@@ -1,0 +1,41 @@
+name: Update Shadcn UI Components
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-shadcn:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check and update Shadcn components
+        run: npx shadcn@latest diff --yes || true
+
+      - name: Reformat files
+        run: npm run format
+
+      - name: Create Pull Request for UI changes
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(ui): sync shadcn components"
+          title: "chore: update shadcn UI components"
+          body: "Automated weekly sync with latest upstream Shadcn UI component changes."
+          branch: "automation/update-shadcn"
+          delete-branch: true

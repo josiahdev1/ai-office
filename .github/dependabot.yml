@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      core-dependencies:
+        patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+          - "eslint-config-next"
+      styling-and-tooling:
+        patterns:
+          - "prettier*"
+          - "tailwind*"
+          - "lucide-react"
+          - "clsx"
+          - "tailwind-merge"
+          - "class-variance-authority"
