@@ -1,209 +1,242 @@
-'use client';
+'use client'
 
-import React, { useState, useEffect } from 'react';
-import { Agent, Approval } from '@/components/office/types';
-import { IsometricOffice } from '@/components/office/IsometricOffice';
-import { PixelSprite } from '@/components/office/pixel-sprites';
-import { sfx } from '@/components/office/audio';
-import { officeBus } from '@/lib/office/bus';
-import { officeSupabase, OfficeMessageRecord, OfficeLogRecord } from '@/lib/supabase/officeService';
+import React, { useState, useEffect } from 'react'
+import { Agent, Approval } from '@/components/office/types'
+import { IsometricOffice } from '@/components/office/IsometricOffice'
+import { PixelSprite } from '@/components/office/pixel-sprites'
+import { sfx } from '@/components/office/audio'
+import { officeBus } from '@/lib/office/bus'
+import {
+  officeSupabase,
+  OfficeMessageRecord,
+  OfficeLogRecord,
+} from '@/lib/supabase/officeService'
 
 export default function EasyUpOfficeHQ() {
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [approvals, setApprovals] = useState<Approval[]>([]);
-  const [logs, setLogs] = useState<string[]>([]);
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [roomFilter, setRoomFilter] = useState<string>('ALL');
-  const [agentSearch, setAgentSearch] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [directiveInput, setDirectiveInput] = useState('');
-  const [timeString, setTimeString] = useState('2026.11.05  08:20:00 GMT+0800');
-  const [supabaseActive, setSupabaseActive] = useState<boolean>(false);
+  const [agents, setAgents] = useState<Agent[]>([])
+  const [approvals, setApprovals] = useState<Approval[]>([])
+  const [logs, setLogs] = useState<string[]>([])
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
+  const [roomFilter, setRoomFilter] = useState<string>('ALL')
+  const [agentSearch, setAgentSearch] = useState<string>('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [directiveInput, setDirectiveInput] = useState('')
+  const [timeString, setTimeString] = useState('2026.11.05  08:20:00 GMT+0800')
+  const [supabaseActive, setSupabaseActive] = useState<boolean>(false)
 
   // Completed items list for "DONE TODAY" card
   const [doneToday, setDoneToday] = useState([
-    { id: 'done-1', title: '2.5D Isometric Engine Deployed (23 Agents)', agent: 'Josiah', time: '08:15 AM' },
-    { id: 'done-2', title: 'Vitest Unit Suite Passing (12/12)', agent: 'Gian', time: '08:10 AM' },
-    { id: 'done-3', title: 'OWASP Top 10 Security Audit Verified', agent: 'Khent', time: '07:55 AM' },
-    { id: 'done-4', title: 'Gemini 2.5 Flash Benchmarking Complete', agent: 'Roy Jhan', time: '07:42 AM' },
-  ]);
+    {
+      id: 'done-1',
+      title: '2.5D Isometric Engine Deployed (23 Agents)',
+      agent: 'Josiah',
+      time: '08:15 AM',
+    },
+    {
+      id: 'done-2',
+      title: 'Vitest Unit Suite Passing (12/12)',
+      agent: 'Gian',
+      time: '08:10 AM',
+    },
+    {
+      id: 'done-3',
+      title: 'OWASP Top 10 Security Audit Verified',
+      agent: 'Khent',
+      time: '07:55 AM',
+    },
+    {
+      id: 'done-4',
+      title: 'Gemini 2.5 Flash Benchmarking Complete',
+      agent: 'Roy Jhan',
+      time: '07:42 AM',
+    },
+  ])
 
   // Real-time Clock ticker (Philippine Standard Time)
   useEffect(() => {
     const updateTime = () => {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
+      const now = new Date()
+      const year = now.getFullYear()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const day = String(now.getDate()).padStart(2, '0')
       const time = now.toLocaleTimeString('en-US', {
         timeZone: 'Asia/Manila',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
         hour12: false,
-      });
-      setTimeString(`${year}.${month}.${day}  ${time} PHT (GMT+0800)`);
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
+      })
+      setTimeString(`${year}.${month}.${day}  ${time} PHT (GMT+0800)`)
+    }
+    updateTime()
+    const interval = setInterval(updateTime, 1000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Connect to Supabase Realtime channel for live messages, logs & approvals
   useEffect(() => {
-    let isSubscribed = true;
+    let isSubscribed = true
 
     async function initSupabase() {
-      const isHealthy = await officeSupabase.checkHealth();
-      if (isSubscribed) setSupabaseActive(isHealthy);
+      const isHealthy = await officeSupabase.checkHealth()
+      if (isSubscribed) setSupabaseActive(isHealthy)
 
       if (isHealthy) {
         // Load initial messages from Supabase
-        const remoteMsgs = await officeSupabase.getMessages(15);
+        const remoteMsgs = await officeSupabase.getMessages(15)
         if (isSubscribed && remoteMsgs.length > 0) {
           const formatted = remoteMsgs.map(
-            (m) => `[COMM] ${m.sender_name} -> ${m.recipient_name || 'All'}: "${m.content}"`
-          );
-          setLogs((prev) => Array.from(new Set([...formatted, ...prev])).slice(0, 35));
+            (m) =>
+              `[COMM] ${m.sender_name} -> ${m.recipient_name || 'All'}: "${m.content}"`
+          )
+          setLogs((prev) =>
+            Array.from(new Set([...formatted, ...prev])).slice(0, 35)
+          )
         }
       }
     }
 
-    void initSupabase();
+    void initSupabase()
 
     const unsubscribe = officeSupabase.subscribeToRealtime({
       onMessage: (msg: OfficeMessageRecord) => {
-        const line = `[COMM] ${msg.sender_name} -> ${msg.recipient_name || 'All'}: "${msg.content}"`;
-        setLogs((prev) => [line, ...prev].slice(0, 35));
+        const line = `[COMM] ${msg.sender_name} -> ${msg.recipient_name || 'All'}: "${msg.content}"`
+        setLogs((prev) => [line, ...prev].slice(0, 35))
       },
       onLog: (log: OfficeLogRecord) => {
-        const line = `[${log.category}] ${log.agent_name ? `${log.agent_name}: ` : ''}${log.message}`;
-        setLogs((prev) => [line, ...prev].slice(0, 35));
+        const line = `[${log.category}] ${log.agent_name ? `${log.agent_name}: ` : ''}${log.message}`
+        setLogs((prev) => [line, ...prev].slice(0, 35))
       },
       onApprovalUpdate: (approval) => {
         if (approval.status === 'approved' || approval.status === 'rejected') {
-          setApprovals((prev) => prev.filter((a) => a.id !== approval.id));
+          setApprovals((prev) => prev.filter((a) => a.id !== approval.id))
         }
       },
-    });
+    })
 
     return () => {
-      isSubscribed = false;
-      unsubscribe();
-    };
-  }, []);
+      isSubscribed = false
+      unsubscribe()
+    }
+  }, [])
 
   // Subscribe to live inter-agent message bus for dynamic activity logs
   useEffect(() => {
     const unsubscribe = officeBus.subscribe((msg) => {
-      const logLine = `[COMM] ${msg.fromName} -> ${msg.toName}: "${msg.text}"`;
-      setLogs((prev) => [logLine, ...prev].slice(0, 35));
-    });
-    return () => unsubscribe();
-  }, []);
+      const logLine = `[COMM] ${msg.fromName} -> ${msg.toName}: "${msg.text}"`
+      setLogs((prev) => [logLine, ...prev].slice(0, 35))
+    })
+    return () => unsubscribe()
+  }, [])
 
   // Real-time 3s polling synchronization with brain/live_status.json
   useEffect(() => {
-    let isMounted = true;
+    let isMounted = true
 
     async function syncOfficeState() {
       try {
-        const res = await fetch('/api/office/status');
-        const json = await res.json();
+        const res = await fetch('/api/office/status')
+        const json = await res.json()
         if (isMounted && json.ok && json.data) {
-          const fleet: Agent[] = json.data.agents || [];
-          setAgents(fleet);
-          setApprovals(json.data.approvals || []);
+          const fleet: Agent[] = json.data.agents || []
+          setAgents(fleet)
+          setApprovals(json.data.approvals || [])
           if (json.data.logs && json.data.logs.length > 0) {
             setLogs((prev) => {
-              const combined = [...json.data.logs, ...prev];
-              return Array.from(new Set(combined)).slice(0, 30);
-            });
+              const combined = [...json.data.logs, ...prev]
+              return Array.from(new Set(combined)).slice(0, 30)
+            })
           }
 
           setSelectedAgent((prev) => {
-            if (!prev) return null;
-            const updated = fleet.find((a) => a.id === prev.id);
-            return updated || prev;
-          });
+            if (!prev) return null
+            const updated = fleet.find((a) => a.id === prev.id)
+            return updated || prev
+          })
         }
       } catch (err) {
-        console.error('Failed to sync office state:', err);
+        console.error('Failed to sync office state:', err)
       }
     }
 
-    void syncOfficeState();
+    void syncOfficeState()
     const pollInterval = setInterval(() => {
-      void syncOfficeState();
-    }, 3000);
+      void syncOfficeState()
+    }, 3000)
 
     return () => {
-      isMounted = false;
-      clearInterval(pollInterval);
-    };
-  }, []);
+      isMounted = false
+      clearInterval(pollInterval)
+    }
+  }, [])
 
   // Handle Josiah's Go-Signal authorization (Audited & Synced to Supabase)
-  const handleGoSignal = async (approvalId: string, action: 'approve' | 'reject') => {
+  const handleGoSignal = async (
+    approvalId: string,
+    action: 'approve' | 'reject'
+  ) => {
     try {
       if (action === 'approve') {
-        sfx?.playApproval?.();
+        sfx?.playApproval?.()
       } else {
-        sfx?.playReject?.();
+        sfx?.playReject?.()
       }
     } catch {}
 
-    const item = approvals.find((a) => a.id === approvalId);
+    const item = approvals.find((a) => a.id === approvalId)
     if (action === 'approve' && item) {
       setDoneToday((prev) => [
         {
           id: `done-${Date.now()}`,
           title: item.title,
           agent: item.agent_name,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          time: new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
         },
         ...prev,
-      ]);
+      ])
     }
 
-    setApprovals((prev) => prev.filter((a) => a.id !== approvalId));
+    setApprovals((prev) => prev.filter((a) => a.id !== approvalId))
 
     // Update Supabase approval record and audit log asynchronously
-    void officeSupabase.resolveApproval(approvalId, action, 'Josiah');
+    void officeSupabase.resolveApproval(approvalId, action, 'Josiah')
     void officeSupabase.logActivity(
       'HUMAN_GO',
       `Go-Signal ${action === 'approve' ? 'AUTHORIZED' : 'REJECTED'} by Josiah for ${item?.title || approvalId}`,
       { id: 'josiah', name: 'Josiah' },
       action === 'approve' ? 'success' : 'warn'
-    );
+    )
 
     try {
       const res = await fetch('/api/office/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approvalId, action }),
-      });
-      const data = await res.json();
+      })
+      const data = await res.json()
       if (data.ok) {
-        setApprovals(data.remaining || []);
+        setApprovals(data.remaining || [])
         if (data.logs) {
-          setLogs((prev) => [...data.logs, ...prev].slice(0, 35));
+          setLogs((prev) => [...data.logs, ...prev].slice(0, 35))
         }
       }
     } catch (err) {
-      console.error('Error submitting go-signal:', err);
+      console.error('Error submitting go-signal:', err)
     }
-  };
+  }
 
   // Dispatch directive to selected agent using real LLM execution route
   const handleDispatchDirective = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!directiveInput.trim() || !selectedAgent) return;
-    setIsSubmitting(true);
-    sfx?.playTrigger?.();
+    e.preventDefault()
+    if (!directiveInput.trim() || !selectedAgent) return
+    setIsSubmitting(true)
+    sfx?.playTrigger?.()
 
-    const taskText = directiveInput.trim();
-    setDirectiveInput('');
+    const taskText = directiveInput.trim()
+    setDirectiveInput('')
 
     try {
       const res = await fetch('/api/office/run', {
@@ -213,17 +246,19 @@ export default function EasyUpOfficeHQ() {
           agentId: selectedAgent.id,
           task: taskText,
         }),
-      });
-      const data = await res.json();
+      })
+      const data = await res.json()
 
       if (data.ok && data.data) {
-        setAgents(data.data.agents || []);
-        setApprovals(data.data.approvals || []);
+        setAgents(data.data.agents || [])
+        setApprovals(data.data.approvals || [])
         if (data.data.logs) {
-          setLogs(data.data.logs);
+          setLogs(data.data.logs)
         }
-        const updated = (data.data.agents as Agent[]).find((a) => a.id === selectedAgent.id);
-        if (updated) setSelectedAgent(updated);
+        const updated = (data.data.agents as Agent[]).find(
+          (a) => a.id === selectedAgent.id
+        )
+        if (updated) setSelectedAgent(updated)
 
         // If completed without requiring approval, add to Done Today
         if (data.result && !data.result.requiresGoSignal) {
@@ -232,70 +267,91 @@ export default function EasyUpOfficeHQ() {
               id: `done-${Date.now()}`,
               title: taskText,
               agent: selectedAgent.name,
-              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              time: new Date().toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
             },
             ...prev,
-          ]);
+          ])
         }
       }
     } catch (err) {
-      console.error('Error dispatching directive:', err);
+      console.error('Error dispatching directive:', err)
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
-  const workingAgents = agents.filter((a) => a.status === 'working');
+  const workingAgents = agents.filter((a) => a.status === 'working')
 
   // Filter agents by department room and search query
   const filteredAgents = agents.filter((a) => {
     const matchesRoom =
       roomFilter === 'ALL'
         ? true
-        : a.room.toLowerCase().includes(roomFilter.toLowerCase());
+        : a.room.toLowerCase().includes(roomFilter.toLowerCase())
 
     const matchesSearch =
       agentSearch.trim() === ''
         ? true
         : a.name.toLowerCase().includes(agentSearch.toLowerCase()) ||
-          a.role.toLowerCase().includes(agentSearch.toLowerCase());
+          a.role.toLowerCase().includes(agentSearch.toLowerCase())
 
-    return matchesRoom && matchesSearch;
-  });
+    return matchesRoom && matchesSearch
+  })
 
   const departmentFilters = [
     { label: 'ALL', count: agents.length },
-    { label: 'Engineering Core', count: agents.filter((a) => a.room === 'Engineering Core').length },
-    { label: 'QA & SecOps NOC', count: agents.filter((a) => a.room === 'QA & SecOps NOC').length },
-    { label: 'Operations Hub', count: agents.filter((a) => a.room === 'Operations Hub').length },
-    { label: 'Growth Lab', count: agents.filter((a) => a.room === 'Growth Lab').length },
-    { label: 'Intelligence Lab', count: agents.filter((a) => a.room === 'Intelligence Lab').length },
-    { label: 'Command Center', count: agents.filter((a) => a.room === 'Command Center').length },
-  ];
+    {
+      label: 'Engineering Core',
+      count: agents.filter((a) => a.room === 'Engineering Core').length,
+    },
+    {
+      label: 'QA & SecOps NOC',
+      count: agents.filter((a) => a.room === 'QA & SecOps NOC').length,
+    },
+    {
+      label: 'Operations Hub',
+      count: agents.filter((a) => a.room === 'Operations Hub').length,
+    },
+    {
+      label: 'Growth Lab',
+      count: agents.filter((a) => a.room === 'Growth Lab').length,
+    },
+    {
+      label: 'Intelligence Lab',
+      count: agents.filter((a) => a.room === 'Intelligence Lab').length,
+    },
+    {
+      label: 'Command Center',
+      count: agents.filter((a) => a.room === 'Command Center').length,
+    },
+  ]
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-[#0a0815] text-slate-100 overflow-x-hidden font-sans select-none">
+    <div className="flex min-h-screen w-full flex-col overflow-x-hidden bg-[#0a0815] font-sans text-slate-100 select-none">
       {/* ========================================================================= */}
       {/* 1. TOP WINDOW TITLEBAR (Exact match to Image 5) */}
       {/* ========================================================================= */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[#120e24] border-b border-[#231b40]">
+      <div className="flex items-center justify-between border-b border-[#231b40] bg-[#120e24] px-4 py-2">
         {/* macOS Traffic Light Dots */}
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-[#ef4444]" />
-          <span className="w-3 h-3 rounded-full bg-[#f59e0b]" />
-          <span className="w-3 h-3 rounded-full bg-[#10b981]" />
+          <span className="h-3 w-3 rounded-full bg-[#ef4444]" />
+          <span className="h-3 w-3 rounded-full bg-[#f59e0b]" />
+          <span className="h-3 w-3 rounded-full bg-[#10b981]" />
         </div>
 
         {/* Center Search / App Title Capsule */}
-        <div className="flex items-center gap-2 px-8 py-1 rounded-full bg-[#1a1433] border border-[#30255c] shadow-inner">
-          <span className="font-mono text-xs font-bold text-amber-400 tracking-wider whitespace-nowrap">
+        <div className="flex items-center gap-2 rounded-full border border-[#30255c] bg-[#1a1433] px-8 py-1 shadow-inner">
+          <span className="font-mono text-xs font-bold tracking-wider whitespace-nowrap text-amber-400">
             EASYUP SOFTWARE SOLUTION // HQ COMMAND
           </span>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="hidden sm:inline whitespace-nowrap">
+        <div className="flex items-center gap-2 font-mono text-xs text-slate-400">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
+          <span className="hidden whitespace-nowrap sm:inline">
             {supabaseActive ? '⚡ SUPABASE REALTIME' : '⚡ LOCAL BUS ACTIVE'}
           </span>
         </div>
@@ -304,48 +360,54 @@ export default function EasyUpOfficeHQ() {
       {/* ========================================================================= */}
       {/* 2. SUB-HEADER METADATA BAR (Exact match to Image 5) */}
       {/* ========================================================================= */}
-      <div className="flex flex-wrap items-center justify-between px-5 py-2.5 bg-[#0f0c1e] border-b border-[#211a3b] gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#211a3b] bg-[#0f0c1e] px-5 py-2.5">
         {/* Left: Brand & Manila Clock */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-sm font-bold text-amber-400 tracking-wider whitespace-nowrap">
+            <span className="font-mono text-sm font-bold tracking-wider whitespace-nowrap text-amber-400">
               EASYUP
             </span>
-            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-black font-bold whitespace-nowrap">
+            <span className="rounded bg-amber-500 px-1.5 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap text-black">
               HQ
             </span>
           </div>
-          <span className="text-xs font-mono text-slate-400 font-semibold tracking-tight whitespace-nowrap">
+          <span className="font-mono text-xs font-semibold tracking-tight whitespace-nowrap text-slate-400">
             {timeString}
           </span>
         </div>
 
         {/* Right: Telemetry Stat Chips */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#181330] border border-[#30255a] text-xs font-mono text-cyan-300 whitespace-nowrap">
+          <div className="flex items-center gap-1.5 rounded-md border border-[#30255a] bg-[#181330] px-3 py-1 font-mono text-xs whitespace-nowrap text-cyan-300">
             <span>FLEET:</span>
-            <span className="font-bold text-white">{agents.length}/{agents.length}</span>
+            <span className="font-bold text-white">
+              {agents.length}/{agents.length}
+            </span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#181330] border border-emerald-600/70 text-xs font-mono text-emerald-300 whitespace-nowrap">
+          <div className="flex items-center gap-1.5 rounded-md border border-emerald-600/70 bg-[#181330] px-3 py-1 font-mono text-xs whitespace-nowrap text-emerald-300">
             <span>DONE TODAY:</span>
             <span className="font-bold text-white">{doneToday.length}</span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#241712] border border-amber-500/80 text-xs font-mono text-amber-300 whitespace-nowrap">
+          <div className="flex items-center gap-1.5 rounded-md border border-amber-500/80 bg-[#241712] px-3 py-1 font-mono text-xs whitespace-nowrap text-amber-300">
             <span>IN PROG:</span>
             <span className="font-bold text-white">{workingAgents.length}</span>
           </div>
 
           <div
-            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono whitespace-nowrap border ${
+            className={`hidden items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-xs whitespace-nowrap sm:flex ${
               supabaseActive
-                ? 'bg-emerald-950/60 border-emerald-600/60 text-emerald-300'
-                : 'bg-[#181330] border-[#30255a] text-slate-400'
+                ? 'border-emerald-600/60 bg-emerald-950/60 text-emerald-300'
+                : 'border-[#30255a] bg-[#181330] text-slate-400'
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${supabaseActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
-            <span>{supabaseActive ? 'SUPABASE: SYNCED' : 'SUPABASE: HYBRID'}</span>
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${supabaseActive ? 'animate-pulse bg-emerald-400' : 'bg-slate-500'}`}
+            />
+            <span>
+              {supabaseActive ? 'SUPABASE: SYNCED' : 'SUPABASE: HYBRID'}
+            </span>
           </div>
         </div>
       </div>
@@ -353,9 +415,9 @@ export default function EasyUpOfficeHQ() {
       {/* ========================================================================= */}
       {/* 3. MAIN WORKSPACE (UPPER SECTION: 68% 2.5D CANVAS + 32% RIGHT CARDS) */}
       {/* ========================================================================= */}
-      <div className="flex flex-col lg:flex-row p-3 gap-3 flex-1">
+      <div className="flex flex-1 flex-col gap-3 p-3 lg:flex-row">
         {/* UPPER-LEFT 68%: ISOMETRIC 2.5D OFFICE ENGINE (Full Viewport Auto-Fit) */}
-        <div className="lg:w-[68%] min-h-[500px] lg:min-h-[580px] h-[580px] flex flex-col rounded-xl overflow-hidden shadow-2xl">
+        <div className="flex h-[580px] min-h-[500px] flex-col overflow-hidden rounded-xl shadow-2xl lg:min-h-[580px] lg:w-[68%]">
           <IsometricOffice
             agents={agents}
             approvals={approvals}
@@ -365,38 +427,44 @@ export default function EasyUpOfficeHQ() {
         </div>
 
         {/* UPPER-RIGHT 32%: 3 STACKED COCKPIT CARDS (Exact match to Image 5) */}
-        <div className="lg:w-[32%] flex flex-col gap-3 min-w-[320px]">
+        <div className="flex min-w-[320px] flex-col gap-3 lg:w-[32%]">
           {/* CARD 1: IN PROGRESS (N) */}
-          <div className="flex-1 flex flex-col rounded-xl bg-[#120e24] border border-[#261e47] p-3.5 shadow-lg overflow-hidden max-h-[220px]">
-            <div className="flex items-center justify-between pb-2 border-b border-[#211a3b] shrink-0">
+          <div className="flex max-h-[220px] flex-1 flex-col overflow-hidden rounded-xl border border-[#261e47] bg-[#120e24] p-3.5 shadow-lg">
+            <div className="flex shrink-0 items-center justify-between border-b border-[#211a3b] pb-2">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                <h3 className="font-mono text-xs font-bold text-cyan-300 uppercase tracking-wide whitespace-nowrap">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
+                <h3 className="font-mono text-xs font-bold tracking-wide whitespace-nowrap text-cyan-300 uppercase">
                   IN PROGRESS ({workingAgents.length})
                 </h3>
               </div>
-              <span className="text-[10px] font-mono text-slate-500 whitespace-nowrap">LIVE SPRINT</span>
+              <span className="font-mono text-[10px] whitespace-nowrap text-slate-500">
+                LIVE SPRINT
+              </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2 mt-2 pr-1">
+            <div className="mt-2 flex-1 space-y-2 overflow-y-auto pr-1">
               {workingAgents.map((ag) => (
                 <div
                   key={ag.id}
                   onClick={() => setSelectedAgent(ag)}
-                  className={`p-2 rounded-lg transition cursor-pointer border ${
+                  className={`cursor-pointer rounded-lg border p-2 transition ${
                     selectedAgent?.id === ag.id
-                      ? 'bg-[#1e173b] border-cyan-500'
-                      : 'bg-[#181330]/80 hover:bg-[#1f183d] border-[#291f4a]'
+                      ? 'border-cyan-500 bg-[#1e173b]'
+                      : 'border-[#291f4a] bg-[#181330]/80 hover:bg-[#1f183d]'
                   }`}
                 >
-                  <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="font-bold text-white uppercase">{ag.name}</span>
-                    <span className="text-cyan-400 font-bold">{ag.progress_pct ?? 75}%</span>
+                  <div className="flex items-center justify-between font-mono text-xs">
+                    <span className="font-bold text-white uppercase">
+                      {ag.name}
+                    </span>
+                    <span className="font-bold text-cyan-400">
+                      {ag.progress_pct ?? 75}%
+                    </span>
                   </div>
-                  <p className="text-[11px] text-slate-300 font-mono truncate mt-0.5">
+                  <p className="mt-0.5 truncate font-mono text-[11px] text-slate-300">
                     {ag.current_task || 'Active development task'}
                   </p>
-                  <div className="w-full h-1.5 rounded-full bg-[#0a0714] overflow-hidden mt-1.5">
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[#0a0714]">
                     <div
                       className="h-full bg-cyan-400 transition-all duration-300"
                       style={{ width: `${ag.progress_pct ?? 75}%` }}
@@ -408,53 +476,60 @@ export default function EasyUpOfficeHQ() {
           </div>
 
           {/* CARD 2: WAITING FOR YOU (N) — JOSIAH'S GO-SIGNAL GATEWAY */}
-          <div className="flex-1 flex flex-col rounded-xl bg-[#161026] border border-amber-500/40 p-3.5 shadow-lg overflow-hidden max-h-[240px]">
-            <div className="flex items-center justify-between pb-2 border-b border-[#2b2045] shrink-0">
+          <div className="flex max-h-[240px] flex-1 flex-col overflow-hidden rounded-xl border border-amber-500/40 bg-[#161026] p-3.5 shadow-lg">
+            <div className="flex shrink-0 items-center justify-between border-b border-[#2b2045] pb-2">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                <h3 className="font-mono text-xs font-bold text-amber-300 uppercase tracking-wide whitespace-nowrap">
+                <span className="h-2 w-2 animate-ping rounded-full bg-amber-400" />
+                <h3 className="font-mono text-xs font-bold tracking-wide whitespace-nowrap text-amber-300 uppercase">
                   WAITING FOR YOU ({approvals.length})
                 </h3>
               </div>
-              <span className="text-[10px] font-mono text-amber-400 font-bold whitespace-nowrap">GO-SIGNAL</span>
+              <span className="font-mono text-[10px] font-bold whitespace-nowrap text-amber-400">
+                GO-SIGNAL
+              </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2 mt-2 pr-1">
+            <div className="mt-2 flex-1 space-y-2 overflow-y-auto pr-1">
               {approvals.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-3">
-                  <span className="text-2xl mb-1">✨</span>
-                  <p className="font-mono text-xs font-bold text-slate-300">ALL GO-SIGNALS CLEARED</p>
-                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">
-                    All client emails, releases & database migrations signed off.
+                <div className="flex h-full flex-col items-center justify-center p-3 text-center">
+                  <span className="mb-1 text-2xl">✨</span>
+                  <p className="font-mono text-xs font-bold text-slate-300">
+                    ALL GO-SIGNALS CLEARED
+                  </p>
+                  <p className="mt-0.5 font-mono text-[10px] text-slate-500">
+                    All client emails, releases & database migrations signed
+                    off.
                   </p>
                 </div>
               ) : (
                 approvals.map((app) => (
                   <div
                     key={app.id}
-                    className="p-2.5 rounded-lg bg-[#1f1638] border border-[#3b2b63] flex flex-col gap-1.5"
+                    className="flex flex-col gap-1.5 rounded-lg border border-[#3b2b63] bg-[#1f1638] p-2.5"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-600 font-semibold uppercase whitespace-nowrap">
+                      <span className="rounded border border-amber-600 bg-amber-950 px-1.5 py-0.5 font-mono text-[9px] font-semibold whitespace-nowrap text-amber-300 uppercase">
                         {app.type}
                       </span>
-                      <span className="font-mono text-[10px] text-slate-400 whitespace-nowrap">by {app.agent_name}</span>
+                      <span className="font-mono text-[10px] whitespace-nowrap text-slate-400">
+                        by {app.agent_name}
+                      </span>
                     </div>
 
-                    <h4 className="font-mono text-xs font-bold text-white leading-snug">
+                    <h4 className="font-mono text-xs leading-snug font-bold text-white">
                       {app.title}
                     </h4>
 
                     <div className="flex items-center justify-end gap-2 pt-1">
                       <button
                         onClick={() => handleGoSignal(app.id, 'reject')}
-                        className="px-2 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] font-mono transition whitespace-nowrap"
+                        className="rounded border border-rose-500/40 bg-rose-500/20 px-2 py-1 font-mono text-[10px] whitespace-nowrap text-rose-300 transition hover:bg-rose-500/30"
                       >
                         Reject
                       </button>
                       <button
                         onClick={() => handleGoSignal(app.id, 'approve')}
-                        className="px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[10px] font-mono transition shadow-lg shadow-emerald-500/20 whitespace-nowrap"
+                        className="rounded bg-emerald-500 px-2.5 py-1 font-mono text-[10px] font-bold whitespace-nowrap text-black shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400"
                       >
                         Grant Go-Signal
                       </button>
@@ -466,25 +541,31 @@ export default function EasyUpOfficeHQ() {
           </div>
 
           {/* CARD 3: DONE TODAY (N) */}
-          <div className="flex flex-col rounded-xl bg-[#120e24] border border-[#261e47] p-3 shadow-lg overflow-hidden max-h-[140px]">
-            <div className="flex items-center justify-between pb-1.5 border-b border-[#211a3b] shrink-0">
+          <div className="flex max-h-[140px] flex-col overflow-hidden rounded-xl border border-[#261e47] bg-[#120e24] p-3 shadow-lg">
+            <div className="flex shrink-0 items-center justify-between border-b border-[#211a3b] pb-1.5">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <h3 className="font-mono text-xs font-bold text-emerald-300 uppercase tracking-wide whitespace-nowrap">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                <h3 className="font-mono text-xs font-bold tracking-wide whitespace-nowrap text-emerald-300 uppercase">
                   DONE TODAY ({doneToday.length})
                 </h3>
               </div>
-              <span className="text-[10px] font-mono text-slate-500 whitespace-nowrap">VERIFIED</span>
+              <span className="font-mono text-[10px] whitespace-nowrap text-slate-500">
+                VERIFIED
+              </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-1.5 mt-2 pr-1">
+            <div className="mt-2 flex-1 space-y-1.5 overflow-y-auto pr-1">
               {doneToday.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between text-xs font-mono p-1 rounded bg-[#181330]"
+                  className="flex items-center justify-between rounded bg-[#181330] p-1 font-mono text-xs"
                 >
-                  <span className="text-slate-300 truncate max-w-[200px]">✓ {item.title}</span>
-                  <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">{item.time}</span>
+                  <span className="max-w-[200px] truncate text-slate-300">
+                    ✓ {item.title}
+                  </span>
+                  <span className="font-mono text-[10px] whitespace-nowrap text-slate-500">
+                    {item.time}
+                  </span>
                 </div>
               ))}
             </div>
@@ -496,26 +577,26 @@ export default function EasyUpOfficeHQ() {
       {/* 4. HORIZONTAL ROOM / DEPARTMENT FILTER BAR */}
       {/* ========================================================================= */}
       <div className="px-3 pb-2">
-        <div className="flex items-center gap-1.5 overflow-x-auto py-2 px-3 rounded-xl bg-[#120e24] border border-[#261e47] shadow-lg">
+        <div className="flex items-center gap-1.5 overflow-x-auto rounded-xl border border-[#261e47] bg-[#120e24] px-3 py-2 shadow-lg">
           {departmentFilters.map((dep) => {
-            const isActive = roomFilter === dep.label;
+            const isActive = roomFilter === dep.label
             return (
               <button
                 key={dep.label}
                 onClick={() => {
-                  setRoomFilter(dep.label);
-                  sfx?.playBlip?.(540);
+                  setRoomFilter(dep.label)
+                  sfx?.playBlip?.(540)
                 }}
-                className={`px-3 py-1 rounded-md text-xs font-mono font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+                className={`flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1 font-mono text-xs font-bold whitespace-nowrap transition ${
                   isActive
                     ? 'bg-amber-500 text-black shadow-md'
-                    : 'bg-[#1a1433] text-slate-300 hover:text-white border border-[#30255a]'
+                    : 'border border-[#30255a] bg-[#1a1433] text-slate-300 hover:text-white'
                 }`}
               >
                 <span>{dep.label}</span>
                 <span className="text-[10px] opacity-80">({dep.count})</span>
               </button>
-            );
+            )
           })}
         </div>
       </div>
@@ -523,11 +604,11 @@ export default function EasyUpOfficeHQ() {
       {/* ========================================================================= */}
       {/* 5. THREE BOTTOM DATA COLUMNS */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 px-3 pb-4">
+      <div className="grid grid-cols-1 gap-3 px-3 pb-4 md:grid-cols-3">
         {/* COLUMN 1: TEAM TODAY */}
-        <div className="flex flex-col rounded-xl bg-[#120e24] border border-[#261e47] p-3.5 shadow-lg max-h-[320px]">
-          <div className="flex items-center justify-between pb-2 border-b border-[#211a3b]">
-            <h3 className="font-mono text-xs font-bold text-white uppercase tracking-wide whitespace-nowrap">
+        <div className="flex max-h-[320px] flex-col rounded-xl border border-[#261e47] bg-[#120e24] p-3.5 shadow-lg">
+          <div className="flex items-center justify-between border-b border-[#211a3b] pb-2">
+            <h3 className="font-mono text-xs font-bold tracking-wide whitespace-nowrap text-white uppercase">
               TEAM TODAY ({filteredAgents.length})
             </h3>
             {/* Quick Filter Search */}
@@ -536,22 +617,22 @@ export default function EasyUpOfficeHQ() {
               value={agentSearch}
               onChange={(e) => setAgentSearch(e.target.value)}
               placeholder="Search agent..."
-              className="px-2 py-0.5 rounded bg-[#0a0714] border border-[#291f4a] text-[10px] font-mono text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-28"
+              className="w-28 rounded border border-[#291f4a] bg-[#0a0714] px-2 py-0.5 font-mono text-[10px] text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
             />
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-2 mt-2 pr-1">
+          <div className="mt-2 flex-1 space-y-2 overflow-y-auto pr-1">
             {filteredAgents.map((ag) => (
               <div
                 key={ag.id}
                 onClick={() => setSelectedAgent(ag)}
-                className={`p-2 rounded-lg transition cursor-pointer flex items-center justify-between border ${
+                className={`flex cursor-pointer items-center justify-between rounded-lg border p-2 transition ${
                   selectedAgent?.id === ag.id
-                    ? 'bg-[#1f173b] border-amber-500 shadow'
-                    : 'bg-[#181330] hover:bg-[#1e173b] border-[#291f4a]'
+                    ? 'border-amber-500 bg-[#1f173b] shadow'
+                    : 'border-[#291f4a] bg-[#181330] hover:bg-[#1e173b]'
                 }`}
               >
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex min-w-0 items-center gap-2">
                   <PixelSprite
                     id={ag.id}
                     color={ag.color}
@@ -560,17 +641,21 @@ export default function EasyUpOfficeHQ() {
                     size={28}
                   />
                   <div className="min-w-0">
-                    <p className="font-mono text-xs font-bold text-white truncate">{ag.name}</p>
-                    <p className="text-[10px] text-slate-400 font-mono truncate">{ag.role}</p>
+                    <p className="truncate font-mono text-xs font-bold text-white">
+                      {ag.name}
+                    </p>
+                    <p className="truncate font-mono text-[10px] text-slate-400">
+                      {ag.role}
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex shrink-0 items-center gap-1.5">
                   <span
-                    className={`font-mono text-[9px] px-1.5 py-0.5 rounded uppercase whitespace-nowrap ${
+                    className={`rounded px-1.5 py-0.5 font-mono text-[9px] whitespace-nowrap uppercase ${
                       ag.status === 'working'
-                        ? 'bg-cyan-950 text-cyan-300 border border-cyan-700'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                        ? 'border border-cyan-700 bg-cyan-950 text-cyan-300'
+                        : 'border border-slate-700 bg-slate-800 text-slate-400'
                     }`}
                   >
                     {ag.status}
@@ -582,63 +667,88 @@ export default function EasyUpOfficeHQ() {
         </div>
 
         {/* COLUMN 2: RUNNING GOAL LIST */}
-        <div className="flex flex-col rounded-xl bg-[#120e24] border border-[#261e47] p-3.5 shadow-lg max-h-[320px]">
-          <div className="flex items-center justify-between pb-2 border-b border-[#211a3b]">
-            <h3 className="font-mono text-xs font-bold text-amber-300 uppercase tracking-wide whitespace-nowrap">
+        <div className="flex max-h-[320px] flex-col rounded-xl border border-[#261e47] bg-[#120e24] p-3.5 shadow-lg">
+          <div className="flex items-center justify-between border-b border-[#211a3b] pb-2">
+            <h3 className="font-mono text-xs font-bold tracking-wide whitespace-nowrap text-amber-300 uppercase">
               RUNNING GOAL LIST
             </h3>
-            <span className="text-[10px] font-mono text-slate-500 whitespace-nowrap">Q4 SPRINT</span>
+            <span className="font-mono text-[10px] whitespace-nowrap text-slate-500">
+              Q4 SPRINT
+            </span>
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-2 mt-2 pr-1">
-            <div className="p-2.5 rounded-lg bg-[#181330] border border-[#291f4a] flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-amber-400 font-bold whitespace-nowrap">1. 2.5D ISOMETRIC ENGINE</span>
-                <span className="text-emerald-400 font-bold whitespace-nowrap">✓ COMPLETED</span>
+          <div className="mt-2 flex-1 space-y-2 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-1 rounded-lg border border-[#291f4a] bg-[#181330] p-2.5">
+              <div className="flex items-center justify-between font-mono text-xs">
+                <span className="font-bold whitespace-nowrap text-amber-400">
+                  1. 2.5D ISOMETRIC ENGINE
+                </span>
+                <span className="font-bold whitespace-nowrap text-emerald-400">
+                  ✓ COMPLETED
+                </span>
               </div>
-              <p className="text-[11px] text-slate-300 font-mono">
-                Extruded 3D floating slab, 10 color-coded rooms, and A* corridor navigation for 23 agents.
+              <p className="font-mono text-[11px] text-slate-300">
+                Extruded 3D floating slab, 10 color-coded rooms, and A* corridor
+                navigation for 23 agents.
               </p>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-[#181330] border border-[#291f4a] flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-cyan-400 font-bold whitespace-nowrap">2. MULTI-PROVIDER LLM RUNTIME</span>
-                <span className="text-emerald-400 font-bold whitespace-nowrap">✓ ACTIVE</span>
+            <div className="flex flex-col gap-1 rounded-lg border border-[#291f4a] bg-[#181330] p-2.5">
+              <div className="flex items-center justify-between font-mono text-xs">
+                <span className="font-bold whitespace-nowrap text-cyan-400">
+                  2. MULTI-PROVIDER LLM RUNTIME
+                </span>
+                <span className="font-bold whitespace-nowrap text-emerald-400">
+                  ✓ ACTIVE
+                </span>
               </div>
-              <p className="text-[11px] text-slate-300 font-mono">
-                Gemini, Claude 3.5 Sonnet, and OpenAI hierarchy with resilient fallback and SSE streaming.
+              <p className="font-mono text-[11px] text-slate-300">
+                Gemini, Claude 3.5 Sonnet, and OpenAI hierarchy with resilient
+                fallback and SSE streaming.
               </p>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-[#181330] border border-[#291f4a] flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-purple-400 font-bold whitespace-nowrap">3. HUMAN-IN-THE-LOOP GO-SIGNAL</span>
-                <span className="text-amber-400 font-bold whitespace-nowrap">ACTIVE RAILS</span>
+            <div className="flex flex-col gap-1 rounded-lg border border-[#291f4a] bg-[#181330] p-2.5">
+              <div className="flex items-center justify-between font-mono text-xs">
+                <span className="font-bold whitespace-nowrap text-purple-400">
+                  3. HUMAN-IN-THE-LOOP GO-SIGNAL
+                </span>
+                <span className="font-bold whitespace-nowrap text-amber-400">
+                  ACTIVE RAILS
+                </span>
               </div>
-              <p className="text-[11px] text-slate-300 font-mono">
-                Mandatory Go-Signal gating on production deployments, emails, and database schema mutations.
+              <p className="font-mono text-[11px] text-slate-300">
+                Mandatory Go-Signal gating on production deployments, emails,
+                and database schema mutations.
               </p>
             </div>
           </div>
         </div>
 
         {/* COLUMN 3: RAW ACTIVITY LOG */}
-        <div className="flex flex-col rounded-xl bg-[#120e24] border border-[#261e47] p-3.5 shadow-lg max-h-[320px]">
-          <div className="flex items-center justify-between pb-2 border-b border-[#211a3b]">
-            <h3 className="font-mono text-xs font-bold text-white uppercase tracking-wide whitespace-nowrap">
+        <div className="flex max-h-[320px] flex-col rounded-xl border border-[#261e47] bg-[#120e24] p-3.5 shadow-lg">
+          <div className="flex items-center justify-between border-b border-[#211a3b] pb-2">
+            <h3 className="font-mono text-xs font-bold tracking-wide whitespace-nowrap text-white uppercase">
               ACTIVITY LOG
             </h3>
-            <span className="text-[10px] font-mono text-emerald-400 whitespace-nowrap">REAL-TIME</span>
+            <span className="font-mono text-[10px] whitespace-nowrap text-emerald-400">
+              REAL-TIME
+            </span>
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-1.5 mt-2 font-mono text-[11px] text-slate-300 pr-1">
+          <div className="mt-2 flex-1 space-y-1.5 overflow-y-auto pr-1 font-mono text-[11px] text-slate-300">
             {logs.length === 0 ? (
-              <p className="text-slate-500 text-center py-4">Waiting for studio telemetry...</p>
+              <p className="py-4 text-center text-slate-500">
+                Waiting for studio telemetry...
+              </p>
             ) : (
               logs.map((log, i) => (
-                <div key={i} className="leading-snug border-b border-[#1b1536] pb-1 last:border-b-0">
-                  <span className="text-amber-400 font-bold">&gt;</span> <span>{log}</span>
+                <div
+                  key={i}
+                  className="border-b border-[#1b1536] pb-1 leading-snug last:border-b-0"
+                >
+                  <span className="font-bold text-amber-400">&gt;</span>{' '}
+                  <span>{log}</span>
                 </div>
               ))
             )}
@@ -650,17 +760,17 @@ export default function EasyUpOfficeHQ() {
       {/* 6. SLIDE-OUT AGENT INSPECTOR (When an agent is selected) */}
       {/* ========================================================================= */}
       {selectedAgent && (
-        <div className="fixed bottom-4 right-4 z-50 w-96 rounded-xl bg-[#140f29] border-2 border-[#382b63] shadow-2xl p-4 flex flex-col gap-3 backdrop-blur-md animate-in slide-in-from-bottom duration-200">
+        <div className="animate-in slide-in-from-bottom fixed right-4 bottom-4 z-50 flex w-96 flex-col gap-3 rounded-xl border-2 border-[#382b63] bg-[#140f29] p-4 shadow-2xl backdrop-blur-md duration-200">
           <div className="flex items-center justify-between border-b border-[#291f4a] pb-2">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-mono text-xs font-bold text-amber-400 whitespace-nowrap">
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400" />
+              <span className="font-mono text-xs font-bold whitespace-nowrap text-amber-400">
                 {`${selectedAgent.name.toUpperCase()} // WORKSTATION`}
               </span>
             </div>
             <button
               onClick={() => setSelectedAgent(null)}
-              className="text-slate-400 hover:text-white font-bold font-mono text-xs whitespace-nowrap"
+              className="font-mono text-xs font-bold whitespace-nowrap text-slate-400 hover:text-white"
             >
               ✕
             </button>
@@ -675,23 +785,31 @@ export default function EasyUpOfficeHQ() {
               size={36}
             />
             <div className="min-w-0">
-              <h4 className="font-mono text-sm font-bold text-white truncate">{selectedAgent.name}</h4>
-              <p className="text-xs text-slate-400 font-mono truncate">{selectedAgent.role}</p>
-              <p className="text-[10px] text-cyan-300 font-mono whitespace-nowrap">{selectedAgent.room}</p>
+              <h4 className="truncate font-mono text-sm font-bold text-white">
+                {selectedAgent.name}
+              </h4>
+              <p className="truncate font-mono text-xs text-slate-400">
+                {selectedAgent.role}
+              </p>
+              <p className="font-mono text-[10px] whitespace-nowrap text-cyan-300">
+                {selectedAgent.room}
+              </p>
             </div>
           </div>
 
           {/* Terminal / Active File Preview */}
-          <div className="p-2.5 rounded bg-[#0a0714] border border-[#261e47] text-xs font-mono space-y-1">
-            <div className="flex justify-between text-slate-400 text-[10px]">
+          <div className="space-y-1 rounded border border-[#261e47] bg-[#0a0714] p-2.5 font-mono text-xs">
+            <div className="flex justify-between text-[10px] text-slate-400">
               <span>ACTIVE WORK:</span>
-              <span className="text-emerald-400 font-bold">{selectedAgent.progress_pct ?? 100}%</span>
+              <span className="font-bold text-emerald-400">
+                {selectedAgent.progress_pct ?? 100}%
+              </span>
             </div>
-            <p className="text-slate-300 text-[11px] truncate">
+            <p className="truncate text-[11px] text-slate-300">
               {selectedAgent.current_task || 'Idle at desk'}
             </p>
             {selectedAgent.terminal_preview && (
-              <pre className="text-[10px] text-emerald-400 bg-black/60 p-2 rounded overflow-x-auto whitespace-pre-wrap font-mono mt-1 border border-emerald-950">
+              <pre className="mt-1 overflow-x-auto rounded border border-emerald-950 bg-black/60 p-2 font-mono text-[10px] whitespace-pre-wrap text-emerald-400">
                 {selectedAgent.terminal_preview}
               </pre>
             )}
@@ -704,12 +822,12 @@ export default function EasyUpOfficeHQ() {
               value={directiveInput}
               onChange={(e) => setDirectiveInput(e.target.value)}
               placeholder={`Assign task to ${selectedAgent.name}...`}
-              className="flex-1 px-2.5 py-1.5 rounded bg-[#0a0714] border border-[#2b224d] text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+              className="flex-1 rounded border border-[#2b224d] bg-[#0a0714] px-2.5 py-1.5 font-mono text-xs text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
             />
             <button
               type="submit"
               disabled={isSubmitting || !directiveInput.trim()}
-              className="px-3 py-1.5 rounded bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs font-mono transition whitespace-nowrap disabled:opacity-50"
+              className="rounded bg-cyan-500 px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-black transition hover:bg-cyan-400 disabled:opacity-50"
             >
               Dispatch
             </button>
@@ -717,5 +835,5 @@ export default function EasyUpOfficeHQ() {
         </div>
       )}
     </div>
-  );
+  )
 }

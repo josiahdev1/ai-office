@@ -4,36 +4,36 @@
  * Supports live Supabase cloud database with graceful local fallback.
  */
 
-import { createClient as createBrowserSupabase } from '@/utils/supabase/client';
-import { Agent, Approval } from '@/components/office/types';
+import { createClient as createBrowserSupabase } from '@/utils/supabase/client'
+import { Agent, Approval } from '@/components/office/types'
 
 export interface OfficeMessageRecord {
-  id: string;
-  sender_id: string;
-  sender_name: string;
-  sender_department: string;
-  recipient_id?: string;
-  recipient_name?: string;
-  channel: string;
-  content: string;
-  message_type: string;
-  created_at: string;
+  id: string
+  sender_id: string
+  sender_name: string
+  sender_department: string
+  recipient_id?: string
+  recipient_name?: string
+  channel: string
+  content: string
+  message_type: string
+  created_at: string
 }
 
 export interface OfficeLogRecord {
-  id: string;
-  agent_id?: string;
-  agent_name?: string;
-  level: string;
-  category: string;
-  message: string;
-  details?: Record<string, unknown>;
-  created_at: string;
+  id: string
+  agent_id?: string
+  agent_name?: string
+  level: string
+  category: string
+  message: string
+  details?: Record<string, unknown>
+  created_at: string
 }
 
 class SupabaseOfficeService {
-  private client = createBrowserSupabase();
-  private isSupabaseReady: boolean | null = null;
+  private client = createBrowserSupabase()
+  private isSupabaseReady: boolean | null = null
 
   /**
    * Probes whether Supabase tables exist in the user's remote project.
@@ -42,23 +42,23 @@ class SupabaseOfficeService {
     try {
       const { error } = await this.client
         .from('office_agents')
-        .select('id', { head: true, count: 'exact' });
+        .select('id', { head: true, count: 'exact' })
 
       if (error && error.message.includes('not find the table')) {
-        this.isSupabaseReady = false;
-        return false;
+        this.isSupabaseReady = false
+        return false
       }
 
-      this.isSupabaseReady = true;
-      return true;
+      this.isSupabaseReady = true
+      return true
     } catch {
-      this.isSupabaseReady = false;
-      return false;
+      this.isSupabaseReady = false
+      return false
     }
   }
 
   public get readyStatus(): boolean | null {
-    return this.isSupabaseReady;
+    return this.isSupabaseReady
   }
 
   /**
@@ -70,12 +70,12 @@ class SupabaseOfficeService {
         .from('office_messages')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(limit);
+        .limit(limit)
 
-      if (error || !data) return [];
-      return data as OfficeMessageRecord[];
+      if (error || !data) return []
+      return data as OfficeMessageRecord[]
     } catch {
-      return [];
+      return []
     }
   }
 
@@ -83,14 +83,14 @@ class SupabaseOfficeService {
    * Post a new inter-agent message to Supabase.
    */
   public async postMessage(message: {
-    sender_id: string;
-    sender_name: string;
-    sender_department?: string;
-    recipient_id?: string;
-    recipient_name?: string;
-    channel?: string;
-    content: string;
-    message_type?: string;
+    sender_id: string
+    sender_name: string
+    sender_department?: string
+    recipient_id?: string
+    recipient_name?: string
+    channel?: string
+    content: string
+    message_type?: string
   }): Promise<OfficeMessageRecord | null> {
     try {
       const record = {
@@ -102,18 +102,18 @@ class SupabaseOfficeService {
         channel: message.channel || 'general',
         content: message.content,
         message_type: message.message_type || 'chat',
-      };
+      }
 
       const { data, error } = await this.client
         .from('office_messages')
         .insert(record)
         .select()
-        .single();
+        .single()
 
-      if (error || !data) return null;
-      return data as OfficeMessageRecord;
+      if (error || !data) return null
+      return data as OfficeMessageRecord
     } catch {
-      return null;
+      return null
     }
   }
 
@@ -135,7 +135,7 @@ class SupabaseOfficeService {
         category,
         message,
         details,
-      });
+      })
     } catch {
       // Gracefully ignore if offline
     }
@@ -157,11 +157,11 @@ class SupabaseOfficeService {
           resolved_by: resolvedBy,
           resolved_at: new Date().toISOString(),
         })
-        .eq('id', approvalId);
+        .eq('id', approvalId)
 
-      return !error;
+      return !error
     } catch {
-      return false;
+      return false
     }
   }
 
@@ -169,10 +169,10 @@ class SupabaseOfficeService {
    * Subscribe to live Supabase Realtime channel for instant multi-user synchronization.
    */
   public subscribeToRealtime(callbacks: {
-    onMessage?: (msg: OfficeMessageRecord) => void;
-    onLog?: (log: OfficeLogRecord) => void;
-    onAgentUpdate?: (agent: Partial<Agent>) => void;
-    onApprovalUpdate?: (approval: Partial<Approval>) => void;
+    onMessage?: (msg: OfficeMessageRecord) => void
+    onLog?: (log: OfficeLogRecord) => void
+    onAgentUpdate?: (agent: Partial<Agent>) => void
+    onApprovalUpdate?: (approval: Partial<Approval>) => void
   }): () => void {
     try {
       const channel = this.client
@@ -182,7 +182,7 @@ class SupabaseOfficeService {
           { event: 'INSERT', schema: 'public', table: 'office_messages' },
           (payload) => {
             if (payload.new && callbacks.onMessage) {
-              callbacks.onMessage(payload.new as OfficeMessageRecord);
+              callbacks.onMessage(payload.new as OfficeMessageRecord)
             }
           }
         )
@@ -191,7 +191,7 @@ class SupabaseOfficeService {
           { event: 'INSERT', schema: 'public', table: 'office_logs' },
           (payload) => {
             if (payload.new && callbacks.onLog) {
-              callbacks.onLog(payload.new as OfficeLogRecord);
+              callbacks.onLog(payload.new as OfficeLogRecord)
             }
           }
         )
@@ -200,19 +200,19 @@ class SupabaseOfficeService {
           { event: '*', schema: 'public', table: 'office_approvals' },
           (payload) => {
             if (payload.new && callbacks.onApprovalUpdate) {
-              callbacks.onApprovalUpdate(payload.new as Partial<Approval>);
+              callbacks.onApprovalUpdate(payload.new as Partial<Approval>)
             }
           }
         )
-        .subscribe();
+        .subscribe()
 
       return () => {
-        void this.client.removeChannel(channel);
-      };
+        void this.client.removeChannel(channel)
+      }
     } catch {
-      return () => {};
+      return () => {}
     }
   }
 }
 
-export const officeSupabase = new SupabaseOfficeService();
+export const officeSupabase = new SupabaseOfficeService()

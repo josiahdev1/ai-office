@@ -11,7 +11,8 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: 'EasyUp Software Solution HQ - Autonomous Multi-Agent Workspace',
-  description: 'Autonomous Multi-Agent AI Office for EasyUp Software Solution (Iloilo City) with Human-in-the-Loop Boss Desk',
+  description:
+    'Autonomous Multi-Agent AI Office for EasyUp Software Solution (Iloilo City) with Human-in-the-Loop Boss Desk',
 }
 
 export default function RootLayout({

@@ -7,6 +7,7 @@
 ---
 
 ### Project Scope & Deliverables
+
 - **Milestone 1**: Autonomous Multi-Agent AI Office Platform setup
 - **Milestone 2**: MCP Tool Integration (GitHub, Supabase, Slack/Discord, Gmail)
 - **Milestone 3**: Staging Deployment, Security Penetration Audits, and Production Release

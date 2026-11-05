@@ -3,11 +3,13 @@
 Last Updated: 2026-11-05
 
 ## Phase 0: Specification & Setup
+
 - [x] Create technical specification document (`docs/UPGRADE_SPEC.md`)
 - [x] Create progress checklist document (`docs/PROGRESS.md`)
 - [x] Install runtime and dev dependencies (`zod`, `vitest`)
 
 ## Phase 1: Data Architecture & Serverless-Safe Storage
+
 - [x] Implement abstract storage adapter (`src/lib/storage/index.ts`) supporting memory cache, local FS (dev), and cloud KV hooks
 - [x] Migrate and seed `brain/live_status.json` with full 23-agent fleet roster:
   - Engineering Core: Josiah (Founder & Lead), Arwin, Neil Mar, Nelmar, Bonnie, John Lloyd
@@ -21,6 +23,7 @@ Last Updated: 2026-11-05
 - [x] Verify Phase 1 compilation (`npx tsc --noEmit && npm run lint`)
 
 ## Phase 2: Isometric Map, 2.5D Canvas & Procedural Art
+
 - [x] Build 3D floating extruded isometric slab with perimeter edge matching reference video frames
 - [x] Render 10 distinct color-coded zones:
   - Operations Hub (Green `#10b981`)
@@ -39,6 +42,7 @@ Last Updated: 2026-11-05
 - [x] Optimize 60 FPS multi-layer canvas rendering (cached floor grid + depth-sorted dynamic sprites)
 
 ## Phase 3: A* Pathfinding, Natural Movement & Office Modes
+
 - [x] Construct discrete walkable/blocked tile grid with corridor waypoints and door collision nodes
 - [x] Implement A* pathfinding algorithm with queueing at doorways and obstacle avoidance
 - [x] Implement 4-directional walk cycles, sit/stand animations, typing animations, and lounge idling
@@ -50,6 +54,7 @@ Last Updated: 2026-11-05
 - [x] Implement Vitest test suite for pathfinding and mode transitions (`tests/pathfinding.test.ts`)
 
 ## Phase 4: Inter-Agent Messaging & Real LLM Execution Engine
+
 - [x] Implement in-memory event bus (`src/lib/office/bus.ts`) for cross-team communications
 - [x] Render natural typewriter speech bubbles and inter-agent communication links
 - [x] Implement resilient multi-provider LLM client (`src/lib/llm/index.ts`):
@@ -62,6 +67,7 @@ Last Updated: 2026-11-05
 - [x] Implement Vitest test suites for message bus and task lifecycle (`tests/bus.test.ts`, `tests/task.test.ts`)
 
 ## Phase 5: Cockpit UI/UX Controls & System Verification
+
 - [x] Wire all cockpit interactive controls:
   - Simulation Speed (1x default, 2x, 5x)
   - Audio SFX toggle (Web Audio API synthesizers)

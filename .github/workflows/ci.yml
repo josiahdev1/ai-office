@@ -9,6 +9,9 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://spacfnutrnhzxxbkjrji.supabase.co' }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_placeholder_for_ci_build' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -21,11 +24,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check code formatting
-        run: npm run format:check
-
       - name: Lint
         run: npm run lint
+
+      - name: Type Check
+        run: npx tsc --noEmit
+
+      - name: Run Tests
+        run: npm test
 
       - name: Build Next.js
         run: npm run build

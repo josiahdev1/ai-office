@@ -1,10 +1,12 @@
 # Company Context: EasyUp Software Solution
+
 - Headquarters: EasyUp Software Solution HQ (Iloilo City)
 - Lead & Founder: Josiah
 - Active Operations: Full-Stack Web & Mobile Development, Cloud Infrastructure, Multi-Agent Engineering Systems
 - Default Simulation Speed: 1x Real-Time Work Pace
 
 ## Fleet Architecture (20 Full-Stack Agents):
+
 1. **Engineering Core (Software Development)**
    - `josiah`: Josiah / LeadDev — Lead Full-Stack Architect (System architecture, commit verification, Go-Signal authority)
    - `arwin`: Arwin — Lead Backend Engineer (Laravel & Node.js API endpoints, microservices)

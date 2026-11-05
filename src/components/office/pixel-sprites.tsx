@@ -1,21 +1,21 @@
-'use client';
+'use client'
 
-import React from 'react';
+import React from 'react'
 
 export interface PixelSpriteProps {
-  id: string;
-  name?: string;
-  color?: string;
-  hair?: string;
-  skin?: string;
-  size?: number;
-  isWalking?: boolean;
-  walkFrame?: number;
-  isTyping?: boolean;
-  facing?: 'left' | 'right';
-  hasCoffee?: boolean;
-  isSeated?: boolean;
-  className?: string;
+  id: string
+  name?: string
+  color?: string
+  hair?: string
+  skin?: string
+  size?: number
+  isWalking?: boolean
+  walkFrame?: number
+  isTyping?: boolean
+  facing?: 'left' | 'right'
+  hasCoffee?: boolean
+  isSeated?: boolean
+  className?: string
 }
 
 export function PixelSprite({
@@ -33,34 +33,34 @@ export function PixelSprite({
   className = '',
 }: PixelSpriteProps) {
   // Walking leg shift (0 or 1)
-  const legShift = isWalking ? (walkFrame % 2 === 0 ? 0 : 1) : 0;
+  const legShift = isWalking ? (walkFrame % 2 === 0 ? 0 : 1) : 0
   // Typing bob animation
-  const typeBob = isTyping && !isWalking ? (walkFrame % 2 === 0 ? 0.6 : 0) : 0;
+  const typeBob = isTyping && !isWalking ? (walkFrame % 2 === 0 ? 0.6 : 0) : 0
 
   // Agent-specific accessory configurations
-  const isJosiah = id === 'josiah';
-  const isArwin = id === 'arwin';
-  const isNeilMar = id === 'neil_mar';
-  const isNelmar = id === 'nelmar';
-  const isBonnie = id === 'bonnie';
-  const isJohnLloyd = id === 'john_lloyd';
-  const isKhent = id === 'khent';
-  const isJohnArvy = id === 'john_arvy';
-  const isGian = id === 'gian';
-  const isMaryGrace = id === 'mary_grace';
-  const isAnthony = id === 'anthony';
-  const isBlaze = id === 'blaze';
-  const isFerwin = id === 'ferwin';
-  const isJoVincent = id === 'jo_vincent';
-  const isJesmond = id === 'jesmond';
-  const isKin = id === 'kin';
-  const isRoyJhan = id === 'roy_jhan';
-  const isGabriel = id === 'gabriel';
-  const isKeiru = id === 'keiru';
-  const isRyan = id === 'ryan';
-  const isGloria = id === 'gloria';
-  const isJB = id === 'jb';
-  const isJulian = id === 'julian';
+  const isJosiah = id === 'josiah'
+  const isArwin = id === 'arwin'
+  const isNeilMar = id === 'neil_mar'
+  const isNelmar = id === 'nelmar'
+  const isBonnie = id === 'bonnie'
+  const isJohnLloyd = id === 'john_lloyd'
+  const isKhent = id === 'khent'
+  const isJohnArvy = id === 'john_arvy'
+  const isGian = id === 'gian'
+  const isMaryGrace = id === 'mary_grace'
+  const isAnthony = id === 'anthony'
+  const isBlaze = id === 'blaze'
+  const isFerwin = id === 'ferwin'
+  const isJoVincent = id === 'jo_vincent'
+  const isJesmond = id === 'jesmond'
+  const isKin = id === 'kin'
+  const isRoyJhan = id === 'roy_jhan'
+  const isGabriel = id === 'gabriel'
+  const isKeiru = id === 'keiru'
+  const isRyan = id === 'ryan'
+  const isGloria = id === 'gloria'
+  const isJB = id === 'jb'
+  const isJulian = id === 'julian'
 
   return (
     <svg
@@ -75,14 +75,32 @@ export function PixelSprite({
       }}
     >
       {/* Ground Shadow */}
-      <ellipse cx="7" cy={isSeated ? 14.5 : 15.2} rx={isSeated ? 5 : 4.2} ry="0.9" fill="rgba(0,0,0,0.45)" />
+      <ellipse
+        cx="7"
+        cy={isSeated ? 14.5 : 15.2}
+        rx={isSeated ? 5 : 4.2}
+        ry="0.9"
+        fill="rgba(0,0,0,0.45)"
+      />
 
       {/* Hair (top 3 rows) */}
       <rect x="4" y="2" width="6" height="2" fill={hair} />
       <rect x="3" y="3" width="8" height="2" fill={hair} />
       {/* Sideburns / Hair silhouette */}
-      <rect x="3" y="4" width="2" height={isMaryGrace || isGloria ? 4 : 2} fill={hair} />
-      <rect x="9" y="4" width="2" height={isMaryGrace || isGloria ? 4 : 2} fill={hair} />
+      <rect
+        x="3"
+        y="4"
+        width="2"
+        height={isMaryGrace || isGloria ? 4 : 2}
+        fill={hair}
+      />
+      <rect
+        x="9"
+        y="4"
+        width="2"
+        height={isMaryGrace || isGloria ? 4 : 2}
+        fill={hair}
+      />
 
       {/* Specialized Hair Accessories & Headgear */}
       {isJosiah && (
@@ -175,9 +193,32 @@ export function PixelSprite({
           {isNeilMar || isFerwin || isGabriel ? (
             // Modern Glasses
             <>
-              <rect x="4" y="4.8" width="2" height="1.4" fill="none" stroke="#0f172a" strokeWidth="0.5" />
-              <rect x="8" y="4.8" width="2" height="1.4" fill="none" stroke="#0f172a" strokeWidth="0.5" />
-              <line x1="6" y1="5.5" x2="8" y2="5.5" stroke="#0f172a" strokeWidth="0.5" />
+              <rect
+                x="4"
+                y="4.8"
+                width="2"
+                height="1.4"
+                fill="none"
+                stroke="#0f172a"
+                strokeWidth="0.5"
+              />
+              <rect
+                x="8"
+                y="4.8"
+                width="2"
+                height="1.4"
+                fill="none"
+                stroke="#0f172a"
+                strokeWidth="0.5"
+              />
+              <line
+                x1="6"
+                y1="5.5"
+                x2="8"
+                y2="5.5"
+                stroke="#0f172a"
+                strokeWidth="0.5"
+              />
             </>
           ) : (
             // Classic 1-pixel dark eyes
@@ -193,7 +234,10 @@ export function PixelSprite({
       {(isJosiah || isJulian || isJB) && (
         <>
           <polygon points="6,8 8,8 7.5,9.5 6.5,9.5" fill="#ffffff" />
-          <polygon points="6.8,8.5 7.2,8.5 7.2,11.5 6.8,11.5" fill={isJosiah ? '#38bdf8' : isJulian ? '#f59e0b' : '#ef4444'} />
+          <polygon
+            points="6.8,8.5 7.2,8.5 7.2,11.5 6.8,11.5"
+            fill={isJosiah ? '#38bdf8' : isJulian ? '#f59e0b' : '#ef4444'}
+          />
         </>
       )}
 
@@ -208,14 +252,27 @@ export function PixelSprite({
         <>
           <rect x="2" y="10.5" width="1" height="1" fill={skin} />
           {/* Coffee Mug with steam */}
-          <rect x="10.5" y="9.5" width="2.2" height="2.5" fill="#f8fafc" rx="0.5" />
+          <rect
+            x="10.5"
+            y="9.5"
+            width="2.2"
+            height="2.5"
+            fill="#f8fafc"
+            rx="0.5"
+          />
           <rect x="11" y="9" width="1.2" height="0.6" fill="#78350f" />
         </>
       ) : isTyping ? (
         <>
           {/* Active typing hands bobbing up and down */}
           <rect x="2" y={10.5 + typeBob} width="1.5" height="1.5" fill={skin} />
-          <rect x="10.5" y={10.5 + (typeBob > 0 ? 0 : 0.6)} width="1.5" height="1.5" fill={skin} />
+          <rect
+            x="10.5"
+            y={10.5 + (typeBob > 0 ? 0 : 0.6)}
+            width="1.5"
+            height="1.5"
+            fill={skin}
+          />
         </>
       ) : (
         <>
@@ -255,5 +312,5 @@ export function PixelSprite({
         </>
       )}
     </svg>
-  );
+  )
 }
