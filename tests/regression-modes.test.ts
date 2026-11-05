@@ -37,7 +37,7 @@ describe('Office Modes Regression Suite (Bugs 1 & 2 Verification)', () => {
       expect(path[path.length - 1]).toEqual(target)
     })
 
-    expect(targets.size).toBe(23)
+    expect(targets.size).toBe(ASSIGNED_DESKS.length)
   })
 
   it('Bug 2: COFFEE_BREAK sends all agents to valid pantry/break spots with A* paths', () => {
@@ -67,7 +67,7 @@ describe('Office Modes Regression Suite (Bugs 1 & 2 Verification)', () => {
       expect(path[path.length - 1]).toEqual(target)
     })
 
-    expect(targets.size).toBe(23)
+    expect(targets.size).toBe(ASSIGNED_DESKS.length)
   })
 
   it('FOCUS_WORK routes each agent precisely to their assigned desk', () => {

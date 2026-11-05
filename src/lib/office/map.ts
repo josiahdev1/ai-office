@@ -410,6 +410,19 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     monitors: 2,
     floor: 1,
   },
+  {
+    id: 'eng-7',
+    agentId: 'christian',
+    name: 'Christian',
+    room: 'Engineering Core',
+    deskGx: 4,
+    deskGy: 13,
+    chairGx: 5,
+    chairGy: 13,
+    facing: 'NW',
+    monitors: 2,
+    floor: 1,
+  },
 
   // 2. QA & SecOps NOC (3 Desks) - Facing NE towards monitors
   {

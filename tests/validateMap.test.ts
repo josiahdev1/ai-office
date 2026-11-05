@@ -90,7 +90,7 @@ describe('Isometric Office Map & Collision Validation (Bug 3 Prevention)', () =>
     const report = validateOfficeMap()
     expect(report.valid).toBe(true)
     expect(report.errors).toEqual([])
-    expect(report.stats.assignedDesks).toBe(23)
+    expect(report.stats.assignedDesks).toBe(24)
   })
 
   it('should have a valid, walkable elevator entrance connected to circulation on every floor', () => {
@@ -113,15 +113,15 @@ describe('Isometric Office Map & Collision Validation (Bug 3 Prevention)', () =>
     expect(errors).toEqual([])
   })
 
-  it('should assign all 23 resident desks to either Floor 1 (Engineering/QA/Ops) or Floor 2 (Growth/Intel/Cmd)', () => {
+  it('should assign all 24 resident desks to either Floor 1 (Engineering/QA/Ops) or Floor 2 (Growth/Intel/Cmd)', () => {
     const floor1Desks = ASSIGNED_DESKS.filter((d) => d.floor === 1)
     const floor2Desks = ASSIGNED_DESKS.filter((d) => d.floor === 2)
-    expect(floor1Desks.length).toBe(13)
+    expect(floor1Desks.length).toBe(14)
     expect(floor2Desks.length).toBe(10)
-    expect(floor1Desks.length + floor2Desks.length).toBe(23)
+    expect(floor1Desks.length + floor2Desks.length).toBe(24)
   })
 
-  it('should enforce that all 23 desk chairs have valid facing and point directly at their monitor', () => {
+  it('should enforce that all 24 desk chairs have valid facing and point directly at their monitor', () => {
     const errors = validateChairFacings(ASSIGNED_DESKS)
     expect(errors).toEqual([])
   })
@@ -135,6 +135,6 @@ describe('Isometric Office Map & Collision Validation (Bug 3 Prevention)', () =>
     expect(nwDesks.length).toBeGreaterThanOrEqual(10) // Behind view facing monitor
     expect(neDesks.length).toBeGreaterThanOrEqual(3)  // QA NOC rows facing up-right
     expect(seDesks.length).toBeGreaterThanOrEqual(4)  // Managers and back-to-back facing camera
-    expect(nwDesks.length + neDesks.length + seDesks.length).toBe(23)
+    expect(nwDesks.length + neDesks.length + seDesks.length).toBe(24)
   })
 })

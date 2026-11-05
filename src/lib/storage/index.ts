@@ -116,6 +116,7 @@ export const ROOM_DESK_SLOTS: Record<string, { id: string; room: string; x: numb
     { id: 'eng-4', room: 'Engineering Core', x: 4, y: 10 },
     { id: 'eng-5', room: 'Engineering Core', x: 4, y: 11 },
     { id: 'eng-6', room: 'Engineering Core', x: 4, y: 12 },
+    { id: 'eng-7', room: 'Engineering Core', x: 4, y: 13 },
   ],
   'QA & SecOps NOC': [
     { id: 'qa-1', room: 'QA & SecOps NOC', x: 2, y: 14 },
