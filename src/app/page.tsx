@@ -1529,20 +1529,20 @@ function HQCommandPage() {
           </div>
 
           {/* Section C: Live Telemetry Stream (Monospaced Terminal Feed) */}
-          <div className="flex-1 flex flex-col min-h-0 p-3">
+          <div className="shrink-0 flex flex-col p-3 pb-6">
             <div className="flex items-center justify-between pb-2 shrink-0">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-cyan-400" />
+                <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
                 <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
                   LIVE TELEMETRY STREAM
                 </span>
               </div>
-              <span className="font-mono text-[10px] text-slate-500">
+              <span className="font-mono text-[10px] font-semibold text-cyan-400">
                 {logs.length} EVENTS
               </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto rounded-lg border border-slate-800/80 bg-slate-950/90 p-2 font-mono text-[11px] space-y-1 shadow-inner">
+            <div className="h-64 overflow-y-auto rounded-lg border border-slate-800/80 bg-slate-950/90 p-2.5 font-mono text-[11px] space-y-1.5 shadow-inner">
               {logs.length === 0 ? (
                 <div className="text-slate-600 text-center py-4">
                   Listening for inter-agent messages and system logs...
@@ -1556,7 +1556,7 @@ function HQCommandPage() {
                   return (
                     <div
                       key={`log-${idx}`}
-                      className={`break-words leading-tight ${
+                      className={`break-words leading-relaxed border-b border-slate-900/80 pb-1 last:border-0 ${
                         isGo
                           ? 'text-amber-400 font-semibold'
                           : isErr
@@ -1565,7 +1565,7 @@ function HQCommandPage() {
                           ? 'text-emerald-300 font-medium'
                           : isComm
                           ? 'text-cyan-300'
-                          : 'text-slate-400'
+                          : 'text-slate-300'
                       }`}
                     >
                       {line}
