@@ -270,6 +270,49 @@ export default function EasyUpOfficeHQ() {
     }
   }
 
+  const handleApproveAction = async (
+    approvalId: string,
+    action: 'approve' | 'reject' | 'hold' | 'send_back' | 'instruct',
+    instruction?: string
+  ) => {
+    try {
+      const res = await fetch('/api/office/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          approvalId,
+          action,
+          resolvedBy: 'Josiah (Founder)',
+          instruction,
+        }),
+      })
+      const data = await res.json()
+      if (data.ok && data.remaining) {
+        setApprovals(data.remaining)
+      } else {
+        await handleRefreshAgents()
+      }
+    } catch (err) {
+      console.error('Error handling approve action:', err)
+    }
+  }
+
+  const handleCreateTask = async (task: { title: string; assignedTo: string; department: string }) => {
+    try {
+      await fetch('/api/office/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task: task.title,
+          agentId: task.assignedTo,
+        }),
+      })
+      await handleRefreshAgents()
+    } catch (err) {
+      console.error('Error creating task:', err)
+    }
+  }
+
   return (
     <main className="h-screen w-screen overflow-hidden bg-[#080b12]">
       <IsometricOffice
@@ -278,6 +321,8 @@ export default function EasyUpOfficeHQ() {
         onSelectAgent={(agent) => setSelectedAgent(agent)}
         selectedAgentId={selectedAgent?.id}
         onGoSignal={handleGoSignal}
+        onApproveAction={handleApproveAction}
+        onCreateTask={handleCreateTask}
         onDispatchDirective={handleDispatchDirective}
         logs={logs}
         doneToday={doneToday}

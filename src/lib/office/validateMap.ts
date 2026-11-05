@@ -20,6 +20,15 @@ import {
   GridCoord,
   DeskSlot,
 } from './map'
+import {
+  CAMPUS_CONFIG,
+  PARKING_BAYS,
+  ROAD_NODES,
+  ROAD_EDGES,
+  OUTDOOR_PROPS,
+  isPointInsideBuilding,
+  doesEdgeIntersectBuilding,
+} from './campusMap'
 
 export interface ValidationReport {
   valid: boolean
@@ -238,6 +247,77 @@ export function validateChairFacings(desks: DeskSlot[]): string[] {
 /**
  * Master validation suite running all checks
  */
+/**
+ * Validates outdoor campus integrity: road paths never intersect building,
+ * >= 20 bays with accessible and founder spots, and connected crosswalk.
+ */
+export function validateCampusMap(): string[] {
+  const errors: string[] = []
+
+  // 1. Car paths never traverse building interior
+  Object.values(ROAD_NODES).forEach((node) => {
+    if (isPointInsideBuilding(node)) {
+      errors.push(`Road node "${node.id}" at (${node.x}, ${node.y}) intersects building interior footprint`)
+    }
+  })
+
+  ROAD_EDGES.forEach((edge) => {
+    const from = ROAD_NODES[edge.from]
+    const to = ROAD_NODES[edge.to]
+    if (from && to && doesEdgeIntersectBuilding(from, to)) {
+      errors.push(`Road edge from "${edge.from}" to "${edge.to}" intersects building interior footprint`)
+    }
+  })
+
+  // 2. Parking lot capacity & reserved spots
+  if (PARKING_BAYS.length < 20) {
+    errors.push(`Campus parking lot must have at least 20 bays (found ${PARKING_BAYS.length})`)
+  }
+  const accessibleBays = PARKING_BAYS.filter((b) => b.type === 'accessible')
+  if (accessibleBays.length < 2) {
+    errors.push(`Campus parking lot must have at least 2 accessible bays (found ${accessibleBays.length})`)
+  }
+  const founderBay = PARKING_BAYS.find((b) => b.type === 'founder' || b.label.includes('FOUNDER'))
+  if (!founderBay) {
+    errors.push('Campus parking lot must have a reserved spot for "JOSIAH (FOUNDER)"')
+  }
+
+  // 3. Parking bay placement & aisle connectivity
+  PARKING_BAYS.forEach((bay) => {
+    if (isPointInsideBuilding(bay)) {
+      errors.push(`Parking bay "${bay.id}" at (${bay.x}, ${bay.y}) is inside building footprint`)
+    }
+    if (bay.y < 900 || bay.y > 1100 || bay.x < 300 || bay.x > 1100) {
+      errors.push(`Parking bay "${bay.id}" is outside reachable lot aisle boundary`)
+    }
+  })
+
+  // 4. Crosswalk connected to entrance walkway
+  const crosswalk = CAMPUS_CONFIG.crosswalk
+  const walkway = CAMPUS_CONFIG.walkwayPath
+  const lastWalkwayPoint = walkway[walkway.length - 1]
+  const dist = Math.hypot(lastWalkwayPoint.x - crosswalk.northEdge.x, lastWalkwayPoint.y - crosswalk.northEdge.y)
+  if (dist > 10) {
+    errors.push(`Entrance walkway is not connected to crosswalk (gap: ${dist}px)`)
+  }
+
+  // 5. Overlapping outdoor solid objects
+  const solidProps = OUTDOOR_PROPS.filter((p) => p.solid)
+  for (let i = 0; i < solidProps.length; i++) {
+    for (let j = i + 1; j < solidProps.length; j++) {
+      const p1 = solidProps[i]
+      const p2 = solidProps[j]
+      const dx = Math.abs(p1.x - p2.x)
+      const dy = Math.abs(p1.y - p2.y)
+      if (dx < (p1.w + p2.w) / 4 && dy < (p1.h + p2.h) / 4) {
+        errors.push(`Overlapping outdoor solid props: "${p1.id}" and "${p2.id}"`)
+      }
+    }
+  }
+
+  return errors
+}
+
 export function validateOfficeMap(): ValidationReport {
   const errors: string[] = []
   const warnings: string[] = []
@@ -255,6 +335,9 @@ export function validateOfficeMap(): ValidationReport {
 
   // 4. Desk chair facing alignment towards monitor
   errors.push(...validateChairFacings(ASSIGNED_DESKS))
+
+  // 5. Outdoor campus validation
+  errors.push(...validateCampusMap())
 
   // Collect all activity spots
   const allSpots: ActivitySpot[] = [

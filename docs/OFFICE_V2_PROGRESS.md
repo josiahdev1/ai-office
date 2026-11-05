@@ -151,3 +151,66 @@
   - Multi-floor navigation, elevator trips, and cross-floor `ALL_HANDS`
   - Simulation testing with `bridge/simulate.mjs`
   - Documentation: `docs/BRIDGE.md`
+
+---
+
+## Phase 15: Outdoor Campus + Real Moving Cars & Arrivals
+- [x] Campus Map Architecture:
+  - [x] Outdoor green lawn slab around the building, perimeter fence/hedge, entrance gate
+  - [x] Trees (multiple species with gentle sway), bushes, flower beds, garden pond, benches, bike rack, flagpole, lamp posts
+  - [x] Entrance walkway with canopy connecting to front doors
+  - [x] Paved road loop with center dashed line, solid shoulder lines, zebra crosswalk, curbs, bus shelter
+  - [x] Parking lot with $\ge 20$ numbered bays (22 bays total), wheel stops, 2 accessible bays, reserved bay for "JOSIAH (FOUNDER)", aisles $\ge 2$ tiles wide
+  - [x] Non-overlapping validation in `validateMap`: car paths never traverse building interior, parking bays reachable, crosswalk connects to walkway
+- [x] Procedural Isometric Vehicles (Canvas/SVG):
+  - [x] 6 body types: sedan, hatchback, SUV, pickup, van, small delivery truck, plus transit bus
+  - [x] 4 facings (`SE`, `SW`, `NE`, `NW`) with smooth corner rotation
+  - [x] Wheels, windows, soft shadows, headlights (night/rain), brake lights, turn signals
+- [x] Roadway & Parking Simulation:
+  - [x] Directed road graph with lane nodes and edges
+  - [x] Safe following distance (buffer), deceleration, crosswalk pedestrian yielding
+  - [x] Deadlock breaker ($>240$ frame timeout)
+  - [x] Capped at 12 moving vehicles
+  - [x] Employee bay reservation (never duplicate bay occupancy)
+  - [x] Ambient vehicles, food delivery van, transit bus drop-offs
+- [x] Commute & Shift-Change Life Cycle:
+  - [x] Agent arrival: car parks, agent steps out, walks path & crosswalk into building to desk
+  - [x] Agent departure: off-duty agent walks out, enters car, drives off campus
+  - [x] Shift change wave button & staggered load arrivals
+  - [x] Idempotent migration / db-map extension for `car_style`, `car_color`, `bay` (`0004_car_commute.sql`)
+- [x] Performance & Camera:
+  - [x] Offscreen/static caching for lawn, road, lot, and building slab
+  - [x] Dynamic pass for cars, walking agents, headlights, tree sway (60 FPS target)
+  - [x] Camera zoom out for whole campus; "Walk around" tour camera gliding through campus, entrance, lot, canteen, gym, The Brain
+
+---
+
+## Phase 16: Live Activity Counters + Decision Cards
+- [x] Live Counter Card (Bottom Right):
+  - [x] Monospace labels: `WORKING`, `EATING`, `IN THE GYM`, `IN MEETING`, `ON BREAK`, `ARRIVING`, `WAITING ON YOU`, `OPEN TASKS`, `ACCESSORIES`
+  - [x] Realtime counts dynamically derived from `office_agents`, `office_tasks`, `office_approvals`
+  - [x] Guaranteed parity: Counter count matches visible agents on screen performing that activity (100% mathematical parity verified in unit tests)
+  - [x] Clicking any counter filters/highlights those agents
+- [x] Activity Director:
+  - [x] Sane scheduler: assigns lunch window eating, off-duty gym ("whoever is off duty" label), active task working, approval waiting
+  - [x] Cap at ~30% team in gym or canteen unless forced by mode
+  - [x] Agents physically walk to the destination with proper facing and animation
+- [x] White Name-Tag Pills:
+  - [x] White rounded pill with agent name and role/task in monospace
+  - [x] Status dot: green (working), orange (waiting on you / approval), blue (talking), gray (idle), yellow (break)
+  - [x] Smart de-cluttering: nudge overlapping tags, collapse task text when zoomed out
+- [x] Cosmetic Accessories System:
+  - [x] Unlockable items (hats, glasses, headphones, desk plant/trophy) based on completed tasks
+  - [x] Rendered as subtle additions adhering to `keep-existing-sprites`
+  - [x] `ACCESSORIES` counter reflecting total unlocked items
+- [x] Decision Cards ("Needs You" Inbox) in Right Panel:
+  - [x] Tabs: `NEEDS YOU (n)` / `TEAM` / `BOARD` / `OFFICE`
+  - [x] Decision cards for `office_approvals` with agent/client/topic, date, and actions: `Approve`, `Hold`, `Send back`, `Instruct` (with text box)
+  - [x] API endpoints with Zod validation writing approval status & audit logs to Supabase
+  - [x] "Give an instruction" card creating a new task in `office_tasks`
+  - [x] `TEAM` tab listing agents with live role and status
+  - [x] `BOARD` tab with simple Kanban of tasks (`queued`, `working`, `needs approval`, `done`)
+- [x] Vitest Suite & Browser QA:
+  - [x] Unit tests for traffic following, collision avoidance, deadlock breaking, bay reservation, counter parity, arrival flow (75/75 passing)
+  - [x] Playwright screenshots: full campus view, parking lot, moving cars yielding at crosswalk, arrival walk, night mode with headlights/lamps, counter card matching screen, decision cards (`docs/campus-overview.png`, `docs/traffic-cars-crosswalk.png`, `docs/night-headlights-lamps.png`, `docs/live-counters-decision-cards.png`)
+

@@ -7,8 +7,11 @@ import React, {
   useCallback,
   useMemo,
 } from 'react'
-import { Agent, Approval, FacingDirection } from './types'
+import { Agent, Approval, FacingDirection, OfficeTask, VehicleState } from './types'
 import { PixelSprite } from './pixel-sprites'
+import { VehicleSprite } from './VehicleSprite'
+import { ActivityCounterCard } from './ActivityCounterCard'
+import { DecisionCardsPanel } from './DecisionCardsPanel'
 import { sfx } from './audio'
 import {
   calculateCorridorPath,
@@ -25,6 +28,12 @@ import {
   calculateFacingBetweenPoints,
   DeskSlot,
 } from '@/lib/office/map'
+import {
+  PARKING_BAYS,
+  OUTDOOR_PROPS,
+} from '@/lib/office/campusMap'
+import { TrafficSimulator } from '@/lib/office/trafficSim'
+import { computeAgentActivities, AgentDirectedActivity } from '@/lib/office/activityDirector'
 import { officeBus } from '@/lib/office/bus'
 import { dialogueEngine, generateAllHandsScript } from '@/lib/office/dialogueEngine'
 import { officeSupabase } from '@/lib/supabase/officeService'
@@ -32,11 +41,18 @@ import { officeSupabase } from '@/lib/supabase/officeService'
 export interface IsometricOfficeProps {
   agents: Agent[]
   approvals?: Approval[]
+  tasks?: OfficeTask[]
   onSelectAgent: (agent: Agent | null) => void
   selectedAgentId?: string | null
   speedMode?: '1x' | '2x' | '5x'
   onSpeedChange?: (speed: '1x' | '2x' | '5x') => void
   onGoSignal?: (approvalId: string, action: 'approve' | 'reject') => void
+  onApproveAction?: (
+    approvalId: string,
+    action: 'approve' | 'reject' | 'hold' | 'send_back' | 'instruct',
+    instruction?: string
+  ) => Promise<void>
+  onCreateTask?: (task: { title: string; assignedTo: string; department: string }) => Promise<void>
   onDispatchDirective?: (agentId: string, directive: string) => Promise<void>
   logs?: string[]
   doneToday?: Array<{ id: string; title: string; agent: string; time: string }>
@@ -84,9 +100,12 @@ ASSIGNED_DESKS.forEach((d) => {
 export function IsometricOffice({
   agents,
   approvals = [],
+  tasks = [],
   onSelectAgent,
   selectedAgentId,
   onGoSignal,
+  onApproveAction,
+  onCreateTask,
   onDispatchDirective,
   logs = [],
   doneToday = [],
@@ -95,11 +114,30 @@ export function IsometricOffice({
   onRefreshAgents,
 }: IsometricOfficeProps) {
   // Navigation & Viewport State
-  const [zoom, setZoom] = useState(0.85)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(0.7)
+  const [pan, setPan] = useState({ x: 0, y: -40 })
   const [isDragging, setIsDragging] = useState(false)
   const dragStartRef = useRef({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Decision Cards Panel & Live Counter Filter
+  const [showDecisionPanel, setShowDecisionPanel] = useState(false)
+  const [activeActivityFilter, setActiveActivityFilter] = useState<AgentDirectedActivity | null>(null)
+
+  // Camera Tour ("Walk around")
+  const [isTourActive, setIsTourActive] = useState(false)
+  const isTourActiveRef = useRef(isTourActive)
+  useEffect(() => {
+    isTourActiveRef.current = isTourActive
+  }, [isTourActive])
+  const tourStepRef = useRef(0)
+
+  // Traffic Simulation
+  const trafficSimRef = useRef<TrafficSimulator>(new TrafficSimulator({ maxMovingCars: 12 }))
+  const [trafficVehicles, setTrafficVehicles] = useState<VehicleState[]>([])
+
+  // Commute arrivals/departures tracking
+  const [arrivingAgentIds, setArrivingAgentIds] = useState<Set<string>>(new Set())
 
   // Office Modes & Audio
   const [currentMode, setCurrentMode] = useState<OfficeMode>('FOCUS_WORK')
@@ -109,6 +147,11 @@ export function IsometricOffice({
   useEffect(() => {
     soundEnabledRef.current = soundEnabled
   }, [soundEnabled])
+
+  // Computed Activities & Stats
+  const { activities: directedActivities, stats: activityStats } = useMemo(() => {
+    return computeAgentActivities(agents, currentMode, approvals, tasks, arrivingAgentIds)
+  }, [agents, currentMode, approvals, tasks, arrivingAgentIds])
 
   // Philippine Standard Time (PHT - UTC+8) Real-Time Clock
   const [phtTimeString, setPhtTimeString] = useState('')
@@ -217,11 +260,11 @@ export function IsometricOffice({
     if (!containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
     if (rect.width <= 0 || rect.height <= 0) return
-    const scaleX = (rect.width - 40) / 1400
-    const scaleY = (rect.height - 40) / 800
-    const fitScale = Math.max(0.6, Math.min(scaleX, scaleY, 1.05))
+    const scaleX = (rect.width - 40) / 1600
+    const scaleY = (rect.height - 40) / 1160
+    const fitScale = Math.max(0.55, Math.min(scaleX, scaleY, 0.95))
     setZoom(fitScale)
-    setPan({ x: 0, y: -20 })
+    setPan({ x: 0, y: -40 })
   }, [])
 
   useEffect(() => {
@@ -656,6 +699,38 @@ export function IsometricOffice({
         setRenderPositions(nextRender)
       }
 
+      // 3. Traffic Simulation Tick & Crosswalk Pedestrian Yielding
+      const isPedCrossing = Object.values(sim).some(
+        (s) => Math.abs(s.x - 700) < 45 && s.y >= 820 && s.y <= 920
+      )
+      trafficSimRef.current.setPedestrianCrossing(isPedCrossing)
+      trafficSimRef.current.tick(false)
+      if (frameTick % 2 === 0) {
+        setTrafficVehicles([...trafficSimRef.current.vehicles])
+      }
+
+      // 4. Camera Tour ("Walk around") Interpolation
+      if (isTourActiveRef.current) {
+        const waypoints = [
+          { x: 0, y: -40, zoom: 0.7 },
+          { x: 0, y: -200, zoom: 1.05 },
+          { x: -50, y: -360, zoom: 1.1 },
+          { x: -260, y: 100, zoom: 1.15 },
+          { x: 260, y: -60, zoom: 1.15 },
+          { x: 0, y: 0, zoom: 1.25 },
+          { x: 180, y: 140, zoom: 1.2 },
+        ]
+        if (frameTick % 280 === 0) {
+          tourStepRef.current = (tourStepRef.current + 1) % waypoints.length
+        }
+        const targetWp = waypoints[tourStepRef.current]
+        setPan((p) => ({
+          x: p.x + (targetWp.x - p.x) * 0.02,
+          y: p.y + (targetWp.y - p.y) * 0.02,
+        }))
+        setZoom((z) => z + (targetWp.zoom - z) * 0.02)
+      }
+
       animId = requestAnimationFrame(tick)
     }
 
@@ -682,9 +757,88 @@ export function IsometricOffice({
   // Mouse pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return
+    setIsTourActive(false) // Stop camera tour on any click or pan
     setIsDragging(true)
     dragStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }
   }
+
+  // Staggered commute wave (Shift change)
+  const handleShiftChange = useCallback(() => {
+    if (soundEnabledRef.current) sfx.playModeSwitch()
+    const movingCandidates = agents.slice(0, 4)
+    const arrivingSet = new Set<string>()
+
+    movingCandidates.forEach((ag, i) => {
+      setTimeout(() => {
+        arrivingSet.add(ag.id)
+        setArrivingAgentIds(new Set(arrivingSet))
+        trafficSimRef.current.spawnVehicle('eastbound', {
+          agentId: ag.id,
+          style: ag.car_style || 'sedan',
+          color: ag.car_color || '#38bdf8',
+        })
+        setTimeout(() => {
+          arrivingSet.delete(ag.id)
+          setArrivingAgentIds(new Set(arrivingSet))
+        }, 8000)
+      }, i * 2000)
+    })
+  }, [agents])
+
+  const handleApproveActionInternal = useCallback(
+    async (
+      approvalId: string,
+      action: 'approve' | 'reject' | 'hold' | 'send_back' | 'instruct',
+      instruction?: string
+    ) => {
+      if (onApproveAction) {
+        await onApproveAction(approvalId, action, instruction)
+        return
+      }
+      try {
+        const res = await fetch('/api/office/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            approvalId,
+            action,
+            resolvedBy: 'Josiah (Founder)',
+            instruction: instruction || null,
+          }),
+        })
+        const data = await res.json()
+        if (data.ok && onRefreshAgents) {
+          await onRefreshAgents()
+        }
+      } catch (err) {
+        console.error('Failed to submit approval action:', err)
+      }
+    },
+    [onApproveAction, onRefreshAgents]
+  )
+
+  const handleCreateTaskInternal = useCallback(
+    async (task: { title: string; assignedTo: string; department: string }) => {
+      if (onCreateTask) {
+        await onCreateTask(task)
+        return
+      }
+      try {
+        await fetch('/api/office/trigger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            task: task.title,
+            agentId: task.assignedTo,
+          }),
+        })
+        if (onRefreshAgents) await onRefreshAgents()
+      } catch (err) {
+        console.error('Failed to create task:', err)
+      }
+    },
+    [onCreateTask, onRefreshAgents]
+  )
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging) return
@@ -902,14 +1056,14 @@ export function IsometricOffice({
           className="relative origin-center transition-transform duration-75"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            width: '1400px',
-            height: '860px',
+            width: '1600px',
+            height: '1160px',
             flexShrink: 0,
           }}
         >
           {/* SVG Floor, Cutaway Charcoal Walls & Architecture */}
           <svg
-            viewBox="0 0 1400 860"
+            viewBox="0 0 1600 1160"
             className="pointer-events-none absolute inset-0 h-full w-full"
             style={{ imageRendering: 'pixelated' }}
           >
@@ -942,7 +1096,297 @@ export function IsometricOffice({
                 <stop offset="0%" stopColor="#22c55e" stopOpacity="0.9" />
                 <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
               </radialGradient>
+
+              {/* Street lamp night radial light puddle */}
+              <radialGradient id="lampLightPuddle" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#fef08a" stopOpacity="0.5" />
+                <stop offset="50%" stopColor="#fef9c3" stopOpacity="0.18" />
+                <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+              </radialGradient>
             </defs>
+
+            {/* ==================== OUTDOOR CAMPUS GROUNDS (PHASE 15) ==================== */}
+            {/* 1. Green Lawn Slab with 3D Bevel Extrusion */}
+            <polygon
+              points="700,30 1530,430 1250,1100 700,1140 150,1100 -130,430"
+              fill="#182e1c"
+              stroke="#0f1d12"
+              strokeWidth="2.5"
+            />
+            {/* Lawn Left Bevel Face */}
+            <polygon
+              points="-130,430 -130,446 150,1116 700,1156 700,1140 150,1100"
+              fill="#0d180f"
+            />
+            {/* Lawn Right Bevel Face */}
+            <polygon
+              points="700,1140 700,1156 1250,1116 1530,446 1530,430 1250,1100"
+              fill="#111f14"
+            />
+
+            {/* Perimeter Hedge & Stone Wall with Entrance Gate */}
+            <polygon
+              points="690,38 1520,434 1240,1094 700,1134 160,1094 -120,434"
+              fill="none"
+              stroke="#2f5436"
+              strokeWidth="4"
+              strokeDasharray="14 3"
+              strokeLinejoin="round"
+            />
+            {/* Security Entrance Gate at Bottom (700, 1140) */}
+            <rect x="670" y="1128" width="10" height="16" fill="#475569" stroke="#1e293b" />
+            <rect x="720" y="1128" width="10" height="16" fill="#475569" stroke="#1e293b" />
+            <line x1="680" y1="1136" x2="720" y2="1136" stroke="#94a3b8" strokeWidth="2" strokeDasharray="4 2" />
+
+            {/* 2. Zen Garden Koi Pond */}
+            <g transform="translate(180, 560)">
+              <ellipse cx="0" cy="0" rx="55" ry="32" fill="#1e293b" stroke="#64748b" strokeWidth="3" />
+              <ellipse cx="0" cy="0" rx="50" ry="28" fill="#0891b2" fillOpacity="0.75" />
+              {/* Lily Pads */}
+              <circle cx="-16" cy="-8" r="5" fill="#15803d" />
+              <circle cx="18" cy="6" r="6" fill="#15803d" />
+              <circle cx="8" cy="-12" r="4.5" fill="#16a34a" />
+              <text x="0" y="4" fill="#67e8f9" fontSize="6.5" fontFamily="monospace" textAnchor="middle" opacity="0.8">
+                ZEN POND
+              </text>
+            </g>
+
+            {/* 3. EasyUp Flagpole */}
+            <g transform="translate(620, 750)">
+              <line x1="0" y1="0" x2="0" y2="-65" stroke="#94a3b8" strokeWidth="2.5" />
+              <circle cx="0" cy="-66" r="2.5" fill="#fbbf24" />
+              {/* Flying Flag Banner */}
+              <polygon points="0,-64 26,-56 26,-42 0,-50" fill="#0284c7" stroke="#38bdf8" strokeWidth="0.8" />
+              <text x="12" y="-52" fill="#ffffff" fontSize="5" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                EASYUP
+              </text>
+            </g>
+
+            {/* 4. Front Entrance Paved Canopy Walkway */}
+            {/* Paved Walkway Path from front door (700, 696) to Crosswalk (700, 825) */}
+            <polygon
+              points="665,696 735,696 735,825 665,825"
+              fill="#cbd5e1"
+              stroke="#94a3b8"
+              strokeWidth="1.2"
+            />
+            {/* Walkway Paver Tiles */}
+            {[720, 750, 780, 810].map((wy) => (
+              <line key={`walkway-tile-${wy}`} x1="665" y1={wy} x2="735" y2={wy} stroke="#94a3b8" strokeWidth="0.8" strokeDasharray="3 3" />
+            ))}
+
+            {/* Glass Entrance Canopy */}
+            <g transform="translate(700, 715)">
+              <polygon points="-46,-12 46,-12 36,18 -36,18" fill="rgba(56, 189, 248, 0.25)" stroke="#38bdf8" strokeWidth="1.5" />
+              {/* Brushed Steel Canopy Pillars */}
+              <line x1="-36" y1="18" x2="-36" y2="35" stroke="#94a3b8" strokeWidth="3" />
+              <line x1="36" y1="18" x2="36" y2="35" stroke="#94a3b8" strokeWidth="3" />
+              <text x="0" y="4" fill="#38bdf8" fontSize="7" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                MAIN ENTRANCE
+              </text>
+            </g>
+
+            {/* 5. Two-Way Asphalt Roadway Loop */}
+            {/* Road Surface */}
+            <polygon
+              points="-130,825 1530,825 1530,915 -130,915"
+              fill="#1e2433"
+              stroke="#0f172a"
+              strokeWidth="2"
+            />
+            {/* Curbs with Granite Trim */}
+            <line x1="-130" y1="825" x2="1530" y2="825" stroke="#cbd5e1" strokeWidth="2.5" />
+            <line x1="-130" y1="915" x2="1530" y2="915" stroke="#cbd5e1" strokeWidth="2.5" />
+            {/* Center Dashed Yellow Divider */}
+            <line
+              x1="-130"
+              y1="870"
+              x2="1530"
+              y2="870"
+              stroke="#facc15"
+              strokeWidth="2"
+              strokeDasharray="12 8"
+            />
+            {/* Solid White Edge Shoulders */}
+            <line x1="-130" y1="835" x2="1530" y2="835" stroke="#f8fafc" strokeWidth="1.2" strokeOpacity="0.8" />
+            <line x1="-130" y1="905" x2="1530" y2="905" stroke="#f8fafc" strokeWidth="1.2" strokeOpacity="0.8" />
+
+            {/* Zebra Pedestrian Crosswalk */}
+            <g transform="translate(700, 870)">
+              {[-32, -20, -8, 4, 16, 28].map((cx) => (
+                <rect
+                  key={`crosswalk-bar-${cx}`}
+                  x={cx}
+                  y="-40"
+                  width="7"
+                  height="80"
+                  fill="#ffffff"
+                  fillOpacity="0.92"
+                />
+              ))}
+            </g>
+
+            {/* Transit Bus Stop with Shelter */}
+            <g transform="translate(940, 810)">
+              {/* Concrete Bus Pad */}
+              <rect x="-35" y="10" width="70" height="24" rx="2" fill="#334155" stroke="#64748b" />
+              {/* Glass Wall & Blue Canopy */}
+              <polygon points="-30,-8 30,-8 25,12 -25,12" fill="rgba(14, 165, 233, 0.4)" stroke="#0284c7" strokeWidth="1.5" />
+              <line x1="-25" y1="12" x2="-25" y2="24" stroke="#64748b" strokeWidth="2" />
+              <line x1="25" y1="12" x2="25" y2="24" stroke="#64748b" strokeWidth="2" />
+              {/* Bench */}
+              <rect x="-18" y="14" width="36" height="5" rx="1" fill="#78350f" />
+              {/* Sign Post */}
+              <line x1="32" y1="-14" x2="32" y2="20" stroke="#94a3b8" strokeWidth="1.5" />
+              <circle cx="32" cy="-16" r="6" fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
+              <text x="32" y="-14" fill="#ffffff" fontSize="6" fontFamily="monospace" fontWeight="bold" textAnchor="middle">BUS</text>
+            </g>
+
+            {/* 6. Employee & Visitor Parking Lot (22 Bays) */}
+            {/* Parking Lot Asphalt Slab */}
+            <polygon
+              points="280,920 1140,920 1140,1095 280,1095"
+              fill="#182030"
+              stroke="#334155"
+              strokeWidth="2"
+            />
+            {/* Driving Aisle Centerline at y = 1000 with Circulation Arrows */}
+            <line x1="300" y1="1000" x2="1120" y2="1000" stroke="#475569" strokeWidth="1" strokeDasharray="14 10" />
+            <text x="460" y="1003" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">▶ DRIVING AISLE ▶</text>
+            <text x="880" y="1003" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">▶ CIRCULATION ▶</text>
+
+            {/* Parking Bays */}
+            {PARKING_BAYS.map((bay) => {
+              const isFounder = bay.type === 'founder'
+              const isAccessible = bay.type === 'accessible'
+              const isNorthRow = bay.y < 1000
+
+              return (
+                <g key={bay.id} transform={`translate(${bay.x}, ${bay.y})`}>
+                  {/* Bay Painted Boundary Lines */}
+                  <line
+                    x1="-26"
+                    y1={isNorthRow ? -20 : -18}
+                    x2="-26"
+                    y2={isNorthRow ? 22 : 20}
+                    stroke="#f8fafc"
+                    strokeWidth="1.4"
+                    strokeOpacity="0.85"
+                  />
+                  <line
+                    x1="26"
+                    y1={isNorthRow ? -20 : -18}
+                    x2="26"
+                    y2={isNorthRow ? 22 : 20}
+                    stroke="#f8fafc"
+                    strokeWidth="1.4"
+                    strokeOpacity="0.85"
+                  />
+
+                  {/* Concrete Wheel Stop */}
+                  <rect
+                    x="-14"
+                    y={isNorthRow ? -18 : 16}
+                    width="28"
+                    height="4"
+                    rx="1"
+                    fill="#94a3b8"
+                    stroke="#475569"
+                    strokeWidth="0.8"
+                  />
+
+                  {/* Accessible Handicap Surface Paint */}
+                  {isAccessible && (
+                    <g>
+                      <rect x="-22" y="-12" width="44" height="24" rx="2" fill="#0284c7" fillOpacity="0.35" stroke="#38bdf8" strokeWidth="1" />
+                      <text x="0" y="4" fill="#ffffff" fontSize="10" textAnchor="middle">♿</text>
+                    </g>
+                  )}
+
+                  {/* Founder Josiah Dedicated Spot */}
+                  {isFounder && (
+                    <g>
+                      <rect x="-24" y="-14" width="48" height="28" rx="2" fill="#78350f" fillOpacity="0.4" stroke="#f59e0b" strokeWidth="1.5" />
+                      <text x="0" y="0" fill="#fbbf24" fontSize="6.5" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                        ★ JOSIAH ★
+                      </text>
+                      <text x="0" y="8" fill="#fef08a" fontSize="5" fontFamily="monospace" textAnchor="middle">
+                        FOUNDER
+                      </text>
+                    </g>
+                  )}
+
+                  {/* Painted Bay Number */}
+                  <text
+                    x="0"
+                    y={isNorthRow ? -7 : 10}
+                    fill={isFounder ? '#f59e0b' : '#94a3b8'}
+                    fontSize="7"
+                    fontFamily="monospace"
+                    fontWeight="bold"
+                    textAnchor="middle"
+                  >
+                    {bay.bayNumber.toString().padStart(2, '0')}
+                  </text>
+                </g>
+              )
+            })}
+
+            {/* 7. Outdoor Street Lamps with Night Radial Glow */}
+            {[
+              { id: 'l1', x: 660, y: 780 },
+              { id: 'l2', x: 740, y: 780 },
+              { id: 'l3', x: 340, y: 920 },
+              { id: 'l4', x: 700, y: 920 },
+              { id: 'l5', x: 1040, y: 920 },
+            ].map((lamp) => (
+              <g key={lamp.id} transform={`translate(${lamp.x}, ${lamp.y})`}>
+                {/* Radial Glow Puddle */}
+                <ellipse cx="0" cy="18" rx="36" ry="18" fill="url(#lampLightPuddle)" />
+                {/* Post & Fixture */}
+                <line x1="0" y1="0" x2="0" y2="18" stroke="#64748b" strokeWidth="2.2" />
+                <circle cx="0" cy="0" r="3.5" fill="#fef08a" stroke="#ca8a04" strokeWidth="1" />
+              </g>
+            ))}
+
+            {/* 8. Swaying Trees & Bushes */}
+            {OUTDOOR_PROPS.filter((p) => p.type.startsWith('tree_')).map((tree) => {
+              const isPine = tree.type === 'tree_pine'
+              const isMaple = tree.type === 'tree_maple'
+              const trunkColor = '#78350f'
+              const foliageColor = isPine ? '#14532d' : isMaple ? '#b91c1c' : '#15803d'
+              const foliageHighlight = isPine ? '#166534' : isMaple ? '#dc2626' : '#22c55e'
+
+              return (
+                <g key={tree.id} transform={`translate(${tree.x}, ${tree.y})`}>
+                  {/* Drop Shadow */}
+                  <ellipse cx="0" cy="8" rx={tree.w * 0.45} ry="12" fill="rgba(0, 0, 0, 0.45)" />
+                  {/* Trunk */}
+                  <rect x="-3" y="-12" width="6" height="20" fill={trunkColor} />
+                  {/* Foliage Layers */}
+                  <circle cx="-6" cy="-28" r={tree.w * 0.35} fill={foliageColor} />
+                  <circle cx="6" cy="-28" r={tree.w * 0.35} fill={foliageColor} />
+                  <circle cx="0" cy="-38" r={tree.w * 0.38} fill={foliageHighlight} />
+                </g>
+              )
+            })}
+
+            {/* 9. Procedural Isometric Vehicles (Parked & Moving on Road / Parking Lot) */}
+            {trafficVehicles.map((veh) => (
+              <VehicleSprite
+                key={veh.id}
+                id={veh.id}
+                style={veh.style}
+                color={veh.color}
+                facing={veh.facing}
+                x={veh.x}
+                y={veh.y}
+                isParked={veh.isParked}
+                headlightsOn={veh.headlightsOn}
+                brakeLightsOn={veh.brakeLightsOn}
+                blinkerOn={veh.blinkerOn}
+              />
+            ))}
 
             {/* ==================== 3D FLOATING SLAB EXTRUSION (BEVEL EDGES) ==================== */}
             {/* Left Slab Thickness Face */}
@@ -1036,7 +1480,9 @@ export function IsometricOffice({
                       strokeLinejoin: 'round',
                     }}
                   >
-                    {`// ${zone.label || zone.name}`}
+                    {zone.id === 'recreation'
+                      ? '// FITNESS & WELLNESS • WHOEVER IS OFF DUTY'
+                      : `// ${zone.label || zone.name}`}
                   </text>
                 </g>
               )
@@ -1674,7 +2120,7 @@ export function IsometricOffice({
           })}
 
           {/* ==================== DYNAMIC AGENTS LAYER (DEPTH SORTED) ==================== */}
-          {sortedAgents.map((agent) => {
+          {sortedAgents.map((agent, idx) => {
             const sim = renderPositions[agent.id] || {
               x: DESK_CONFIGS[agent.id]?.x || 540,
               y: DESK_CONFIGS[agent.id]?.y || 340,
@@ -1693,6 +2139,40 @@ export function IsometricOffice({
             const safeY = Number.isFinite(sim.y) ? sim.y : 340
             const zIndexVal = Math.max(10, Math.round(safeY) + (sim.isSeated ? 10 : 25))
 
+            // Activity Director mapping & Filter Highlight
+            const directedActivity: AgentDirectedActivity =
+              directedActivities[agent.id]?.activity || 'working'
+            const isDimmed = activeActivityFilter !== null && directedActivity !== activeActivityFilter
+            const isFilterHighlighted = activeActivityFilter !== null && directedActivity === activeActivityFilter
+
+            // Status dot color
+            const dotColor =
+              directedActivity === 'waiting_on_you'
+                ? 'bg-amber-500 animate-ping'
+                : directedActivity === 'working'
+                  ? 'bg-emerald-500'
+                  : directedActivity === 'eating'
+                    ? 'bg-amber-400'
+                    : directedActivity === 'gym'
+                      ? 'bg-cyan-400'
+                      : directedActivity === 'meeting'
+                        ? 'bg-purple-400'
+                        : directedActivity === 'arriving'
+                          ? 'bg-sky-400 animate-pulse'
+                          : 'bg-slate-400'
+
+            // Smart de-cluttering offset: alternate top spacing so adjacent agents don't overlap
+            const nameTagTopClass = idx % 2 === 0 ? '-top-5' : '-top-7'
+
+            // Cosmetic accessories for this agent
+            const agentAccessories: string[] = Array.isArray(agent.accessories)
+              ? agent.accessories
+              : agent.id === 'eng-1'
+                ? ['headphones', 'desk_plant']
+                : agent.id === 'growth-1'
+                  ? ['glasses', 'trophy']
+                  : []
+
             return (
               <div
                 key={agent.id}
@@ -1700,7 +2180,9 @@ export function IsometricOffice({
                   e.stopPropagation()
                   handleSelectAgentAndFollow(agent)
                 }}
-                className="absolute cursor-pointer transition-transform duration-75 hover:scale-110"
+                className={`absolute cursor-pointer transition-all duration-150 hover:scale-110 ${
+                  isDimmed ? 'opacity-35 hover:opacity-100' : 'opacity-100'
+                }`}
                 style={{
                   left: `${safeX - 19}px`,
                   top: `${safeY - 32}px`,
@@ -1711,21 +2193,23 @@ export function IsometricOffice({
                 {isSelected && (
                   <div className="pointer-events-none absolute -inset-2 animate-pulse rounded-full border-2 border-amber-400 bg-amber-400/20" />
                 )}
+                {isFilterHighlighted && !isSelected && (
+                  <div className="pointer-events-none absolute -inset-2 animate-pulse rounded-full border-2 border-cyan-400 bg-cyan-400/20" />
+                )}
 
-                {/* Floating Clean Name Tag with Status Dot */}
-                <div className="pointer-events-none absolute -top-5 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded border border-slate-700/80 bg-[#090d16]/95 px-1.5 py-0.5 whitespace-nowrap shadow-lg">
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      agent.status === 'working'
-                        ? 'animate-pulse bg-emerald-400'
-                        : agent.status === 'awaiting_approval'
-                          ? 'animate-ping bg-amber-400'
-                          : 'bg-slate-400'
-                    }`}
-                  />
-                  <span className="font-mono text-[9px] font-bold tracking-tight text-slate-100">
+                {/* Floating Clean White Pill Name Tag with Status Dot */}
+                <div
+                  className={`pointer-events-none absolute ${nameTagTopClass} left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-slate-200/90 bg-white/95 px-2 py-0.5 whitespace-nowrap shadow-md backdrop-blur-sm transition-opacity duration-150`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+                  <span className="font-mono text-[9px] font-bold tracking-tight text-slate-800">
                     {agent.name}
                   </span>
+                  {zoom >= 0.72 && (
+                    <span className="font-mono text-[8px] font-medium text-slate-500">
+                      • {agent.role}
+                    </span>
+                  )}
                 </div>
 
                 {/* Typewriter Speech Bubble */}
@@ -1733,6 +2217,35 @@ export function IsometricOffice({
                   <div className="animate-in fade-in zoom-in-95 pointer-events-none absolute -top-16 left-1/2 z-50 max-w-[220px] -translate-x-1/2 rounded-lg border border-cyan-400/80 bg-[#0c1322] px-2.5 py-1.5 font-mono text-[10px] text-cyan-200 shadow-2xl duration-150">
                     <p className="leading-tight">{speechText}</p>
                     <div className="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-r border-b border-cyan-400/80 bg-[#0c1322]" />
+                  </div>
+                )}
+
+                {/* Cosmetic Accessories Overlay (Preserves base sprite identity) */}
+                {agentAccessories.includes('headphones') && (
+                  <div
+                    className="pointer-events-none absolute -top-1 left-1/2 -translate-x-1/2 z-10"
+                    title="Dev Headphones"
+                  >
+                    <div className="h-1.5 w-4 rounded-t-full border-t-2 border-slate-900" />
+                  </div>
+                )}
+                {agentAccessories.includes('glasses') && (
+                  <div
+                    className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 z-10"
+                    title="Terminal Shades"
+                  >
+                    <div className="flex gap-0.5">
+                      <span className="h-1 w-1.5 bg-slate-900 rounded-xs" />
+                      <span className="h-1 w-1.5 bg-slate-900 rounded-xs" />
+                    </div>
+                  </div>
+                )}
+                {agentAccessories.includes('gold_star') && (
+                  <div
+                    className="pointer-events-none absolute top-4 right-0 z-10"
+                    title="Top Performer Pin"
+                  >
+                    <span className="text-[7px] leading-none">⭐</span>
                   </div>
                 )}
 
@@ -1848,6 +2361,64 @@ export function IsometricOffice({
             <span>⚙️</span>
             <span>Settings</span>
           </button>
+
+          {/* Walk around (Cinematic Camera Tour) */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsTourActive((prev) => !prev)
+            }}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-xs whitespace-nowrap transition active:scale-95 ${
+              isTourActive
+                ? 'bg-amber-600 font-bold text-white shadow-md shadow-amber-500/20 animate-pulse'
+                : 'bg-slate-900/80 text-amber-300 hover:bg-slate-800'
+            }`}
+            title="Walk around: Autonomous campus tour"
+          >
+            <span>🚶</span>
+            <span>{isTourActive ? 'Touring...' : 'Walk around'}</span>
+          </button>
+
+          {/* Shift change (Car commute wave) */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleShiftChange()
+            }}
+            className="flex cursor-pointer items-center gap-1.5 rounded-md bg-slate-900/80 px-3 py-1.5 font-mono text-xs whitespace-nowrap text-sky-300 transition hover:bg-slate-800 active:scale-95"
+            title="Shift change: Staggered car arrival wave"
+          >
+            <span>🔄</span>
+            <span>Shift change</span>
+          </button>
+
+          {/* Needs You Inbox Trigger */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowDecisionPanel(true)
+            }}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap transition active:scale-95 ${
+              approvals.length > 0
+                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/30'
+                : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800'
+            }`}
+            title="Needs You Inbox & Decision Cards"
+          >
+            <span>📬</span>
+            <span>Needs You</span>
+            {approvals.length > 0 && (
+              <span className="rounded-full bg-amber-950 px-1.5 py-0.2 font-mono text-[10px] font-black text-amber-300">
+                {approvals.length}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Center/Right: Interactive Office Modes (Focus Work, All Hands, Pantry, Gym) */}
@@ -1925,6 +2496,27 @@ export function IsometricOffice({
           </button>
         </div>
       </footer>
+
+      {/* ==================== 4b. LIVE ACTIVITY COUNTER CARD (BOTTOM RIGHT) ==================== */}
+      <div className="pointer-events-auto absolute right-3 bottom-16 z-30">
+        <ActivityCounterCard
+          stats={activityStats}
+          activeFilter={activeActivityFilter}
+          onSelectFilter={setActiveActivityFilter}
+        />
+      </div>
+
+      {/* ==================== 4c. DECISION CARDS PANEL (NEEDS YOU / TEAM / BOARD / OFFICE) ==================== */}
+      <DecisionCardsPanel
+        isOpen={showDecisionPanel}
+        onClose={() => setShowDecisionPanel(false)}
+        approvals={approvals}
+        tasks={tasks}
+        agents={agents}
+        onApproveAction={handleApproveActionInternal}
+        onCreateTask={handleCreateTaskInternal}
+        onSelectAgent={(ag) => handleSelectAgentAndFollow(ag)}
+      />
 
       {/* ==================== 5. TOAST NOTIFICATION ==================== */}
       {spawnToast && (

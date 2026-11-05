@@ -34,6 +34,33 @@ export interface OfficeAgentRow {
   appearance?: Record<string, unknown> | null
   last_active_at?: string | null
   updated_at?: string | null
+  kind?: 'resident' | 'external' | null
+  cli?: string | null
+  session_id?: string | null
+  cwd_hash?: string | null
+  current_tool?: string | null
+  tokens_used?: number | null
+  tool_call_count?: number | null
+  car_style?: string | null
+  car_color?: string | null
+  bay?: number | null
+  accessories?: string[] | null
+}
+
+export interface OfficeSessionRow {
+  id: string
+  kind: 'resident' | 'external'
+  cli: 'claude-code' | 'antigravity' | 'codex' | 'opencode' | 'cursor' | 'other'
+  session_id: string
+  cwd_hash: string | null
+  status: string
+  current_tool: string | null
+  tokens_used: number
+  tool_call_count: number
+  started_at: string
+  last_seen_at: string
+  ended_at: string | null
+  created_at?: string
 }
 
 export interface OfficeApprovalRow {
@@ -201,6 +228,82 @@ export function dbRowToAgent(row: OfficeAgentRow): Agent {
     desk_coord: { x: row.desk_x, y: row.desk_y },
     color: row.color || '#3b82f6',
     updated_at: row.updated_at || new Date().toISOString(),
+    kind: (row.kind as 'resident' | 'external') || 'resident',
+    cli: (row.cli as Agent['cli']) || undefined,
+    session_id: row.session_id || undefined,
+    cwd_hash: row.cwd_hash || undefined,
+    current_tool: row.current_tool || undefined,
+    tokens_used: row.tokens_used ?? 0,
+    tool_call_count: row.tool_call_count ?? 0,
+    car_style: (row.car_style as Agent['car_style']) || undefined,
+    car_color: row.car_color || undefined,
+    bay: row.bay ?? undefined,
+    accessories: Array.isArray(row.accessories) ? row.accessories : undefined,
+  }
+}
+
+/**
+ * Maps an office_sessions database row into an application guest Agent object
+ */
+export function sessionRowToGuestAgent(
+  session: OfficeSessionRow,
+  assignedGuestDesk?: { deskGx: number; deskGy: number; chairGx: number; chairGy: number; id: string }
+): Agent {
+  const cliName =
+    session.cli === 'claude-code'
+      ? 'Claude Code'
+      : session.cli === 'antigravity'
+        ? 'Antigravity CLI'
+        : session.cli === 'codex'
+          ? 'Codex CLI'
+          : session.cli
+
+  const cliBadge =
+    session.cli === 'claude-code'
+      ? 'cc'
+      : session.cli === 'antigravity'
+        ? 'ag'
+        : session.cli === 'codex'
+          ? 'cx'
+          : 'guest'
+
+  const desk = assignedGuestDesk || {
+    id: `guest-${session.session_id.slice(0, 6)}`,
+    deskGx: 6,
+    deskGy: 10,
+    chairGx: 7,
+    chairGy: 10,
+  }
+
+  const status = mapDbStatusToAgentStatus(session.status)
+  let subState: AgentSubState = 'seated'
+  if (session.status === 'working' || session.status === 'coding') {
+    subState = 'typing'
+  } else if (session.status === 'waiting_approval' || session.status === 'awaiting_approval') {
+    subState = 'reading_logs'
+  }
+
+  return {
+    id: `ext_${session.cli}_${session.session_id}`,
+    name: `${cliName} (${session.session_id.slice(0, 6)})`,
+    role: `Live ${cliName} Session`,
+    room: 'Guest Workstations',
+    tag: cliBadge.toUpperCase(),
+    status,
+    sub_state: subState,
+    current_task: session.current_tool ? `Executing ${session.current_tool}` : 'Connected via Bridge',
+    desk_id: desk.id,
+    desk_coord: { x: desk.deskGx, y: desk.deskGy },
+    color: session.cli === 'claude-code' ? '#f97316' : session.cli === 'antigravity' ? '#38bdf8' : '#10b981',
+    updated_at: session.last_seen_at || session.started_at,
+    kind: 'external',
+    cli: session.cli,
+    session_id: session.session_id,
+    cwd_hash: session.cwd_hash || undefined,
+    current_tool: session.current_tool || undefined,
+    tokens_used: session.tokens_used,
+    tool_call_count: session.tool_call_count,
+    session_started_at: session.started_at,
   }
 }
 
@@ -231,6 +334,17 @@ export function agentToDbRow(agent: Partial<Agent>): Partial<OfficeAgentRow> {
   if (agent.progress_pct !== undefined) row.progress = agent.progress_pct
   if (agent.desk_id !== undefined) row.seat_id = agent.desk_id
   if (agent.avatar !== undefined) row.avatar = agent.avatar
+  if (agent.kind !== undefined) row.kind = agent.kind
+  if (agent.cli !== undefined) row.cli = agent.cli
+  if (agent.session_id !== undefined) row.session_id = agent.session_id
+  if (agent.cwd_hash !== undefined) row.cwd_hash = agent.cwd_hash
+  if (agent.current_tool !== undefined) row.current_tool = agent.current_tool
+  if (agent.tokens_used !== undefined) row.tokens_used = agent.tokens_used
+  if (agent.tool_call_count !== undefined) row.tool_call_count = agent.tool_call_count
+  if (agent.car_style !== undefined) row.car_style = agent.car_style
+  if (agent.car_color !== undefined) row.car_color = agent.car_color
+  if (agent.bay !== undefined) row.bay = agent.bay
+  if (agent.accessories !== undefined) row.accessories = agent.accessories
   
   row.updated_at = new Date().toISOString()
   return row

@@ -17,10 +17,12 @@ export async function POST(req: Request) {
       )
     }
 
-    const { approvalId, action } = parseResult.data
+    const { approvalId, action, resolvedBy, instruction } = parseResult.data
     const { remaining, logs, resolvedItem } = await resolveApproval(
       approvalId,
-      action
+      action,
+      resolvedBy,
+      instruction
     )
 
     return NextResponse.json({

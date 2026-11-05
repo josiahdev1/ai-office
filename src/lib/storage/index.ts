@@ -26,8 +26,9 @@ import {
 
 export const ApprovalRequestSchema = z.object({
   approvalId: z.string().min(1, 'approvalId is required'),
-  action: z.enum(['approve', 'reject']),
+  action: z.enum(['approve', 'reject', 'hold', 'send_back', 'instruct']),
   resolvedBy: z.string().optional(),
+  instruction: z.string().optional(),
 })
 
 export const TriggerRequestSchema = z.object({
@@ -361,8 +362,9 @@ export async function updateAgent(
  */
 export async function resolveApproval(
   approvalId: string,
-  action: 'approve' | 'reject',
-  resolvedBy = 'Josiah'
+  action: 'approve' | 'reject' | 'hold' | 'send_back' | 'instruct',
+  resolvedBy = 'Josiah',
+  instruction?: string
 ): Promise<{ remaining: Approval[]; logs: string[]; resolvedItem?: Approval }> {
   const supabase = getSupabase()
   let resolvedItem: Approval | undefined
@@ -380,38 +382,70 @@ export async function resolveApproval(
     }
 
     // 2. Update status in office_approvals
+    const targetStatus =
+      action === 'approve'
+        ? 'approved'
+        : action === 'reject'
+          ? 'rejected'
+          : action === 'hold'
+            ? 'hold'
+            : action === 'send_back'
+              ? 'sent_back'
+              : 'instructed'
+
     await supabase
       .from('office_approvals')
       .update({
-        status: action === 'approve' ? 'approved' : 'rejected',
+        status: targetStatus,
         resolved_by: resolvedBy,
         resolved_at: new Date().toISOString(),
       })
       .eq('id', approvalId)
 
     // 3. Write audit log to office_logs
+    const logMsg =
+      action === 'instruct'
+        ? `[INSTRUCT] User instruction sent to ${existing?.requested_by || 'agent'}: "${instruction || 'Proceed with updated directive'}"`
+        : action === 'send_back'
+          ? `[SEND_BACK] Approval returned to ${existing?.requested_by || 'agent'} for revision.`
+          : action === 'hold'
+            ? `[HOLD] Approval placed on hold by ${resolvedBy}.`
+            : `[GO-SIGNAL] ${action.toUpperCase()} recorded for "${existing?.title || approvalId}".`
+
     await supabase.from('office_logs').insert(
       logToDbRow({
         category: 'approval',
         level: 'audit',
         agentName: resolvedBy,
-        message: `[GO-SIGNAL] ${action.toUpperCase()} granted for approval "${existing?.title || approvalId}".`,
-        details: { approvalId, action, resolvedBy },
+        message: logMsg,
+        details: { approvalId, action, resolvedBy, instruction },
       })
     )
 
-    // 4. If approved, advance agent state in office_agents
-    if (existing && action === 'approve' && existing.requested_by) {
+    // 4. If approved or instructed, advance agent state in office_agents
+    if (existing && existing.requested_by) {
       const agentId = existing.requested_by.toLowerCase().replace(/\s+/g, '_')
-      await supabase
-        .from('office_agents')
-        .update({
-          status: 'coding',
-          sub_state: 'typing',
-          current_task: `Executing approved Go-Signal: ${existing.title}`,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', agentId)
+      if (action === 'approve') {
+        await supabase
+          .from('office_agents')
+          .update({
+            status: 'coding',
+            sub_state: 'typing',
+            current_task: `Executing approved Go-Signal: ${existing.title}`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', agentId)
+      } else if (action === 'instruct' && instruction) {
+        await supabase
+          .from('office_agents')
+          .update({
+            status: 'coding',
+            sub_state: 'typing',
+            current_task: `Directive: ${instruction}`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', agentId)
+      }
     }
   }
 

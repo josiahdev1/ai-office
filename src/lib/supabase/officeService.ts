@@ -88,6 +88,21 @@ class SupabaseOfficeService {
     return this.isSupabaseReady
   }
 
+  public getClient() {
+    return this.client
+  }
+
+  public async upsertSession(sessionPayload: Record<string, unknown>): Promise<boolean> {
+    try {
+      const { error } = await this.client.from('office_sessions').upsert(sessionPayload, {
+        onConflict: 'session_id',
+      })
+      return !error
+    } catch {
+      return false
+    }
+  }
+
   /**
    * Fetch table row counts for DB CONNECTED status reporting.
    */

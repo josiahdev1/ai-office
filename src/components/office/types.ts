@@ -55,6 +55,56 @@ export interface Agent {
   tokens_used?: number
   tool_call_count?: number
   session_started_at?: string
+  car_style?: CarStyle
+  car_color?: string
+  bay?: number
+  accessories?: string[]
+}
+
+export type CarStyle = 'sedan' | 'hatchback' | 'suv' | 'pickup' | 'van' | 'truck' | 'bus'
+
+export interface VehicleState {
+  id: string
+  style: CarStyle
+  color: string
+  facing: FacingDirection
+  x: number
+  y: number
+  speed: number
+  targetNodeId?: string
+  isParked: boolean
+  bayId?: string
+  headlightsOn: boolean
+  brakeLightsOn: boolean
+  blinkerOn: boolean
+  isWaitingPedestrian: boolean
+  assignedAgentId?: string
+  idleWaitFrames: number
+}
+
+export interface ActivityCounterStats {
+  working: number
+  eating: number
+  gym: number
+  meeting: number
+  break: number
+  arriving: number
+  waiting_on_you: number
+  open_tasks: number
+  accessories: number
+}
+
+export interface OfficeTask {
+  id: string
+  title: string
+  description?: string
+  assigned_to?: string
+  department: string
+  status: 'queued' | 'working' | 'needs_approval' | 'done'
+  priority?: 'low' | 'medium' | 'high' | 'critical'
+  progress?: number
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Approval {

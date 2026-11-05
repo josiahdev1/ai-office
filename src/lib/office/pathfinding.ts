@@ -12,6 +12,9 @@ import {
   PANTRY_ACTIVITY_SPOTS,
   GYM_ACTIVITY_SPOTS,
   GridCoord,
+  FloorNumber,
+  ELEVATOR_CONFIG,
+  getAgentAssignedFloor,
 } from './map'
 
 export interface Point2D {
@@ -350,5 +353,87 @@ export function getModeTargets(
 
     default:
       return deskCoord
+  }
+}
+
+/**
+ * Returns target floor for office mode
+ */
+export function getModeTargetFloor(
+  mode: OfficeMode,
+  agentId: string,
+  defaultFloor: FloorNumber = 1
+): FloorNumber {
+  switch (mode) {
+    case 'ALL_HANDS':
+      return 3 // The Brain is on Top Floor (Floor 3)
+    case 'COFFEE_BREAK':
+    case 'RECREATION':
+      return 0 // Canteen and Gym are on Ground Floor (Floor 0)
+    case 'FOCUS_WORK':
+      return getAgentAssignedFloor(agentId)
+    default:
+      return defaultFloor
+  }
+}
+
+export interface MultiFloorPath {
+  startFloor: FloorNumber
+  targetFloor: FloorNumber
+  needsElevator: boolean
+  pathToElevator: Point2D[]
+  elevatorDoorCoord: Point2D
+  elevatorShaftCoord: Point2D
+  pathFromElevator: Point2D[]
+  finalTarget: Point2D
+}
+
+/**
+ * Calculates inter-floor routing through the express elevator
+ */
+export function calculateMultiFloorRoute(
+  startFloor: FloorNumber,
+  startPos: Point2D,
+  targetFloor: FloorNumber,
+  finalTarget: Point2D
+): MultiFloorPath {
+  const elevatorDoorScreen = gridToScreen(
+    ELEVATOR_CONFIG.doorGx,
+    ELEVATOR_CONFIG.doorGy
+  )
+  const elevatorShaftScreen = gridToScreen(
+    ELEVATOR_CONFIG.shaftGx,
+    ELEVATOR_CONFIG.shaftGy
+  )
+
+  if (startFloor === targetFloor) {
+    const directPath = calculateCorridorPath(startPos, finalTarget)
+    return {
+      startFloor,
+      targetFloor,
+      needsElevator: false,
+      pathToElevator: [],
+      elevatorDoorCoord: elevatorDoorScreen,
+      elevatorShaftCoord: elevatorShaftScreen,
+      pathFromElevator: directPath,
+      finalTarget,
+    }
+  }
+
+  // Leg 1: Path on current floor to elevator door
+  const pathToElevator = calculateCorridorPath(startPos, elevatorDoorScreen)
+
+  // Leg 2: Path from elevator door on target floor to final target
+  const pathFromElevator = calculateCorridorPath(elevatorDoorScreen, finalTarget)
+
+  return {
+    startFloor,
+    targetFloor,
+    needsElevator: true,
+    pathToElevator,
+    elevatorDoorCoord: elevatorDoorScreen,
+    elevatorShaftCoord: elevatorShaftScreen,
+    pathFromElevator,
+    finalTarget,
   }
 }
