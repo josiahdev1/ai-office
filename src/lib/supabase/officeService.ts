@@ -11,6 +11,7 @@
  */
 
 import { createClient as createBrowserSupabase } from '@/utils/supabase/client'
+import { createClient as createSupabaseJsClient, SupabaseClient } from '@supabase/supabase-js'
 import { Agent, Approval } from '@/components/office/types'
 import {
   dbRowToAgent,
@@ -59,8 +60,38 @@ export interface OfficeSettingsRecord {
 }
 
 class SupabaseOfficeService {
-  private client = createBrowserSupabase()
+  private _client: SupabaseClient | null = null
   private isSupabaseReady: boolean | null = null
+
+  /**
+   * Lazily initializes the Supabase client so module evaluation during `next build` on Vercel
+   * never throws when build-time env vars are absent.
+   */
+  private get client(): SupabaseClient {
+    if (this._client) return this._client
+
+    const url =
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      'https://spacfnutrnhzxxbkjrji.supabase.co'
+    const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    const anonKey =
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      'sb_publishable_dkDalV5egnrWSKymMPEjvg_E81nLzdi'
+
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && publishableKey) {
+        this._client = createBrowserSupabase() as unknown as SupabaseClient
+        return this._client
+      }
+    } catch {
+      // Fall back to direct @supabase/supabase-js client
+    }
+
+    this._client = createSupabaseJsClient(url, publishableKey || anonKey, {
+      auth: { persistSession: false },
+    })
+    return this._client
+  }
 
   /**
    * Probes whether office_agents table exists and is accessible.
