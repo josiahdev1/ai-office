@@ -15,6 +15,7 @@ import { CameraController } from './CameraController'
 export interface OfficeSceneProps {
   agents: Agent[]
   mode: DepartmentMode
+  agentRouteOverrides?: Record<string, DepartmentMode>
   selectedAgentId?: string | null
   onSelectAgent: (agent: Agent) => void
 }
@@ -22,6 +23,7 @@ export interface OfficeSceneProps {
 export function OfficeScene({
   agents,
   mode,
+  agentRouteOverrides = {},
   selectedAgentId,
   onSelectAgent,
 }: OfficeSceneProps) {
@@ -55,20 +57,17 @@ export function OfficeScene({
     // Night Mode (19:00 - 06:00)
     return {
       sunColor: '#60a5fa',
-      sunIntensity: 0.6,
-      ambientColor: '#1e293b',
-      ambientIntensity: 0.45,
+      sunIntensity: 0.65,
+      ambientColor: '#334155',
+      ambientIntensity: 0.55,
       sunPosition: [30, 50, 40] as [number, number, number],
     }
   }, [])
 
-  // Build a map of agents to render, ensuring all 24 database agents are positioned
   const renderedAgents = useMemo(() => {
     return agents.map((agent, idx) => {
-      // Find workstation preset or assign fallback
       let ws = AGENT_WORKSTATIONS_3D[agent.id]
       if (!ws) {
-        // Fallback workstation
         const keys = Object.keys(AGENT_WORKSTATIONS_3D)
         const fallbackKey = keys[idx % keys.length]
         ws = {
@@ -92,24 +91,23 @@ export function OfficeScene({
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-near={0.5}
-        shadow-camera-far={150}
-        shadow-camera-left={-38}
-        shadow-camera-right={38}
-        shadow-camera-top={38}
-        shadow-camera-bottom={-38}
+        shadow-camera-far={160}
+        shadow-camera-left={-44}
+        shadow-camera-right={44}
+        shadow-camera-top={44}
+        shadow-camera-bottom={-44}
         shadow-bias={-0.0005}
       />
-      {/* Soft Blue Sky Fill */}
       <hemisphereLight
         color="#38bdf8"
         groundColor="#0f172a"
-        intensity={0.35}
+        intensity={0.38}
       />
 
       {/* 2. Interactive Camera Controller with Mode Lerping */}
       <CameraController mode={mode} />
 
-      {/* 3. Procedural 3x3 Architectural Building with Cutaways */}
+      {/* 3. Procedural 3x3 Architectural Building + Outdoor Highway & Parking */}
       <BuildingArchitecture />
 
       {/* 4. Central Command Center ("The Brain") Holographic Core */}
@@ -118,7 +116,7 @@ export function OfficeScene({
       {/* 5. Departmental Props & Furniture */}
       <OfficeFurniture />
 
-      {/* 6. All 24 Database Agents Stationed at Workstations */}
+      {/* 6. All Registered Database Agents with A* Walking & Distinct Styles */}
       <group name="AgentFleet">
         {renderedAgents.map(({ agent, workstation }) => (
           <ProceduralAgent3D
@@ -126,6 +124,7 @@ export function OfficeScene({
             agent={agent}
             workstation={workstation}
             mode={mode}
+            routeOverride={agentRouteOverrides[agent.id]}
             isSelected={selectedAgentId === agent.id}
             onSelect={onSelectAgent}
           />

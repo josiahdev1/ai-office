@@ -503,35 +503,142 @@ export interface CameraPreset {
 
 export const CAMERA_PRESETS: Record<DepartmentMode, CameraPreset> = {
   OVERVIEW: {
-    target: [0, 0, 0],
-    zoom: 20,
+    target: [2, 0, 2],
+    zoom: 16.5,
   },
   FOCUS_WORK: {
     target: [-8, 0, -14],
-    zoom: 34,
+    zoom: 32,
   },
   ALL_HANDS: {
     target: [0, 0, 0],
-    zoom: 38,
+    zoom: 36,
   },
   PANTRY: {
     target: [-16, 0, 16],
-    zoom: 34,
+    zoom: 32,
   },
   GYM: {
     target: [0, 0, 16],
-    zoom: 34,
+    zoom: 32,
   },
 }
 
+export interface ParkedVehicleConfig {
+  id: string
+  pos: [number, number, number]
+  rotY: number
+  color: string
+  type: 'sedan' | 'suv' | 'scooter'
+}
+
+export const PARKED_VEHICLES: ParkedVehicleConfig[] = [
+  { id: 'park-1', pos: [26.8, 0, -17], rotY: Math.PI / 2, color: '#ef4444', type: 'sedan' },
+  { id: 'park-2', pos: [26.8, 0, -12], rotY: Math.PI / 2, color: '#3b82f6', type: 'suv' },
+  { id: 'park-3', pos: [26.8, 0, -7], rotY: Math.PI / 2, color: '#10b981', type: 'sedan' },
+  { id: 'park-4', pos: [26.8, 0, -2], rotY: Math.PI / 2, color: '#f59e0b', type: 'scooter' },
+  { id: 'park-5', pos: [26.8, 0, 3], rotY: Math.PI / 2, color: '#8b5cf6', type: 'sedan' },
+  { id: 'park-6', pos: [26.8, 0, 8], rotY: Math.PI / 2, color: '#06b6d4', type: 'suv' },
+]
+
+export interface HighwayCarConfig {
+  id: string
+  axis: 'x' | 'z'
+  laneCoord: number // fixed Z for 'x' axis, fixed X for 'z' axis
+  dir: 1 | -1
+  speed: number
+  initialOffset: number
+  color: string
+  range: [number, number]
+}
+
+export const HIGHWAY_CARS: HighwayCarConfig[] = [
+  // South Highway (Dual-lane along Z = 28.5 and Z = 31.5)
+  {
+    id: 'hwy-car-1',
+    axis: 'x',
+    laneCoord: 28.2,
+    dir: 1,
+    speed: 9.5,
+    initialOffset: -24,
+    color: '#38bdf8',
+    range: [-36, 36],
+  },
+  {
+    id: 'hwy-car-2',
+    axis: 'x',
+    laneCoord: 28.2,
+    dir: 1,
+    speed: 9.5,
+    initialOffset: 10,
+    color: '#f43f5e',
+    range: [-36, 36],
+  },
+  {
+    id: 'hwy-car-3',
+    axis: 'x',
+    laneCoord: 31.4,
+    dir: -1,
+    speed: 8.2,
+    initialOffset: 22,
+    color: '#f59e0b',
+    range: [-36, 36],
+  },
+  {
+    id: 'hwy-car-4',
+    axis: 'x',
+    laneCoord: 31.4,
+    dir: -1,
+    speed: 8.2,
+    initialOffset: -12,
+    color: '#a855f7',
+    range: [-36, 36],
+  },
+  // East Avenue (Dual-lane along X = 32.5)
+  {
+    id: 'hwy-car-5',
+    axis: 'z',
+    laneCoord: 32.5,
+    dir: 1,
+    speed: 7.8,
+    initialOffset: -20,
+    color: '#10b981',
+    range: [-34, 25],
+  },
+  {
+    id: 'hwy-car-6',
+    axis: 'z',
+    laneCoord: 35.2,
+    dir: -1,
+    speed: 8.6,
+    initialOffset: 15,
+    color: '#e2e8f0',
+    range: [-34, 25],
+  },
+]
+
+export const STREETLIGHT_POSITIONS: [number, number, number][] = [
+  [-20, 0, 25.4],
+  [-8, 0, 25.4],
+  [8, 0, 25.4],
+  [20, 0, 25.4],
+  [25.4, 0, -18],
+  [25.4, 0, -6],
+  [25.4, 0, 6],
+  [25.4, 0, 18],
+]
+
 /**
  * Helper to resolve an agent's active 3D/2D world coordinate for any DepartmentMode
+ * or individual agent route override.
  */
 export function getAgentTargetPosition(
   ws: AgentWorkstation3D,
-  mode: DepartmentMode
+  globalMode: DepartmentMode,
+  overrideMode?: DepartmentMode
 ): [number, number, number] {
-  switch (mode) {
+  const effectiveMode = overrideMode || globalMode
+  switch (effectiveMode) {
     case 'ALL_HANDS':
       return ws.allHandsPos
     case 'PANTRY':
@@ -571,3 +678,4 @@ export function projectIso3DTo2D(
     depth: x + z + y * 0.5,
   }
 }
+

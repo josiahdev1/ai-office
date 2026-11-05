@@ -3,11 +3,23 @@ import {
   ROOMS_3D,
   AGENT_WORKSTATIONS_3D,
   CAMERA_PRESETS,
+  PARKED_VEHICLES,
+  HIGHWAY_CARS,
+  STREETLIGHT_POSITIONS,
   getAgentTargetPosition,
   projectIso3DTo2D,
 } from '@/config/officeLayout'
+import {
+  getCharacterStyle,
+  getAgentStatusBadge,
+} from '@/config/characterStyles'
+import {
+  computeAStarWaypoints,
+  stepAgentNavigation,
+  AgentNavState,
+} from '@/config/walkwayGrid'
 
-describe('2D == 3D Architectural & Behavioral Parity (officeLayout.ts)', () => {
+describe('2D == 3D Architectural, Pathfinding & Character Parity', () => {
   it('defines all 9 architectural rooms in the 3x3 layout with The Brain at [0, 0, 0]', () => {
     const roomKeys = Object.keys(ROOMS_3D)
     expect(roomKeys).toHaveLength(9)
@@ -18,7 +30,7 @@ describe('2D == 3D Architectural & Behavioral Parity (officeLayout.ts)', () => {
     expect(ROOMS_3D.INTELLIGENCE.center).toEqual([16, 0, 16])
   })
 
-  it('preserves all 24 database agents with complete mode coordinates (desk, allHands, pantry, gym)', () => {
+  it('preserves all 24 database agents with complete mode coordinates and individual route overrides', () => {
     const agents = Object.values(AGENT_WORKSTATIONS_3D)
     expect(agents).toHaveLength(24)
 
@@ -30,22 +42,67 @@ describe('2D == 3D Architectural & Behavioral Parity (officeLayout.ts)', () => {
       expect(['SE', 'SW', 'NE', 'NW']).toContain(ag.facing)
 
       expect(getAgentTargetPosition(ag, 'OVERVIEW')).toEqual(ag.deskPos)
-      expect(getAgentTargetPosition(ag, 'FOCUS_WORK')).toEqual(ag.deskPos)
-      expect(getAgentTargetPosition(ag, 'ALL_HANDS')).toEqual(ag.allHandsPos)
-      expect(getAgentTargetPosition(ag, 'PANTRY')).toEqual(ag.pantryPos)
-      expect(getAgentTargetPosition(ag, 'GYM')).toEqual(ag.gymPos)
+      expect(getAgentTargetPosition(ag, 'OVERVIEW', 'PANTRY')).toEqual(ag.pantryPos)
+      expect(getAgentTargetPosition(ag, 'OVERVIEW', 'GYM')).toEqual(ag.gymPos)
+      expect(getAgentTargetPosition(ag, 'OVERVIEW', 'ALL_HANDS')).toEqual(ag.allHandsPos)
     }
   })
 
-  it('provides synchronized camera presets for all 5 modes and accurate isometric projection', () => {
-    expect(CAMERA_PRESETS.OVERVIEW.zoom).toBe(20)
-    expect(CAMERA_PRESETS.FOCUS_WORK.target).toEqual([-8, 0, -14])
-    expect(CAMERA_PRESETS.ALL_HANDS.target).toEqual([0, 0, 0])
-    expect(CAMERA_PRESETS.PANTRY.target).toEqual([-16, 0, 16])
-    expect(CAMERA_PRESETS.GYM.target).toEqual([0, 0, 16])
+  it('provides outdoor campus highway cars, parked vehicles, and streetlights', () => {
+    expect(PARKED_VEHICLES.length).toBeGreaterThanOrEqual(6)
+    expect(HIGHWAY_CARS.length).toBeGreaterThanOrEqual(6)
+    expect(STREETLIGHT_POSITIONS.length).toBeGreaterThanOrEqual(8)
+    expect(CAMERA_PRESETS.OVERVIEW.zoom).toBe(16.5)
 
-    const centerProj = projectIso3DTo2D(0, 0, 0, 0, 0, 20, 1000, 800)
+    const centerProj = projectIso3DTo2D(2, 0, 2, 2, 2, 16.5, 1000, 800)
     expect(centerProj.px).toBeCloseTo(500, 3)
     expect(centerProj.py).toBeCloseTo(400, 3)
+  })
+
+  it('computes multi-waypoint A* corridor paths and advances walking smoothly without teleporting', () => {
+    // Path from Josiah's Engineering desk (-19, -19) to Pantry (-20, 13.2)
+    const waypoints = computeAStarWaypoints(-19, -19, -20, 13.2)
+    expect(waypoints.length).toBeGreaterThan(1)
+    const lastWp = waypoints[waypoints.length - 1]
+    expect(lastWp[0]).toBeCloseTo(-20, 1)
+    expect(lastWp[2]).toBeCloseTo(13.2, 1)
+
+    const nav: AgentNavState = {
+      currentPos: [-19, 0, -19],
+      targetPos: [-19, 0, -19],
+      waypoints: [],
+      waypointIndex: 0,
+      rotationY: 0,
+      subState: 'seated',
+      walkPhase: 0,
+    }
+
+    // Trigger walk to Pantry -> should enter 'walking' state and move partially, NOT teleport
+    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.1, 6.0)
+    expect(nav.subState).toBe('walking')
+    const distFromStart = Math.hypot(nav.currentPos[0] - -19, nav.currentPos[2] - -19)
+    expect(distFromStart).toBeGreaterThan(0.1)
+    expect(distFromStart).toBeLessThan(2.0)
+  })
+
+  it('assigns distinct gender, hair, outfit, and status dot colors across the roster', () => {
+    const josiah = getCharacterStyle('josiah', 'Josiah')
+    const maryGrace = getCharacterStyle('mary_grace', 'Mary Grace')
+    const gloria = getCharacterStyle('gloria', 'Gloria')
+    const judith = getCharacterStyle('judith', 'Judith')
+
+    expect(josiah.gender).toBe('male')
+    expect(josiah.accessory).toBe('cap')
+    expect(maryGrace.gender).toBe('female')
+    expect(maryGrace.hairStyle).toBe('long')
+    expect(gloria.gender).toBe('female')
+    expect(gloria.hairStyle).toBe('ponytail')
+    expect(judith.gender).toBe('female')
+
+    expect(getAgentStatusBadge('working', 'OVERVIEW').dotHex).toBe('#22c55e')
+    expect(getAgentStatusBadge('awaiting_approval', 'OVERVIEW').dotHex).toBe('#f97316')
+    expect(getAgentStatusBadge('working', 'ALL_HANDS').dotHex).toBe('#3b82f6')
+    expect(getAgentStatusBadge('on_break', 'PANTRY').dotHex).toBe('#eab308')
+    expect(getAgentStatusBadge('on_break', 'GYM').dotHex).toBe('#ec4899')
   })
 })

@@ -1,10 +1,18 @@
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react'
+import React, { useState, useEffect, useRef, Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Agent, Approval } from '@/components/office/types'
-import { DepartmentMode, AGENT_WORKSTATIONS_3D } from '@/config/officeLayout'
+import {
+  DepartmentMode,
+  AGENT_WORKSTATIONS_3D,
+  getAgentTargetPosition,
+} from '@/config/officeLayout'
+import {
+  getCharacterStyle,
+  getAgentStatusBadge,
+} from '@/config/characterStyles'
 import OfficeCanvas2D from '@/components/office/OfficeCanvas2D'
 import { sfx } from '@/components/office/audio'
 import { officeBus } from '@/lib/office/bus'
@@ -14,7 +22,7 @@ import {
   OfficeLogRecord,
 } from '@/lib/supabase/officeService'
 
-// Default baseline of all 24 registered database agents for instant zero-latency mount
+// Default baseline of all registered database agents for instant zero-latency mount
 const DEFAULT_AGENTS: Agent[] = Object.values(AGENT_WORKSTATIONS_3D).map((ws) => ({
   id: ws.agentId,
   name: ws.name,
@@ -27,6 +35,65 @@ const DEFAULT_AGENTS: Agent[] = Object.values(AGENT_WORKSTATIONS_3D).map((ws) =>
   progress_pct: 82,
   updated_at: new Date().toISOString(),
 }))
+
+// Contextual non-looping engineering & operational milestones
+const CONTEXTUAL_EVENTS: {
+  senderId: string
+  senderName: string
+  receiverId: string
+  receiverName: string
+  category: string
+  text: string
+}[] = [
+  {
+    senderId: 'arwin',
+    senderName: 'Arwin',
+    receiverId: 'josiah',
+    receiverName: 'Josiah',
+    category: 'API_SYNC',
+    text: 'Completed DugtongOJT API schema migration and verified zero-downtime Postgres connection pooling.',
+  },
+  {
+    senderId: 'mary_grace',
+    senderName: 'Mary Grace',
+    receiverId: 'gloria',
+    receiverName: 'Gloria',
+    category: 'OPS_DELIVERY',
+    text: 'Reconciled PayBridge escrow batch disbursements and cleared Q4 partner onboarding checklist.',
+  },
+  {
+    senderId: 'khent',
+    senderName: 'Khent',
+    receiverId: 'gian',
+    receiverName: 'Gian',
+    category: 'SECOPS_AUDIT',
+    text: 'Passed automated Vitest & RLS policy verification across office_agents, office_logs, and office_approvals.',
+  },
+  {
+    senderId: 'neil_mar',
+    senderName: 'Neil Mar',
+    receiverId: 'christian',
+    receiverName: 'Christian',
+    category: 'WEBGL_UI',
+    text: 'Synchronized 3D WebGL sprite nameplates and 2D Canvas tags at 60fps with zero pan/zoom latency.',
+  },
+  {
+    senderId: 'roy_jhan',
+    senderName: 'Roy Jhan',
+    receiverId: 'keiru',
+    receiverName: 'Keiru',
+    category: 'AI_PIPELINE',
+    text: 'Benchmarked multimodal embeddings and reduced inference p95 latency by 24% in Intelligence Lab.',
+  },
+  {
+    senderId: 'bonnie',
+    senderName: 'Bonnie',
+    receiverId: 'john_lloyd',
+    receiverName: 'John Lloyd',
+    category: 'CLOUD_OPS',
+    text: 'Scaled FlexSpace Iloilo edge workers and verified replica read latency under 12ms.',
+  },
+]
 
 // Dynamically import 3D engine with SSR disabled for optimal WebGL performance
 const OfficeCanvas3D = dynamic(
@@ -51,18 +118,22 @@ function HQCommandPage() {
   const router = useRouter()
   const is2DView = searchParams.get('v') === '2'
 
-  // Office state: initialized with full 24-agent roster
+  // Office state
   const [agents, setAgents] = useState<Agent[]>(DEFAULT_AGENTS)
   const [approvals, setApprovals] = useState<Approval[]>([])
   const [logs, setLogs] = useState<string[]>([])
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(DEFAULT_AGENTS[0])
   const [, setSupabaseActive] = useState<boolean>(false)
   const [currentMode, setCurrentMode] = useState<DepartmentMode>('OVERVIEW')
+  const [agentRouteOverrides, setAgentRouteOverrides] = useState<
+    Record<string, DepartmentMode>
+  >({})
   const [directiveInput, setDirectiveInput] = useState<string>('')
   const [isDispatching, setIsDispatching] = useState<boolean>(false)
 
   // Real-time PHT Clock (Asia/Manila, UTC+8)
   const [phtTime, setPhtTime] = useState<string>('')
+  const eventCursorRef = useRef<number>(0)
 
   useEffect(() => {
     function updateClock() {
@@ -96,17 +167,21 @@ function HQCommandPage() {
             setSupabaseActive(json.data.dbConnected)
           }
 
-          // Default selected agent to Josiah or the first available
           setSelectedAgent((prev) => {
             if (!prev && fleet.length > 0) {
               return fleet.find((a) => a.id === 'josiah') || fleet[0]
             }
+            if (prev) {
+              const updated = fleet.find((a) => a.id === prev.id)
+              if (updated) return { ...prev, ...updated }
+            }
             return prev
           })
 
-          // Initial logs
           if (json.data.logs && json.data.logs.length > 0) {
-            setLogs(json.data.logs.slice(0, 40))
+            setLogs((prev) =>
+              prev.length === 0 ? json.data.logs.slice(0, 40) : prev
+            )
           }
         }
       } catch (err) {
@@ -116,7 +191,6 @@ function HQCommandPage() {
 
     void loadInitialData()
 
-    // 3s interval polling synchronization for continuous freshness
     const pollInterval = setInterval(() => {
       void loadInitialData()
     }, 3000)
@@ -136,8 +210,7 @@ function HQCommandPage() {
       if (isSubscribed) setSupabaseActive(isHealthy)
 
       if (isHealthy) {
-        // Initial messages
-        const remoteMsgs = await officeSupabase.getMessages(30)
+        const remoteMsgs = await officeSupabase.getMessages(25)
         if (isSubscribed && remoteMsgs.length > 0) {
           const formatted = remoteMsgs.map(
             (m) => `[COMM] ${m.sender_name} -> ${m.receiver_name || 'All'}: "${m.content}"`
@@ -173,7 +246,9 @@ function HQCommandPage() {
           setApprovals((prev) => {
             const exists = prev.some((a) => a.id === approval.id)
             if (exists) {
-              return prev.map((a) => (a.id === approval.id ? ({ ...a, ...approval } as Approval) : a))
+              return prev.map((a) =>
+                a.id === approval.id ? ({ ...a, ...approval } as Approval) : a
+              )
             }
             return [approval as Approval, ...prev]
           })
@@ -188,6 +263,7 @@ function HQCommandPage() {
           modeStr === 'GYM'
         ) {
           setCurrentMode(modeStr)
+          setAgentRouteOverrides({})
         }
       },
     })
@@ -198,13 +274,35 @@ function HQCommandPage() {
     }
   }, [])
 
-  // 3. In-memory Office Event Bus subscription
+  // 3. In-memory Office Event Bus + Non-Looping Contextual Telemetry
   useEffect(() => {
     const unsub = officeBus.subscribe((msg) => {
       const line = `[EVENT] ${msg.fromName}: "${msg.text}"`
       setLogs((prev) => [line, ...prev.filter((p) => p !== line)].slice(0, 50))
     })
-    return () => unsub()
+
+    // Non-looping contextual milestone emitter (fires up to CONTEXTUAL_EVENTS.length times)
+    const contextualTimer = setInterval(() => {
+      const idx = eventCursorRef.current
+      if (idx >= CONTEXTUAL_EVENTS.length) return
+      eventCursorRef.current = idx + 1
+      const ev = CONTEXTUAL_EVENTS[idx]
+      const line = `[${ev.category}] ${ev.senderName} -> ${ev.receiverName}: "${ev.text}"`
+      setLogs((prev) => [line, ...prev.filter((p) => p !== line)].slice(0, 50))
+      void officeSupabase.postMessage({
+        sender_id: ev.senderId,
+        sender_name: ev.senderName,
+        recipient_id: ev.receiverId,
+        recipient_name: ev.receiverName,
+        content: ev.text,
+        message_type: 'chat',
+      })
+    }, 22000)
+
+    return () => {
+      unsub()
+      clearInterval(contextualTimer)
+    }
   }, [])
 
   // Handle Go-Signal Authorizations
@@ -220,7 +318,6 @@ function HQCommandPage() {
     const item = approvals.find((a) => a.id === approvalId)
     setApprovals((prev) => prev.filter((a) => a.id !== approvalId))
 
-    // Audited update to Supabase
     void officeSupabase.resolveApproval(approvalId, action, 'Josiah (Lead Architect)')
     void officeSupabase.logActivity(
       'HUMAN_GO',
@@ -244,6 +341,49 @@ function HQCommandPage() {
     }
   }
 
+  // Step 6: Individual Agent Direct Routing ("Send to Work Desk", "Pantry", "Gym", "Brain")
+  const handleRouteIndividualAgent = (
+    agent: Agent,
+    targetMode: DepartmentMode,
+    newStatus: Agent['status'],
+    taskDescription: string
+  ) => {
+    sfx?.playTrigger?.()
+    setAgentRouteOverrides((prev) => ({
+      ...prev,
+      [agent.id]: targetMode,
+    }))
+
+    setAgents((prev) =>
+      prev.map((a) =>
+        a.id === agent.id
+          ? { ...a, status: newStatus, current_task: taskDescription }
+          : a
+      )
+    )
+    setSelectedAgent((prev) =>
+      prev && prev.id === agent.id
+        ? { ...prev, status: newStatus, current_task: taskDescription }
+        : prev
+    )
+
+    const ws = AGENT_WORKSTATIONS_3D[agent.id]
+    const coords = ws ? getAgentTargetPosition(ws, currentMode, targetMode) : [0, 0, 0]
+    const logLine = `[ROUTE] ${agent.name} walking via A* pathfinding to ${targetMode.replace('_', ' ')} (${coords[0]}, ${coords[2]}): ${taskDescription}`
+    setLogs((prev) => [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50))
+
+    void officeSupabase.updateAgent(agent.id, {
+      status: newStatus || 'working',
+      current_task: taskDescription,
+    })
+    void officeSupabase.logActivity(
+      'AGENT_ROUTE',
+      `${agent.name} routed to ${targetMode}: ${taskDescription}`,
+      { id: agent.id, name: agent.name },
+      'info'
+    )
+  }
+
   // Handle Dispatching Directives to Selected Agent
   const handleDispatchDirective = async () => {
     if (!selectedAgent || !directiveInput.trim() || isDispatching) return
@@ -252,6 +392,29 @@ function HQCommandPage() {
 
     const promptText = directiveInput.trim()
     setDirectiveInput('')
+
+    // Route agent to their work desk and set status to working immediately
+    setAgentRouteOverrides((prev) => ({
+      ...prev,
+      [selectedAgent.id]: 'FOCUS_WORK',
+    }))
+    setAgents((prev) =>
+      prev.map((a) =>
+        a.id === selectedAgent.id
+          ? { ...a, status: 'working', current_task: promptText }
+          : a
+      )
+    )
+    setSelectedAgent((prev) =>
+      prev ? { ...prev, status: 'working', current_task: promptText } : prev
+    )
+
+    const directiveLine = `[DIRECTIVE] Josiah -> ${selectedAgent.name}: "${promptText}"`
+    setLogs((prev) => [directiveLine, ...prev].slice(0, 50))
+    void officeSupabase.updateAgent(selectedAgent.id, {
+      status: 'working',
+      current_task: promptText,
+    })
 
     try {
       const res = await fetch('/api/office/run', {
@@ -282,6 +445,16 @@ function HQCommandPage() {
     { mode: 'PANTRY', label: 'PANTRY & CANTEEN' },
     { mode: 'GYM', label: 'REC & GYM' },
   ]
+
+  const selectedEffectiveMode = selectedAgent
+    ? agentRouteOverrides[selectedAgent.id] || currentMode
+    : currentMode
+  const selectedStyle = selectedAgent
+    ? getCharacterStyle(selectedAgent.id, selectedAgent.name)
+    : null
+  const selectedBadge = selectedAgent
+    ? getAgentStatusBadge(selectedAgent.status, selectedEffectiveMode)
+    : null
 
   return (
     <main className="flex h-screen w-screen flex-col overflow-hidden bg-[#080b12] text-slate-100 font-sans select-none">
@@ -316,6 +489,7 @@ function HQCommandPage() {
                 type="button"
                 onClick={() => {
                   setCurrentMode(btn.mode)
+                  setAgentRouteOverrides({})
                   void officeSupabase.setOfficeMode(btn.mode)
                 }}
                 className={`cursor-pointer rounded-lg px-3 py-1 font-mono text-[11px] font-bold tracking-tight transition-all whitespace-nowrap ${
@@ -388,23 +562,31 @@ function HQCommandPage() {
             <OfficeCanvas2D
               agents={agents}
               mode={currentMode}
+              agentRouteOverrides={agentRouteOverrides}
               selectedAgentId={selectedAgent?.id}
               onSelectAgent={(ag) => setSelectedAgent(ag)}
-              onResetCamera={() => setCurrentMode('OVERVIEW')}
+              onResetCamera={() => {
+                setCurrentMode('OVERVIEW')
+                setAgentRouteOverrides({})
+              }}
             />
           ) : (
             <OfficeCanvas3D
               agents={agents}
               mode={currentMode}
+              agentRouteOverrides={agentRouteOverrides}
               selectedAgentId={selectedAgent?.id}
               onSelectAgent={(ag) => setSelectedAgent(ag)}
-              onResetCamera={() => setCurrentMode('OVERVIEW')}
+              onResetCamera={() => {
+                setCurrentMode('OVERVIEW')
+                setAgentRouteOverrides({})
+              }}
             />
           )}
         </section>
 
         {/* Right: 30% Width Sidebar Console */}
-        <aside className="w-full md:w-[380px] lg:w-[420px] shrink-0 border-l border-slate-800/80 bg-[#0d111c] flex flex-col overflow-hidden shadow-2xl z-20">
+        <aside className="w-full md:w-[390px] lg:w-[430px] shrink-0 border-l border-slate-800/80 bg-[#0d111c] flex flex-col overflow-hidden shadow-2xl z-20">
           {/* Section A: The Boss Desk (Approvals Gate) */}
           <div className="border-b border-slate-800/80 p-3 shrink-0">
             <div className="flex items-center justify-between pb-2">
@@ -419,10 +601,9 @@ function HQCommandPage() {
               </span>
             </div>
 
-            {/* Approvals List */}
-            <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
               {approvals.length === 0 ? (
-                <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-3 text-center">
+                <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-2.5 text-center">
                   <span className="font-mono text-[11px] text-slate-500">
                     All Go-Signals cleared. Operations running nominal.
                   </span>
@@ -469,11 +650,11 @@ function HQCommandPage() {
             </div>
           </div>
 
-          {/* Section B: Agent Detail Inspector */}
+          {/* Section B: Interactive Individual Agent Dispatch Drawer */}
           <div className="border-b border-slate-800/80 p-3 shrink-0 bg-slate-900/30">
             <div className="flex items-center justify-between pb-2">
               <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
-                AGENT DETAIL INSPECTOR
+                AGENT INSPECTOR & ROUTING
               </span>
               {selectedAgent && (
                 <span className="font-mono text-[10px] text-cyan-400 font-bold uppercase">
@@ -482,40 +663,158 @@ function HQCommandPage() {
               )}
             </div>
 
-            {selectedAgent ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between rounded-lg bg-slate-950/60 p-2 border border-slate-800/60">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            {selectedAgent && selectedStyle && selectedBadge ? (
+              <div className="space-y-2.5">
+                {/* Profile Card with Distinct Gender/Outfit Avatar Preview */}
+                <div className="flex items-center justify-between rounded-lg bg-slate-950/70 p-2.5 border border-slate-800/70">
+                  <div className="flex items-center gap-2.5">
+                    {/* Distinct Styled Pixel-Agent Avatar Swatch */}
+                    <div
+                      className="relative flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-lg border border-slate-700/80 shadow-inner overflow-hidden"
+                      style={{ backgroundColor: '#0f172a' }}
+                    >
+                      {/* Hair */}
+                      <div
+                        className="h-2 w-5 rounded-t-sm"
+                        style={{ backgroundColor: selectedStyle.hairColor }}
+                      />
+                      {/* Face */}
+                      <div
+                        className="h-2.5 w-4"
+                        style={{ backgroundColor: selectedStyle.skinColor }}
+                      />
+                      {/* Outfit */}
+                      <div
+                        className="h-3 w-6 rounded-t-sm"
+                        style={{ backgroundColor: selectedStyle.outfitColor }}
+                      />
+                    </div>
                     <div>
-                      <div className="font-mono text-xs font-bold text-slate-100">
-                        {selectedAgent.name}
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs font-bold text-slate-100">
+                          {selectedAgent.name}
+                        </span>
+                        <span className="rounded bg-slate-800/90 px-1.5 py-0.5 font-mono text-[9px] text-slate-400 uppercase">
+                          {selectedStyle.gender === 'female' ? '♀' : '♂'}{' '}
+                          {selectedStyle.hairStyle}
+                        </span>
                       </div>
                       <div className="font-mono text-[10px] text-slate-400">
                         {selectedAgent.role}
                       </div>
                     </div>
                   </div>
-                  <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-[10px] text-slate-300">
-                    {selectedAgent.status || 'Active'}
-                  </span>
+                  <div className="flex items-center gap-1.5 rounded-full bg-slate-900 px-2.5 py-1 border border-slate-800">
+                    <span className={`h-2 w-2 rounded-full ${selectedBadge.dotTailwind}`} />
+                    <span className="font-mono text-[10px] font-semibold text-slate-200 whitespace-nowrap">
+                      {selectedBadge.label}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Individual Action Buttons (Direct A* Pathfinding Routing) */}
+                <div>
+                  <div className="font-mono text-[9px] font-bold tracking-wider text-slate-400 uppercase pb-1">
+                    DIRECT INDIVIDUAL ROUTING (A* WALKING):
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleRouteIndividualAgent(
+                          selectedAgent,
+                          'FOCUS_WORK',
+                          'working',
+                          `Executing sprint tasks at ${selectedAgent.room || 'Workstation'}`
+                        )
+                      }
+                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap ${
+                        selectedEffectiveMode === 'FOCUS_WORK' ||
+                        selectedEffectiveMode === 'OVERVIEW'
+                          ? 'border-emerald-500/60 bg-emerald-950/50 text-emerald-300'
+                          : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                      <span>Send to Work Desk</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleRouteIndividualAgent(
+                          selectedAgent,
+                          'PANTRY',
+                          'on_break',
+                          'Recharging at Espresso Bar & Pantry Lounge'
+                        )
+                      }
+                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap ${
+                        selectedEffectiveMode === 'PANTRY'
+                          ? 'border-yellow-500/60 bg-yellow-950/50 text-yellow-300'
+                          : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-yellow-400" />
+                      <span>Send to Pantry / Coffee</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleRouteIndividualAgent(
+                          selectedAgent,
+                          'GYM',
+                          'on_break',
+                          'Active recovery workout in Rec & Gym'
+                        )
+                      }
+                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap ${
+                        selectedEffectiveMode === 'GYM'
+                          ? 'border-pink-500/60 bg-pink-950/50 text-pink-300'
+                          : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-pink-400" />
+                      <span>Send to Gym / Rec</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleRouteIndividualAgent(
+                          selectedAgent,
+                          'ALL_HANDS',
+                          'working',
+                          'Joining Architecture Standup at The Brain'
+                        )
+                      }
+                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap ${
+                        selectedEffectiveMode === 'ALL_HANDS'
+                          ? 'border-blue-500/60 bg-blue-950/50 text-blue-300'
+                          : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-blue-400" />
+                      <span>Call to Brain (Scrum)</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Live Task & File */}
                 <div className="rounded-lg bg-slate-950/40 p-2 border border-slate-800/40 space-y-1">
                   <div className="flex items-center justify-between font-mono text-[10px] text-slate-400">
                     <span>CURRENT TASK:</span>
-                    <span className="text-slate-200 truncate max-w-[200px]">
+                    <span className="text-slate-200 truncate max-w-[210px]">
                       {selectedAgent.current_task || 'Architecting High-Throughput Pipelines'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between font-mono text-[10px] text-slate-400">
                     <span>ACTIVE FILE:</span>
-                    <span className="text-cyan-400 font-mono truncate max-w-[200px]">
+                    <span className="text-cyan-400 font-mono truncate max-w-[210px]">
                       {selectedAgent.current_file || 'src/components/office/OfficeCanvas3D.tsx'}
                     </span>
                   </div>
-                  {/* Progress Bar */}
                   <div className="pt-1">
                     <div className="flex justify-between font-mono text-[9px] text-slate-400 pb-0.5">
                       <span>PROGRESS</span>
@@ -530,8 +829,8 @@ function HQCommandPage() {
                   </div>
                 </div>
 
-                {/* Directive Dispatch Input */}
-                <div className="flex gap-1.5 pt-1">
+                {/* Custom Directive Dispatch Input */}
+                <div className="flex gap-1.5 pt-0.5">
                   <input
                     type="text"
                     value={directiveInput}
@@ -547,13 +846,13 @@ function HQCommandPage() {
                     disabled={isDispatching || !directiveInput.trim()}
                     className="cursor-pointer rounded-lg bg-cyan-500 px-3 py-1.5 font-mono text-xs font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all whitespace-nowrap"
                   >
-                    {isDispatching ? '...' : 'Dispatch'}
+                    {isDispatching ? '...' : 'Dispatch Directive'}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-4 text-center font-mono text-xs text-slate-500">
-                Click any agent in the office to inspect live runtime telemetry.
+                Click any agent in the office to inspect live runtime telemetry and route them.
               </div>
             )}
           </div>
@@ -579,7 +878,8 @@ function HQCommandPage() {
                 </div>
               ) : (
                 logs.map((line, idx) => {
-                  const isComm = line.startsWith('[COMM]')
+                  const isComm = line.startsWith('[COMM]') || line.startsWith('[DIRECTIVE]')
+                  const isRoute = line.startsWith('[ROUTE]')
                   const isGo = line.includes('HUMAN_GO')
                   const isErr = line.includes('ERROR') || line.includes('WARN')
                   return (
@@ -590,6 +890,8 @@ function HQCommandPage() {
                           ? 'text-amber-400 font-semibold'
                           : isErr
                           ? 'text-rose-400 font-semibold'
+                          : isRoute
+                          ? 'text-emerald-300 font-medium'
                           : isComm
                           ? 'text-cyan-300'
                           : 'text-slate-400'

@@ -16,6 +16,10 @@ export type AgentStatus =
   | 'idle'
   | 'awaiting_approval'
   | 'done'
+  | 'on_break'
+  | 'in_meeting'
+  | 'gym'
+
 
 export type AgentSubState =
   | 'typing'
