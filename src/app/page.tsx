@@ -164,6 +164,9 @@ function HQCommandPage() {
   >({})
   const [directiveInput, setDirectiveInput] = useState<string>('')
   const [isDispatching, setIsDispatching] = useState<boolean>(false)
+  const [isRosterOpen, setIsRosterOpen] = useState<boolean>(false)
+  const [rosterSearch, setRosterSearch] = useState<string>('')
+  const [rosterDeptFilter, setRosterDeptFilter] = useState<string>('ALL')
 
   // Real-time PHT Clock (Asia/Manila, UTC+8)
   const [phtTime, setPhtTime] = useState<string>('')
@@ -712,13 +715,25 @@ function HQCommandPage() {
             </span>
           </div>
 
-          {/* Live Badge (Database Count) */}
-          <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-950/40 px-3 py-1 font-mono text-xs font-bold text-emerald-400">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+          {/* Clickable Live Roster Button (24 Agents Online) */}
+          <button
+            type="button"
+            onClick={() => setIsRosterOpen((prev) => !prev)}
+            className={`cursor-pointer flex items-center gap-2 rounded-lg border px-3 py-1 font-mono text-xs font-bold transition-all whitespace-nowrap ${
+              isRosterOpen
+                ? 'border-cyan-400 bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                : 'border-emerald-500/40 bg-emerald-950/50 text-emerald-400 hover:bg-emerald-900/60 hover:border-emerald-400'
+            }`}
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                isRosterOpen ? 'bg-slate-950' : 'bg-emerald-400 animate-ping'
+              }`}
+            />
             <span className="whitespace-nowrap">
-              {agents.length > 0 ? `${agents.length} AGENTS ONLINE` : '24 AGENTS ONLINE'}
+              {agents.length > 0 ? `${agents.length} AGENTS ROSTER` : '24 AGENTS ROSTER'} ▾
             </span>
-          </div>
+          </button>
 
           {/* Segmented 3D / 2D Parity Viewport Switcher */}
           <div className="flex items-center rounded-lg border border-slate-700/80 bg-slate-950/90 p-0.5 font-mono text-[11px]">
@@ -751,7 +766,7 @@ function HQCommandPage() {
       {/* ========================================================================= */}
       {/* 2. MAIN COCKPIT BODY (70% 3D/2D Viewport + 30% Sidebar Console)          */}
       {/* ========================================================================= */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="relative flex flex-1 overflow-hidden">
         {/* Left / Center: Synchronized 3D or 2D Isometric Viewport */}
         <section className="relative flex-1 h-full overflow-hidden">
           {is2DView ? (
@@ -776,6 +791,218 @@ function HQCommandPage() {
             />
           )}
         </section>
+
+        {/* ===================================================================== */}
+        {/* SLIDE-OVER FULL AI AGENT ROSTER DRAWER (Search, Filter & Quick Route) */}
+        {/* ===================================================================== */}
+        {isRosterOpen && (
+          <div className="absolute inset-y-0 right-0 md:right-[390px] lg:right-[430px] w-full max-w-md bg-[#0a0e17]/95 backdrop-blur-xl border-l border-slate-800 shadow-2xl z-40 flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="font-mono text-xs font-black tracking-wider text-slate-100 uppercase">
+                  AI AGENT ROSTER ({agents.length} ONLINE)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRosterOpen(false)}
+                className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-[11px] font-bold text-slate-300 hover:bg-slate-800 hover:text-white whitespace-nowrap"
+              >
+                Close ✕
+              </button>
+            </div>
+
+            {/* Search & Department Filter Bar */}
+            <div className="border-b border-slate-800/80 p-3 space-y-2 bg-slate-950/60">
+              <input
+                type="text"
+                value={rosterSearch}
+                onChange={(e) => setRosterSearch(e.target.value)}
+                placeholder="Search agent by name, role, or room..."
+                className="w-full rounded-lg border border-slate-800 bg-slate-900/90 px-3 py-1.5 font-mono text-xs text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
+              />
+              <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                {['ALL', 'ENGINEERING', 'QA', 'GROWTH', 'INTELLIGENCE', 'OPERATIONS', 'COMMAND'].map(
+                  (dept) => (
+                    <button
+                      key={dept}
+                      type="button"
+                      onClick={() => setRosterDeptFilter(dept)}
+                      className={`cursor-pointer rounded-md px-2 py-0.5 font-mono text-[10px] font-bold transition-colors whitespace-nowrap ${
+                        rosterDeptFilter === dept
+                          ? 'bg-cyan-500 text-slate-950'
+                          : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                      }`}
+                    >
+                      {dept}
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Scrollable List of All 24 Agents */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {agents
+                .filter((ag) => {
+                  const q = rosterSearch.trim().toLowerCase()
+                  const matchesSearch =
+                    !q ||
+                    ag.name.toLowerCase().includes(q) ||
+                    (ag.role || '').toLowerCase().includes(q) ||
+                    (ag.room || '').toLowerCase().includes(q) ||
+                    (ag.department || '').toLowerCase().includes(q)
+                  const deptStr = `${ag.department || ''} ${ag.room || ''} ${ag.role || ''}`.toUpperCase()
+                  const matchesDept =
+                    rosterDeptFilter === 'ALL' || deptStr.includes(rosterDeptFilter)
+                  return matchesSearch && matchesDept
+                })
+                .map((ag) => {
+                  const effMode = agentRouteOverrides[ag.id] || currentMode
+                  const stStyle = getCharacterStyle(ag.id, ag.name)
+                  const stBadge = getAgentStatusBadge(ag.status, effMode)
+                  const isSel = selectedAgent?.id === ag.id
+                  return (
+                    <div
+                      key={ag.id}
+                      onClick={() => setSelectedAgent(ag)}
+                      className={`cursor-pointer rounded-xl border p-2.5 transition-all ${
+                        isSel
+                          ? 'border-cyan-500/80 bg-cyan-950/30 shadow-md'
+                          : 'border-slate-800/80 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className="relative flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-lg border border-slate-700/80 overflow-hidden"
+                            style={{ backgroundColor: '#0f172a' }}
+                          >
+                            <div
+                              className="h-1.5 w-4 rounded-t-sm"
+                              style={{ backgroundColor: stStyle.hairColor }}
+                            />
+                            <div
+                              className="h-2 w-3.5"
+                              style={{ backgroundColor: stStyle.skinColor }}
+                            />
+                            <div
+                              className="h-2.5 w-5 rounded-t-sm"
+                              style={{ backgroundColor: stStyle.outfitColor }}
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-xs font-bold text-slate-100 truncate">
+                                {ag.name}
+                              </span>
+                              <span className="rounded bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-400 uppercase whitespace-nowrap">
+                                {stStyle.gender === 'female' ? '♀' : '♂'}
+                              </span>
+                            </div>
+                            <div className="font-mono text-[10px] text-slate-400 truncate">
+                              {ag.role} • <span className="text-cyan-400">{ag.room}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 rounded-full bg-slate-950 px-2 py-0.5 border border-slate-800 shrink-0">
+                          <span className={`h-2 w-2 rounded-full ${stBadge.dotTailwind}`} />
+                          <span className="font-mono text-[9px] font-semibold text-slate-200 whitespace-nowrap">
+                            {stBadge.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Quick 1-Click Route Buttons inside Roster Card */}
+                      <div
+                        className="mt-2 grid grid-cols-4 gap-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedAgent(ag)
+                            handleRouteIndividualAgent(
+                              ag,
+                              'FOCUS_WORK',
+                              'working',
+                              `Executing sprint tasks at ${ag.room || 'Workstation'}`
+                            )
+                          }}
+                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
+                            effMode === 'FOCUS_WORK' || effMode === 'OVERVIEW'
+                              ? 'border-emerald-500/60 bg-emerald-950/60 text-emerald-300'
+                              : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                          }`}
+                        >
+                          💻 Desk
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedAgent(ag)
+                            handleRouteIndividualAgent(
+                              ag,
+                              'PANTRY',
+                              'on_break',
+                              'Recharging at Espresso Bar & Pantry Lounge'
+                            )
+                          }}
+                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
+                            effMode === 'PANTRY'
+                              ? 'border-yellow-500/60 bg-yellow-950/60 text-yellow-300'
+                              : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                          }`}
+                        >
+                          ☕ Pantry
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedAgent(ag)
+                            handleRouteIndividualAgent(
+                              ag,
+                              'GYM',
+                              'at_gym',
+                              'Active recovery workout in Rec & Gym'
+                            )
+                          }}
+                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
+                            effMode === 'GYM'
+                              ? 'border-pink-500/60 bg-pink-950/60 text-pink-300'
+                              : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                          }`}
+                        >
+                          🏋️ Gym
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedAgent(ag)
+                            handleRouteIndividualAgent(
+                              ag,
+                              'ALL_HANDS',
+                              'in_meeting',
+                              'Joining Architecture Standup at The Brain'
+                            )
+                          }}
+                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
+                            effMode === 'ALL_HANDS'
+                              ? 'border-blue-500/60 bg-blue-950/60 text-blue-300'
+                              : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                          }`}
+                        >
+                          🧠 Brain
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
+          </div>
+        )}
 
         {/* Right: 30% Width Sidebar Console */}
         <aside className="w-full md:w-[390px] lg:w-[430px] shrink-0 border-l border-slate-800/80 bg-[#0d111c] flex flex-col overflow-hidden shadow-2xl z-20">
@@ -848,11 +1075,37 @@ function HQCommandPage() {
               <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
                 AGENT INSPECTOR & ROUTING
               </span>
-              {selectedAgent && (
-                <span className="font-mono text-[10px] text-cyan-400 font-bold uppercase">
-                  {selectedAgent.department || selectedAgent.room}
-                </span>
-              )}
+              <button
+                type="button"
+                onClick={() => setIsRosterOpen((prev) => !prev)}
+                className="cursor-pointer rounded-md border border-cyan-500/40 bg-cyan-950/40 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-300 hover:bg-cyan-900/60 transition-colors whitespace-nowrap"
+              >
+                {isRosterOpen ? 'Hide Roster ✕' : `All Agents (${agents.length}) ☰`}
+              </button>
+            </div>
+
+            {/* Quick Horizontal Agent Switcher Strip */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-2 mb-2 border-b border-slate-800/60">
+              {agents.map((ag) => {
+                const eff = agentRouteOverrides[ag.id] || currentMode
+                const bdg = getAgentStatusBadge(ag.status, eff)
+                const active = selectedAgent?.id === ag.id
+                return (
+                  <button
+                    key={ag.id}
+                    type="button"
+                    onClick={() => setSelectedAgent(ag)}
+                    className={`cursor-pointer flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap shrink-0 ${
+                      active
+                        ? 'border-cyan-400 bg-cyan-500/20 text-cyan-200'
+                        : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${bdg.dotTailwind}`} />
+                    <span>{ag.name}</span>
+                  </button>
+                )
+              })}
             </div>
 
             {selectedAgent && selectedStyle && selectedBadge ? (
