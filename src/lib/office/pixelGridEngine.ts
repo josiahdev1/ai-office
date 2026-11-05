@@ -20,6 +20,9 @@ export interface PixelSpriteDef {
   height: number
   palette: PixelPalette
   grid: string[]
+  description?: string
+  hasVisibleFace?: boolean
+  category?: string
 }
 
 // In-memory sprite cache to avoid re-rendering static grids
@@ -727,3 +730,6 @@ export const V3_PIXEL_SPRITES: PixelSpriteDef[] = [
   SPRITE_JOSIAH_RIG,
   SPRITE_THE_BRAIN_CORE,
 ]
+
+export { ALL_V3_SPRITES, type SpriteCategory } from './spriteCatalog'
+
