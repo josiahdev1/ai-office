@@ -10,9 +10,8 @@ const poppins = Poppins({
 })
 
 export const metadata: Metadata = {
-  title: 'Next.js Starter Template',
-  description:
-    'Production-ready Next.js starter template with Shadcn UI, Tailwind CSS, and automated workflows.',
+  title: 'EasyUp Software Solution HQ - Autonomous Multi-Agent Workspace',
+  description: 'Autonomous Multi-Agent AI Office for EasyUp Software Solution (Iloilo City) with Human-in-the-Loop Boss Desk',
 }
 
 export default function RootLayout({
