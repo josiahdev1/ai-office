@@ -11,7 +11,10 @@ import {
   OfficeMode,
   Point2D,
 } from '@/lib/office/pathfinding';
-import { officeBus, PRESET_OFFICE_DIALOGUES } from '@/lib/office/bus';
+import { officeBus } from '@/lib/office/bus';
+import { dialogueEngine } from '@/lib/office/dialogueEngine';
+import { officeSupabase } from '@/lib/supabase/officeService';
+
 
 export interface IsometricOfficeProps {
   agents: Agent[];
@@ -119,10 +122,18 @@ export function IsometricOffice({
   onSelectAgent,
   selectedAgentId,
   speedMode = '1x',
-  onSpeedChange,
 }: IsometricOfficeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(1);
+
+  // Compute Philippine Standard Time (UTC+8) Day vs Night
+  const getIsPhNight = () => {
+    const now = new Date();
+    const utcHours = now.getUTCHours();
+    const phHours = (utcHours + 8) % 24;
+    return phHours < 6 || phHours >= 18; // 6:00 PM to 6:00 AM is night
+  };
+
+  const [zoom, setZoom] = useState(0.72);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
@@ -132,6 +143,15 @@ export function IsometricOffice({
   const [activeLaserLink, setActiveLaserLink] = useState<{ from: Point2D; to: Point2D } | null>(null);
   const [currentMode, setCurrentMode] = useState<OfficeMode>('FOCUS_WORK');
   const [, startTransition] = useTransition();
+
+  // Periodically refresh Day/Night lighting with real Philippine Standard Time
+  useEffect(() => {
+    setIsNightMode(getIsPhNight());
+    const timer = setInterval(() => {
+      setIsNightMode(getIsPhNight());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   // 60 FPS Physics Simulation State Ref
   const simStateRef = useRef<Record<string, AgentSimState>>({});
@@ -162,6 +182,29 @@ export function IsometricOffice({
     agentsRef.current = agents;
   }, [agents]);
 
+  // Auto-fit overview camera to container size on mount and resize
+  const fitOverviewCamera = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const padding = 20;
+    const scaleX = (rect.width - padding) / 1080;
+    const scaleY = (rect.height - padding) / 640;
+    const fitScale = Math.max(0.55, Math.min(scaleX, scaleY, 0.95));
+    setZoom(fitScale);
+    setPan({ x: 0, y: 0 });
+  }, []);
+
+  useEffect(() => {
+    fitOverviewCamera();
+    const t = setTimeout(fitOverviewCamera, 150);
+    window.addEventListener('resize', fitOverviewCamera);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', fitOverviewCamera);
+    };
+  }, [fitOverviewCamera]);
+
   // Non-passive wheel event listener so cursor over canvas zooms without scrolling the page
   useEffect(() => {
     const el = containerRef.current;
@@ -180,10 +223,10 @@ export function IsometricOffice({
     };
   }, []);
 
-  // Periodic authentic inter-agent conversations with visual laser beam links
+  // Periodic authentic inter-agent conversations with visual laser beam links (Dynamic & Non-Looping)
   useEffect(() => {
     const chatInterval = setInterval(() => {
-      const dialogue = PRESET_OFFICE_DIALOGUES[Math.floor(Math.random() * PRESET_OFFICE_DIALOGUES.length)];
+      const dialogue = dialogueEngine.getNextDialogue();
       if (!dialogue) return;
 
       const sim = simStateRef.current;
@@ -191,7 +234,9 @@ export function IsometricOffice({
       const recipientSim = sim[dialogue.to];
 
       // Play subtle radio chirp
-      if (soundEnabled) sfx?.playBlip?.(720);
+      try {
+        if (soundEnabled) sfx?.playBlip?.(720);
+      } catch {}
 
       // 1. Show sender message and laser link
       setActiveSpeech((prev) => ({ ...prev, [dialogue.from]: dialogue.text }));
@@ -211,10 +256,32 @@ export function IsometricOffice({
         text: dialogue.text,
       });
 
+      // Persist to Supabase office_messages table
+      void officeSupabase.postMessage({
+        sender_id: dialogue.from,
+        sender_name: dialogue.fromName,
+        sender_department: dialogue.topic.toUpperCase(),
+        recipient_id: dialogue.to,
+        recipient_name: dialogue.toName,
+        content: dialogue.text,
+        message_type: 'inter_agent_chat',
+      });
+
       // 2. Recipient replies after 2.4s
       setTimeout(() => {
-        if (soundEnabled) sfx?.playBlip?.(540);
+        try {
+          if (soundEnabled) sfx?.playBlip?.(540);
+        } catch {}
         setActiveSpeech((prev) => ({ ...prev, [dialogue.to]: dialogue.replyText }));
+
+        void officeSupabase.postMessage({
+          sender_id: dialogue.to,
+          sender_name: dialogue.toName,
+          recipient_id: dialogue.from,
+          recipient_name: dialogue.fromName,
+          content: dialogue.replyText,
+          message_type: 'inter_agent_reply',
+        });
       }, 2400);
 
       // 3. Clear speech bubbles & laser after 6.8s
@@ -280,11 +347,28 @@ export function IsometricOffice({
     return () => clearInterval(breakInterval);
   }, [currentMode]);
 
-  // Mode Handlers: Smooth A* Pathfinding (No Instant Snapping / Teleporting)
+  // Mode Handlers: Smooth A* Pathfinding and Interactive Camera Focus
   const switchOfficeMode = useCallback((newMode: OfficeMode) => {
     setCurrentMode(newMode);
-    if (soundEnabled) {
-      sfx?.playModeSwitch?.();
+    try {
+      if (soundEnabled) {
+        sfx?.playModeSwitch?.();
+      }
+    } catch {}
+
+    // Smoothly pan & zoom camera to the active department/zone
+    if (newMode === 'FOCUS_WORK') {
+      setPan({ x: 80, y: 0 });
+      setZoom(0.82);
+    } else if (newMode === 'ALL_HANDS') {
+      setPan({ x: 0, y: 20 });
+      setZoom(1.05);
+    } else if (newMode === 'COFFEE_BREAK') {
+      setPan({ x: -160, y: -160 });
+      setZoom(1.05);
+    } else if (newMode === 'RECREATION') {
+      setPan({ x: 280, y: -160 });
+      setZoom(1.05);
     }
 
     const sim = simStateRef.current;
@@ -324,7 +408,7 @@ export function IsometricOffice({
       const dt = Math.min(Math.max(rawDt, 0.005), 0.05); // Clamped delta
       frameTick++;
 
-      const speedMultiplier = speedMode === '5x' ? 3.0 : speedMode === '2x' ? 1.8 : 1.0;
+      const speedMultiplier = 1.0; // Strictly real-time 1x speed
       const walkSpeed = 68 * speedMultiplier; // Pixels per second
       const sim = simStateRef.current;
       let hasStateChanged = false;
@@ -440,15 +524,22 @@ export function IsometricOffice({
     return () => cancelAnimationFrame(animId);
   }, [speedMode, currentMode]);
 
-  // Center camera on selected agent
+  // Center camera only when user explicitly selects a NEW agent
+  const prevSelectedAgentRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!selectedAgentId) return;
-    const pos = simStateRef.current[selectedAgentId];
-    if (pos) {
-      // Calculate offset to center the agent in viewport
-      const targetPanX = -(pos.x - 540) * zoom;
-      const targetPanY = -(pos.y - 310) * zoom;
-      setPan({ x: targetPanX, y: targetPanY });
+    if (!selectedAgentId) {
+      prevSelectedAgentRef.current = null;
+      return;
+    }
+    // Only center if the user picked a different agent
+    if (prevSelectedAgentRef.current !== selectedAgentId) {
+      prevSelectedAgentRef.current = selectedAgentId;
+      const pos = simStateRef.current[selectedAgentId];
+      if (pos) {
+        const targetPanX = -(pos.x - 540) * zoom;
+        const targetPanY = -(pos.y - 310) * zoom;
+        setPan({ x: targetPanX, y: targetPanY });
+      }
     }
   }, [selectedAgentId, zoom]);
 
@@ -502,132 +593,125 @@ export function IsometricOffice({
       style={{ cursor: isDragging ? 'grabbing' : 'default' }}
     >
       {/* ==================== HUD CONTROLS BAR ==================== */}
-      <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-30 pointer-events-none">
-        {/* Left: Mode Switchers */}
-        <div className="flex items-center gap-2 pointer-events-auto">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111625]/90 border border-[#1e293b] shadow-xl backdrop-blur-md">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-mono text-xs font-bold text-slate-200 tracking-tight whitespace-nowrap">
-              EASYUP HQ // 2.5D ISOMETRIC
+      <div className="absolute top-2 left-2 right-2 flex flex-wrap items-center justify-between gap-1.5 z-30 pointer-events-none">
+        {/* Left: Brand Badge & Mode Switchers */}
+        <div className="flex items-center gap-1.5 pointer-events-auto">
+          <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#111625]/95 border border-[#1e293b] shadow backdrop-blur-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-mono text-[11px] font-bold text-slate-200 tracking-tight whitespace-nowrap">
+              EASYUP HQ
             </span>
           </div>
 
-          <div className="flex items-center gap-1 bg-[#111625]/90 p-1 rounded-lg border border-[#1e293b] shadow-xl backdrop-blur-md">
+          <div className="flex items-center gap-0.5 bg-[#111625]/95 p-0.5 rounded-md border border-[#1e293b] shadow backdrop-blur-md">
             <button
+              type="button"
               onClick={() => switchOfficeMode('FOCUS_WORK')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded-md transition whitespace-nowrap ${
+              className={`flex items-center gap-1 px-2 py-1 text-[11px] font-mono rounded transition shadow cursor-pointer active:scale-95 whitespace-nowrap ${
                 currentMode === 'FOCUS_WORK'
-                  ? 'bg-blue-600 text-white font-semibold shadow'
-                  : 'text-slate-300 hover:bg-[#1e293b]'
+                  ? 'bg-blue-600 text-white font-bold ring-1 ring-blue-400 shadow-blue-500/20'
+                  : 'text-slate-300 hover:bg-[#1e293b] hover:text-white'
               }`}
-              title="Focus Work (Shortcut: F)"
+              title="Focus Work: Return all agents to department desks (Shortcut: F)"
             >
               <span>🖥️</span>
-              <span className="hidden sm:inline">Focus Work</span>
+              <span>Focus Work</span>
             </button>
 
             <button
+              type="button"
               onClick={() => switchOfficeMode('ALL_HANDS')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded-md transition whitespace-nowrap ${
+              className={`flex items-center gap-1 px-2 py-1 text-[11px] font-mono rounded transition shadow cursor-pointer active:scale-95 whitespace-nowrap ${
                 currentMode === 'ALL_HANDS'
-                  ? 'bg-purple-600 text-white font-semibold shadow'
-                  : 'text-slate-300 hover:bg-[#1e293b]'
+                  ? 'bg-purple-600 text-white font-bold ring-1 ring-purple-400 shadow-purple-500/20'
+                  : 'text-slate-300 hover:bg-[#1e293b] hover:text-white'
               }`}
-              title="All Hands Assembly (Shortcut: A)"
+              title="All Hands Assembly: Assemble all agents around The Brain (Shortcut: A)"
             >
               <span>📢</span>
-              <span className="hidden sm:inline">All Hands</span>
+              <span>All Hands</span>
             </button>
 
             <button
+              type="button"
               onClick={() => switchOfficeMode('COFFEE_BREAK')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded-md transition whitespace-nowrap ${
+              className={`flex items-center gap-1 px-2 py-1 text-[11px] font-mono rounded transition shadow cursor-pointer active:scale-95 whitespace-nowrap ${
                 currentMode === 'COFFEE_BREAK'
-                  ? 'bg-amber-600 text-white font-semibold shadow'
-                  : 'text-slate-300 hover:bg-[#1e293b]'
+                  ? 'bg-amber-600 text-white font-bold ring-1 ring-amber-400 shadow-amber-500/20'
+                  : 'text-slate-300 hover:bg-[#1e293b] hover:text-white'
               }`}
-              title="Pantry & Canteen Dining (Shortcut: C)"
+              title="Pantry & Canteen: Head to espresso bar & dining lounge (Shortcut: C)"
             >
               <span>☕</span>
-              <span className="hidden sm:inline">Pantry & Canteen</span>
+              <span>Pantry & Canteen</span>
             </button>
 
             <button
+              type="button"
               onClick={() => switchOfficeMode('RECREATION')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded-md transition whitespace-nowrap ${
+              className={`flex items-center gap-1 px-2 py-1 text-[11px] font-mono rounded transition shadow cursor-pointer active:scale-95 whitespace-nowrap ${
                 currentMode === 'RECREATION'
-                  ? 'bg-cyan-600 text-white font-semibold shadow'
-                  : 'text-slate-300 hover:bg-[#1e293b]'
+                  ? 'bg-cyan-600 text-white font-bold ring-1 ring-cyan-400 shadow-cyan-500/20'
+                  : 'text-slate-300 hover:bg-[#1e293b] hover:text-white'
               }`}
-              title="Recreation Court & Fitness Gym (Shortcut: R)"
+              title="Recreation Court & Fitness Gym: Workout & tennis rally (Shortcut: R)"
             >
               <span>🎾</span>
-              <span className="hidden sm:inline">Rec & Gym</span>
+              <span>Rec & Gym</span>
             </button>
           </div>
         </div>
 
-        {/* Right: Audio, Lighting, Speed, Zoom Reset */}
-        <div className="flex items-center gap-2 pointer-events-auto">
-          {/* Day / Night lighting toggle */}
-          <button
-            onClick={() => setIsNightMode(!isNightMode)}
-            className={`px-2.5 py-1.5 text-xs font-mono rounded-lg border transition shadow whitespace-nowrap ${
+        {/* Right: Manila Real-Time Shift Badge, Audio Toggle, Overview Fit Button */}
+        <div className="flex items-center gap-1 pointer-events-auto">
+          {/* Automatic Manila Standard Time Shift Badge */}
+          <div
+            className={`flex items-center gap-1 px-2 py-1 text-[11px] font-mono rounded-md border shadow backdrop-blur-md whitespace-nowrap ${
               isNightMode
-                ? 'bg-indigo-950/90 text-indigo-300 border-indigo-600'
-                : 'bg-[#111625]/90 text-slate-300 border-[#1e293b]'
+                ? 'bg-indigo-950/90 text-indigo-300 border-indigo-700/80 shadow-indigo-950/50'
+                : 'bg-[#111625]/90 text-amber-300 border-[#2b244d] shadow-amber-950/20'
             }`}
-            title="Toggle Day/Night Lighting"
+            title="Automatically synchronized to Philippine Standard Time (UTC+8)"
           >
-            {isNightMode ? '🌙 NIGHT' : '☀️ DAY'}
-          </button>
+            <span>{isNightMode ? '🌙' : '☀️'}</span>
+            <span className="font-semibold">
+              PHT // {isNightMode ? 'NIGHT' : 'DAY'}
+            </span>
+          </div>
 
           {/* Sound Toggle */}
           <button
+            type="button"
             onClick={() => {
               const next = !soundEnabled;
               setSoundEnabled(next);
               if (sfx) {
                 sfx.enabled = next;
-                if (next) sfx?.playBlip?.(700);
+                if (next) {
+                  try {
+                    sfx?.playBlip?.(700);
+                  } catch {}
+                }
               }
             }}
-            className={`px-2.5 py-1.5 text-xs font-mono rounded-lg border transition shadow whitespace-nowrap ${
+            className={`px-2 py-1 text-[11px] font-mono rounded-md border transition shadow whitespace-nowrap cursor-pointer ${
               soundEnabled
                 ? 'bg-emerald-950/90 text-emerald-300 border-emerald-600'
-                : 'bg-[#111625]/90 text-slate-400 border-[#1e293b]'
+                : 'bg-[#111625]/90 text-slate-400 border-[#1e293b] hover:text-slate-200'
             }`}
           >
             {soundEnabled ? '🔊 AUDIO' : '🔇 MUTED'}
           </button>
 
-          {/* Speed Pills (1x default, 2x, 5x) */}
-          <div className="flex items-center rounded-lg bg-[#111625]/90 border border-[#1e293b] p-1 shadow">
-            {(['1x', '2x', '5x'] as const).map((spd) => (
-              <button
-                key={spd}
-                onClick={() => onSpeedChange?.(spd)}
-                className={`px-2 py-0.5 text-xs font-mono rounded transition whitespace-nowrap ${
-                  speedMode === spd
-                    ? 'bg-amber-500 text-black font-bold shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {spd === '1x' ? '1x Real' : spd}
-              </button>
-            ))}
-          </div>
-
-          {/* Reset Zoom / Center Button */}
+          {/* Reset Zoom / Center Overview Button */}
           <button
-            onClick={() => {
-              setZoom(1);
-              setPan({ x: 0, y: 0 });
-            }}
-            className="px-2.5 py-1.5 text-xs font-mono rounded-lg bg-[#111625]/90 text-slate-300 border border-[#1e293b] hover:bg-[#1e293b] transition shadow whitespace-nowrap"
-            title="Reset Camera Center"
+            type="button"
+            onClick={fitOverviewCamera}
+            className="flex items-center gap-1 px-2 py-1 text-[11px] font-mono font-bold rounded-md bg-[#181330]/95 text-cyan-300 border border-cyan-500/50 hover:bg-cyan-950 hover:border-cyan-400 transition shadow-lg whitespace-nowrap cursor-pointer"
+            title="Reset to Full Overview Fit"
           >
-            🎯 CENTER
+            <span>🎯</span>
+            <span>OVERVIEW</span>
           </button>
         </div>
       </div>

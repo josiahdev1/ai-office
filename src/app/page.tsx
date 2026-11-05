@@ -6,6 +6,7 @@ import { IsometricOffice } from '@/components/office/IsometricOffice';
 import { PixelSprite } from '@/components/office/pixel-sprites';
 import { sfx } from '@/components/office/audio';
 import { officeBus } from '@/lib/office/bus';
+import { officeSupabase, OfficeMessageRecord, OfficeLogRecord } from '@/lib/supabase/officeService';
 
 export default function EasyUpOfficeHQ() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -14,10 +15,10 @@ export default function EasyUpOfficeHQ() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [roomFilter, setRoomFilter] = useState<string>('ALL');
   const [agentSearch, setAgentSearch] = useState<string>('');
-  const [speedMode, setSpeedMode] = useState<'1x' | '2x' | '5x'>('1x');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [directiveInput, setDirectiveInput] = useState('');
   const [timeString, setTimeString] = useState('2026.11.05  08:20:00 GMT+0800');
+  const [supabaseActive, setSupabaseActive] = useState<boolean>(false);
 
   // Completed items list for "DONE TODAY" card
   const [doneToday, setDoneToday] = useState([
@@ -27,7 +28,7 @@ export default function EasyUpOfficeHQ() {
     { id: 'done-4', title: 'Gemini 2.5 Flash Benchmarking Complete', agent: 'Roy Jhan', time: '07:42 AM' },
   ]);
 
-  // Real-time Clock ticker
+  // Real-time Clock ticker (Philippine Standard Time)
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -41,18 +42,62 @@ export default function EasyUpOfficeHQ() {
         second: '2-digit',
         hour12: false,
       });
-      setTimeString(`${year}.${month}.${day}  ${time} GMT+0800`);
+      setTimeString(`${year}.${month}.${day}  ${time} PHT (GMT+0800)`);
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
 
+  // Connect to Supabase Realtime channel for live messages, logs & approvals
+  useEffect(() => {
+    let isSubscribed = true;
+
+    async function initSupabase() {
+      const isHealthy = await officeSupabase.checkHealth();
+      if (isSubscribed) setSupabaseActive(isHealthy);
+
+      if (isHealthy) {
+        // Load initial messages from Supabase
+        const remoteMsgs = await officeSupabase.getMessages(15);
+        if (isSubscribed && remoteMsgs.length > 0) {
+          const formatted = remoteMsgs.map(
+            (m) => `[COMM] ${m.sender_name} -> ${m.recipient_name || 'All'}: "${m.content}"`
+          );
+          setLogs((prev) => Array.from(new Set([...formatted, ...prev])).slice(0, 35));
+        }
+      }
+    }
+
+    void initSupabase();
+
+    const unsubscribe = officeSupabase.subscribeToRealtime({
+      onMessage: (msg: OfficeMessageRecord) => {
+        const line = `[COMM] ${msg.sender_name} -> ${msg.recipient_name || 'All'}: "${msg.content}"`;
+        setLogs((prev) => [line, ...prev].slice(0, 35));
+      },
+      onLog: (log: OfficeLogRecord) => {
+        const line = `[${log.category}] ${log.agent_name ? `${log.agent_name}: ` : ''}${log.message}`;
+        setLogs((prev) => [line, ...prev].slice(0, 35));
+      },
+      onApprovalUpdate: (approval) => {
+        if (approval.status === 'approved' || approval.status === 'rejected') {
+          setApprovals((prev) => prev.filter((a) => a.id !== approval.id));
+        }
+      },
+    });
+
+    return () => {
+      isSubscribed = false;
+      unsubscribe();
+    };
+  }, []);
+
   // Subscribe to live inter-agent message bus for dynamic activity logs
   useEffect(() => {
     const unsubscribe = officeBus.subscribe((msg) => {
       const logLine = `[COMM] ${msg.fromName} -> ${msg.toName}: "${msg.text}"`;
-      setLogs((prev) => [logLine, ...prev].slice(0, 30));
+      setLogs((prev) => [logLine, ...prev].slice(0, 35));
     });
     return () => unsubscribe();
   }, []);
@@ -77,9 +122,7 @@ export default function EasyUpOfficeHQ() {
           }
 
           setSelectedAgent((prev) => {
-            if (!prev) {
-              return fleet.find((a) => a.id === 'josiah') || fleet[0] || null;
-            }
+            if (!prev) return null;
             const updated = fleet.find((a) => a.id === prev.id);
             return updated || prev;
           });
@@ -100,13 +143,15 @@ export default function EasyUpOfficeHQ() {
     };
   }, []);
 
-  // Handle Josiah's Go-Signal authorization
+  // Handle Josiah's Go-Signal authorization (Audited & Synced to Supabase)
   const handleGoSignal = async (approvalId: string, action: 'approve' | 'reject') => {
-    if (action === 'approve') {
-      sfx?.playApproval?.();
-    } else {
-      sfx?.playReject?.();
-    }
+    try {
+      if (action === 'approve') {
+        sfx?.playApproval?.();
+      } else {
+        sfx?.playReject?.();
+      }
+    } catch {}
 
     const item = approvals.find((a) => a.id === approvalId);
     if (action === 'approve' && item) {
@@ -123,6 +168,15 @@ export default function EasyUpOfficeHQ() {
 
     setApprovals((prev) => prev.filter((a) => a.id !== approvalId));
 
+    // Update Supabase approval record and audit log asynchronously
+    void officeSupabase.resolveApproval(approvalId, action, 'Josiah');
+    void officeSupabase.logActivity(
+      'HUMAN_GO',
+      `Go-Signal ${action === 'approve' ? 'AUTHORIZED' : 'REJECTED'} by Josiah for ${item?.title || approvalId}`,
+      { id: 'josiah', name: 'Josiah' },
+      action === 'approve' ? 'success' : 'warn'
+    );
+
     try {
       const res = await fetch('/api/office/approve', {
         method: 'POST',
@@ -133,7 +187,7 @@ export default function EasyUpOfficeHQ() {
       if (data.ok) {
         setApprovals(data.remaining || []);
         if (data.logs) {
-          setLogs((prev) => [...data.logs, ...prev].slice(0, 30));
+          setLogs((prev) => [...data.logs, ...prev].slice(0, 35));
         }
       }
     } catch (err) {
@@ -241,7 +295,9 @@ export default function EasyUpOfficeHQ() {
 
         <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="hidden sm:inline whitespace-nowrap">LIVE 1X PACE</span>
+          <span className="hidden sm:inline whitespace-nowrap">
+            {supabaseActive ? '⚡ SUPABASE REALTIME' : '⚡ LOCAL BUS ACTIVE'}
+          </span>
         </div>
       </div>
 
@@ -280,6 +336,17 @@ export default function EasyUpOfficeHQ() {
             <span>IN PROG:</span>
             <span className="font-bold text-white">{workingAgents.length}</span>
           </div>
+
+          <div
+            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono whitespace-nowrap border ${
+              supabaseActive
+                ? 'bg-emerald-950/60 border-emerald-600/60 text-emerald-300'
+                : 'bg-[#181330] border-[#30255a] text-slate-400'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${supabaseActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+            <span>{supabaseActive ? 'SUPABASE: SYNCED' : 'SUPABASE: HYBRID'}</span>
+          </div>
         </div>
       </div>
 
@@ -294,8 +361,6 @@ export default function EasyUpOfficeHQ() {
             approvals={approvals}
             onSelectAgent={(agent) => setSelectedAgent(agent)}
             selectedAgentId={selectedAgent?.id}
-            speedMode={speedMode}
-            onSpeedChange={setSpeedMode}
           />
         </div>
 

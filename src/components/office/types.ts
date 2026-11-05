@@ -41,6 +41,7 @@ export interface Approval {
   title: string;
   summary: string;
   created_at: string;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 export interface OfficeData {
