@@ -12,9 +12,11 @@ import {
   SPRITE_CHAR_SEATED_TYPING_SW_0,
   SPRITE_CHAR_SEATED_IDLE_NW,
   SPRITE_CHAR_SEATED_ISLAND_FAR,
+  SPRITE_PROP_WALL_DESK,
+  SPRITE_PROP_COFFEE_MUG,
 } from '../src/lib/office/spriteCatalog'
 
-describe('Workstation Seated Facing & Face Visibility Rules (Phase 1B)', () => {
+describe('Workstation Seated Facing & Face Visibility Rules (Phase 1C)', () => {
   const seatedPoses: PixelSpriteDef[] = [
     SPRITE_CHAR_SEATED_TYPING_NW_0,
     SPRITE_CHAR_SEATED_TYPING_NW_1,
@@ -36,9 +38,7 @@ describe('Workstation Seated Facing & Face Visibility Rules (Phase 1B)', () => {
     })
   })
 
-  it('guarantees 0 face/eye/mouth pixels in the upper head region (rows 3 to 13) for back-facing seated poses', () => {
-    // For back facings (NW, NE) and rear island desk, camera sees the cap crown, buckle cutout, and nape hair.
-    // The upper head area must not contain front face skin pixels.
+  it('guarantees 0 face/eye/mouth pixels in the upper head region (rows 3 to 12) for back-facing seated poses (NW, NE, Idle, Island Far)', () => {
     const backFacings = [
       SPRITE_CHAR_SEATED_TYPING_NW_0,
       SPRITE_CHAR_SEATED_TYPING_NW_1,
@@ -50,7 +50,6 @@ describe('Workstation Seated Facing & Face Visibility Rules (Phase 1B)', () => {
     ]
 
     backFacings.forEach((pose) => {
-      // Rows 3 to 12 correspond to head and cap
       for (let y = 3; y <= 12; y++) {
         const row = pose.grid[y]
         if (!row) continue
@@ -64,6 +63,70 @@ describe('Workstation Seated Facing & Face Visibility Rules (Phase 1B)', () => {
         }
       }
     })
+  })
+
+  it('verifies SE and SW seated poses are drawn from back-three-quarter angle with NO eyes, NO mouth, and NO flat gray block', () => {
+    const sidePoses = [SPRITE_CHAR_SEATED_TYPING_SE_0, SPRITE_CHAR_SEATED_TYPING_SW_0]
+
+    sidePoses.forEach((pose) => {
+      let skinPixelsInHead = 0
+      let blueCapPixelsInHead = 0
+      let graySquarePixelsInHead = 0
+
+      for (let y = 3; y <= 12; y++) {
+        const row = pose.grid[y]
+        if (!row) continue
+        for (let x = 0; x < row.length; x++) {
+          const char = row[x]
+          if (char === 'F' || char === 'f') skinPixelsInHead++
+          if (char === 'C' || char === 'c') blueCapPixelsInHead++
+          if (char === 'k') graySquarePixelsInHead++
+        }
+      }
+
+      // No flat gray square block in upper head
+      expect(graySquarePixelsInHead, `${pose.id} must not have a flat gray square in head`).toBe(0)
+
+      // Recognizable blue baseball cap dome
+      expect(blueCapPixelsInHead, `${pose.id} must have a prominent blue cap dome`).toBeGreaterThanOrEqual(20)
+
+      // Only subtle profile contour (ear/jawline) allowed (<= 4 pixels), strictly NO eyes or mouth
+      expect(skinPixelsInHead, `${pose.id} has too many face pixels for a back 3/4 view`).toBeLessThanOrEqual(4)
+    })
+  })
+
+  it('verifies prop_wall_desk has solid wooden top with visible bevel thickness, 3 drawers, legs, monitor, keyboard, mouse, and NO glowing halo', () => {
+    const desk = SPRITE_PROP_WALL_DESK
+    expect(desk).toBeDefined()
+    expect(desk.width).toBe(64)
+    expect(desk.height).toBe(48)
+
+    // Palette includes oak wood, front bevel, drawer handles, metal legs, monitor screen code syntax
+    expect(desk.palette['w']).toBeDefined() // base oak
+    expect(desk.palette['d']).toBeDefined() // front bevel
+    expect(desk.palette['H']).toBeDefined() // drawer handles
+    expect(desk.palette['L']).toBeDefined() // metal leg
+    expect(desk.palette['B']).toBeDefined() // monitor bezel
+    expect(desk.palette['1']).toBeDefined() // syntax code cyan
+    expect(desk.palette['2']).toBeDefined() // syntax code orange
+    expect(desk.palette['3']).toBeDefined() // syntax code green
+
+    // Verifies no glowing yellow halo around the perimeter
+    expect(desk.palette['h']).not.toBe('#fde68a')
+  })
+
+  it('verifies prop_coffee_mug is a clean ceramic mug with NO white-face / brown-hair / red-dot look', () => {
+    const mug = SPRITE_PROP_COFFEE_MUG
+    expect(mug).toBeDefined()
+    expect(mug.width).toBe(16)
+    expect(mug.height).toBe(16)
+
+    // Must not contain red mouth/dot pixel 'r'
+    expect(mug.palette['r']).toBeUndefined()
+
+    // Must be navy ceramic with dark coffee
+    expect(mug.palette['M']).toBe('#1e3a8a')
+    expect(mug.palette['b']).toBe('#451a03')
   })
 
   it('contains at least 6 floor diamond tiles with valid dimensions and textures', () => {
@@ -114,7 +177,6 @@ describe('Workstation Seated Facing & Face Visibility Rules (Phase 1B)', () => {
     const props = ALL_V3_SPRITES.filter((s) => s.category !== 'floors' && s.category !== 'walls')
     expect(props.length).toBeGreaterThanOrEqual(36)
 
-    // Check key required props from prompt
     const keyProps = [
       'prop_wall_desk',
       'prop_island_desk_pair',

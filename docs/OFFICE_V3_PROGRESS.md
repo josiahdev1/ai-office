@@ -4,12 +4,17 @@ Tracking progress for Office V3 architecture implementation across Phases 1 thro
 
 ---
 
-## Phase 1: Art Pipeline & Dev Gallery (Phase 1B Completed)
+## Phase 1: Art Pipeline & Dev Gallery (Phase 1B & 1C Completed)
 - [x] Palette-indexed pixel grid engine (`32x32`, `48x48`, `64x32`, `64x80`) with 1px dark hue outline, 3 shades, highlight, and baked soft shadow.
 - [x] Procedural asset generator for walls, floors, desks, monitors, office props, decor, and characters (`src/lib/office/spriteCatalog.ts` with 75 distinct items).
 - [x] License tracking document (`docs/ASSET_LICENSES.md`) verifying all used assets allow public redistribution.
 - [x] Dev Gallery page (`src/app/dev/gallery/page.tsx`) with 6x Workstation Test section (strict rear facing, alternating typing hands, idle coffee sip, island desk far-side seat, 4-direction action cycle, speed/pause/chair controls) and 4x categorized asset inspection.
-- [x] Vitest tests for pixel asset rendering and workstation seated facing verification (`tests/pixelGrid.test.ts`, `tests/workstationSeatedFacing.test.ts`).
+- [x] **Phase 1C Polishing**:
+  - Removed floating white face / red dot artifact (redesigned coffee mug as clean royal navy ceramic mug; integrated onto desktop).
+  - Redrew SE and SW seated poses from back-three-quarter angle with blue cap, forward visor, dark hair, subtle cheek/ear contour, zero eyes/mouth, and eliminated flat gray blocks.
+  - Redrew `prop_wall_desk` as a real wooden desk matching `ref-room-closeup.png` with warm oak top, visible 4px vertical bevel thickness, 3-drawer pedestal with brushed silver handles, metal leg, widescreen monitor, keyboard, and mouse without glow halo.
+  - Restored recognizable employee baseball cap with dome button, brim line, adjustment strap, buckle, and clean dark nape hair (removed light-blue spiky hair look).
+- [x] Vitest tests for pixel asset rendering and workstation seated facing verification (`tests/pixelGrid.test.ts`, `tests/workstationSeatedFacing.test.ts` covering NW, NE, SE, SW, idle, island far-side).
 
 ---
 

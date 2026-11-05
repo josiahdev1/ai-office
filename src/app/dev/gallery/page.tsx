@@ -14,10 +14,6 @@ import {
   SPRITE_PROP_CHAIR_NE,
   SPRITE_PROP_CHAIR_SE,
   SPRITE_PROP_CHAIR_SW,
-  SPRITE_PROP_MONITOR_CODE,
-  SPRITE_PROP_KEYBOARD,
-  SPRITE_PROP_MOUSE,
-  SPRITE_PROP_COFFEE_MUG,
   SPRITE_CHAR_SEATED_TYPING_NW_0,
   SPRITE_CHAR_SEATED_TYPING_NW_1,
   SPRITE_CHAR_SEATED_TYPING_NW_2,
@@ -97,70 +93,56 @@ function WorkstationScene6x({
     return SPRITE_PROP_CHAIR_SW
   }, [facing])
 
-  const chairOffsetY = isChairPulledOut ? 6 : 0
+  const chairOffsetY = isChairPulledOut ? 16 : 0
 
   return (
-    <div className="relative w-80 h-72 rounded-xl border border-cyan-900/40 bg-[#080d1a] overflow-hidden flex flex-col items-center justify-center p-2 shadow-2xl">
+    <div className="relative w-84 h-80 rounded-xl border border-cyan-900/40 bg-[#080d1a] overflow-hidden flex flex-col items-center justify-center p-2 shadow-2xl">
       {/* Background isometric floor grid */}
       <div className="absolute inset-0 opacity-20 pointer-events-none flex items-center justify-center">
-        <PixelSpriteSvgView def={SPRITE_FLOOR_WOOD_PLANK} scale={6} />
+        <PixelSpriteSvgView def={SPRITE_FLOOR_WOOD_PLANK} scale={5} />
       </div>
 
       {/* Facing Badge */}
-      <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 rounded bg-black/60 px-2 py-0.5 border border-slate-700 font-mono text-[10px] text-cyan-300">
+      <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 rounded bg-black/70 px-2 py-0.5 border border-slate-700 font-mono text-[10px] text-cyan-300">
         <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
         Facing: <strong className="text-white">{facing}</strong>
-        <span className="text-slate-400">({facing === 'NW' || facing === 'NE' ? 'Back View' : 'Face Occluded'})</span>
+        <span className="text-slate-400">
+          {facing === 'NW' || facing === 'NE' ? '(Back View)' : '(Back 3/4 View)'}
+        </span>
       </div>
 
       {/* Face Status Badge */}
-      <div className="absolute top-2 right-2 z-20 rounded bg-emerald-950/80 px-2 py-0.5 border border-emerald-500/50 font-mono text-[10px] text-emerald-300 font-bold whitespace-nowrap">
+      <div className="absolute top-2 right-2 z-20 rounded bg-emerald-950/90 px-2 py-0.5 border border-emerald-500/50 font-mono text-[10px] text-emerald-300 font-bold whitespace-nowrap">
         Face Hidden: 100%
       </div>
 
-      {/* Layered Workstation in 6x */}
-      <div className="relative w-64 h-56 flex items-center justify-center">
-        {/* Layer 1: Desk */}
-        <div className="absolute top-6 left-0 z-0">
-          <PixelSpriteSvgView def={SPRITE_PROP_WALL_DESK} scale={4} />
+      {/* Cohesive Workstation in 6x Inspection (Desk + Chair + Seated Agent) */}
+      <div className="relative w-80 h-64 flex items-center justify-center">
+        {/* Layer 1: Solid Teak Desk with 3 Drawers, Widescreen Monitor, Keyboard, Mouse & Mug */}
+        <div className="absolute top-2 left-0 z-0">
+          <PixelSpriteSvgView def={SPRITE_PROP_WALL_DESK} scale={5} />
         </div>
 
-        {/* Layer 2: Monitor */}
-        <div className="absolute top-2 left-20 z-10">
-          <PixelSpriteSvgView def={SPRITE_PROP_MONITOR_CODE} scale={4} />
-        </div>
-
-        {/* Layer 3: Keyboard, Mouse, Mug */}
-        <div className="absolute top-18 left-20 z-10">
-          <PixelSpriteSvgView def={SPRITE_PROP_KEYBOARD} scale={4} />
-        </div>
-        <div className="absolute top-20 left-44 z-10">
-          <PixelSpriteSvgView def={SPRITE_PROP_MOUSE} scale={4} />
-        </div>
-        <div className="absolute top-14 left-10 z-10">
-          <PixelSpriteSvgView def={SPRITE_PROP_COFFEE_MUG} scale={4} />
-        </div>
-
-        {/* Layer 4: Office Chair */}
+        {/* Layer 2: Office Chair */}
         <div
-          className="absolute left-16 z-20 transition-all duration-300"
+          className="absolute left-20 z-10 transition-all duration-300"
           style={{ top: `${16 + chairOffsetY}px` }}
         >
-          <PixelSpriteSvgView def={chairSprite} scale={4} />
+          <PixelSpriteSvgView def={chairSprite} scale={5} />
         </div>
 
-        {/* Layer 5: Seated Agent (Never shows face) */}
+        {/* Layer 3: Seated Agent (Recognizable blue cap, dark nape hair, hands on keyboard) */}
         <div
-          className="absolute left-16 z-30 pointer-events-none"
-          style={{ top: `${12 + (facing === 'SE' || facing === 'SW' ? 4 : 0)}px` }}
+          className="absolute left-20 z-20 pointer-events-none transition-all duration-300"
+          style={{ top: `${14 + chairOffsetY}px` }}
         >
-          <PixelSpriteSvgView def={agentSprite} scale={4} />
+          <PixelSpriteSvgView def={agentSprite} scale={5} />
         </div>
       </div>
 
-      <div className="absolute bottom-2 inset-x-2 z-20 flex items-center justify-between font-mono text-[10px] text-slate-400 bg-black/40 px-2 py-1 rounded">
+      <div className="absolute bottom-2 inset-x-2 z-20 flex items-center justify-between font-mono text-[10px] text-slate-400 bg-black/60 px-2.5 py-1 rounded border border-slate-800">
         <span>Hands: Typing Frame {frame % 3}</span>
-        <span className="text-amber-400">Head: 0 Face Pixels</span>
+        <span className="text-emerald-400 font-bold">Head: 0 Front Face Pixels</span>
       </div>
     </div>
   )
