@@ -190,19 +190,39 @@ const CONVERSATION_TEMPLATES = [
     topic: 'engineering' as const,
     pair: ['arwin', 'neil_mar'],
     generate: (runIndex: number) => {
-      const tickets = ['PR #184', 'PR #205', 'PR #212', 'PR #229', 'PR #245']
+      const tickets = ['PR #184', 'PR #205', 'PR #212', 'PR #229', 'PR #245', 'PR #258', 'PR #264']
       const modules = [
         'TanStack Query cache',
         'canvas viewport matrix',
         'isometric z-indexing',
         'Next.js 16 SSR prefetch',
         'Supabase realtime sync',
+        'WebWorker physics scheduler',
+        'A* collision rasterizer',
       ]
       const ticket = tickets[runIndex % tickets.length]
       const mod = modules[runIndex % modules.length]
       return {
         text: `@Neil Mar ${ticket} for ${mod} is merged to staging. Ready for your reactive card hooks.`,
         replyText: `@Arwin Testing rehydration on live stream now. P99 render frame is solid at 16.6ms.`,
+      }
+    },
+  },
+  {
+    topic: 'engineering' as const,
+    pair: ['josiah', 'arwin'],
+    generate: (runIndex: number) => {
+      const topics = [
+        '18x18 diamond floor slab geometry',
+        'sub-pixel sprite rendering pipeline',
+        'Supabase RLS security policies',
+        'zero-downtime database migrations',
+        'Next.js 16 cacheComponents compatibility',
+      ]
+      const top = topics[runIndex % topics.length]
+      return {
+        text: `@Arwin Reviewed the implementation for ${top}. Architectural boundaries look spotless.`,
+        replyText: `@Josiah Thanks! All unit tests pass cleanly with zero regression warnings.`,
       }
     },
   },
@@ -215,6 +235,7 @@ const CONVERSATION_TEMPLATES = [
         'connection pool utilization at 18%',
         'composite index on office_logs active',
         'partitioned audit table indexed',
+        'WAL checkpoint flush time at 12ms',
       ]
       const metric = metrics[runIndex % metrics.length]
       return {
@@ -232,11 +253,24 @@ const CONVERSATION_TEMPLATES = [
         'Docker staging release v1.4.2',
         'Edge worker bundle #88',
         'E2E regression suite',
+        'Automated CI/CD security gate',
       ]
       const build = builds[runIndex % builds.length]
       return {
         text: `@Josiah ${build} passed all gates. Ready for your Go-Signal signoff.`,
         replyText: `@Bonnie Inspected the diff and unit test reports. Signoff authorized.`,
+      }
+    },
+  },
+  {
+    topic: 'engineering' as const,
+    pair: ['bonnie', 'blaze'],
+    generate: (runIndex: number) => {
+      const runners = ['github-runner-01', 'deploy-edge-sg', 'build-cluster-pht', 'k8s-worker-node']
+      const runner = runners[runIndex % runners.length]
+      return {
+        text: `@Blaze Re-provisioned ${runner} with SSD swap and 10Gbps uplink.`,
+        replyText: `@Bonnie Pipeline checkout time dropped from 14s to 2.1s. Super clean!`,
       }
     },
   },
@@ -251,6 +285,7 @@ const CONVERSATION_TEMPLATES = [
         'CSP nonce evaluation',
         'JWT token expiration & refresh cycle',
         'Supabase RLS bypass probe',
+        'Cross-site WebSocket hijacking audit',
       ]
       const check = checks[runIndex % checks.length]
       return {
@@ -264,15 +299,28 @@ const CONVERSATION_TEMPLATES = [
     pair: ['gian', 'arwin'],
     generate: (runIndex: number) => {
       const suites = [
-        'Vitest unit suite (12/12 passing)',
+        'Vitest unit suite (26/26 passing)',
         'Playwright isometric pathfinding E2E',
         'A* door navigation stress test',
         'Web-first locator regression',
+        'Screen waypoint interpolation matrix',
       ]
       const suite = suites[runIndex % suites.length]
       return {
         text: `@Arwin ${suite} finished with 0 failures across 60 simulated agent cycles.`,
         replyText: `@Gian Fantastic. Moving build artifact to staging candidate repository.`,
+      }
+    },
+  },
+  {
+    topic: 'secops' as const,
+    pair: ['gian', 'khent'],
+    generate: (runIndex: number) => {
+      const tests = ['SQL injection fuzzing', 'rate limiter burst test', 'SSRF egress filter']
+      const t = tests[runIndex % tests.length]
+      return {
+        text: `@Khent Automated ${t} in CI runner. 10,000 requests blocked as expected.`,
+        replyText: `@Gian Excellent resilience. Guardrails are performing according to specification.`,
       }
     },
   },
@@ -288,7 +336,7 @@ const CONVERSATION_TEMPLATES = [
         'OpenAI o3-mini pool',
         'DeepSeek fallback router',
       ]
-      const latencies = ['62ms TTFT', '74ms TTFT', '81ms TTFT', '68ms TTFT']
+      const latencies = ['58ms TTFT', '69ms TTFT', '76ms TTFT', '64ms TTFT']
       const m = models[runIndex % models.length]
       const lat = latencies[runIndex % latencies.length]
       return {
@@ -311,6 +359,30 @@ const CONVERSATION_TEMPLATES = [
       return {
         text: `@Ryan ${vt} weights quantized to INT8 for local browser edge execution.`,
         replyText: `@Keiru Loaded in WebWorker. Memory consumption capped at 48MB.`,
+      }
+    },
+  },
+  {
+    topic: 'ai' as const,
+    pair: ['gabriel', 'nelmar'],
+    generate: (runIndex: number) => {
+      const endpoints = ['/api/office/run streaming SSE', 'vector embeddings cache', 'prompt batching queue']
+      const ep = endpoints[runIndex % endpoints.length]
+      return {
+        text: `@Nelmar Connected ${ep} with backpressure throttling. Zero timeouts observed.`,
+        replyText: `@Gabriel Verified throughput. Response buffers stay within 4KB memory footprint.`,
+      }
+    },
+  },
+  {
+    topic: 'ai' as const,
+    pair: ['roy_jhan', 'josiah'],
+    generate: (runIndex: number) => {
+      const agents = ['Engineering Core', 'Growth Lab', 'Intelligence Lab', 'SecOps NOC']
+      const dept = agents[runIndex % agents.length]
+      return {
+        text: `@Josiah Agent cognitive memory architecture finalized for ${dept}.`,
+        replyText: `@Roy Jhan Outstanding work. Let us monitor reasoning accuracy during all-hands.`,
       }
     },
   },
@@ -350,6 +422,18 @@ const CONVERSATION_TEMPLATES = [
       }
     },
   },
+  {
+    topic: 'operations' as const,
+    pair: ['anthony', 'bonnie'],
+    generate: (runIndex: number) => {
+      const clouds = ['Singapore AWS ap-southeast-1', 'Tokyo edge point-of-presence', 'Manila local CDN cache']
+      const c = clouds[runIndex % clouds.length]
+      return {
+        text: `@Bonnie Routing egress traffic through ${c} for regional low-latency access.`,
+        replyText: `@Anthony DNS propagation confirmed. Client round-trip latency is 14ms.`,
+      }
+    },
+  },
 
   // 5. Growth Lab <-> Product & Analytics
   {
@@ -383,6 +467,18 @@ const CONVERSATION_TEMPLATES = [
       return {
         text: `@Jo Vincent Growth performance telemetry: ${stat}.`,
         replyText: `@Kin Excellent. Exporting executive report for Josiah and client stakeholders.`,
+      }
+    },
+  },
+  {
+    topic: 'growth' as const,
+    pair: ['jesmond', 'neil_mar'],
+    generate: (runIndex: number) => {
+      const widgets = ['interactive canvas HUD', 'fleet roster quick-filter', 'go-signal approval modal']
+      const w = widgets[runIndex % widgets.length]
+      return {
+        text: `@Neil Mar User session recordings show high engagement on ${w}.`,
+        replyText: `@Jesmond Micro-interactions and smooth 60fps animations make all the difference.`,
       }
     },
   },
@@ -422,6 +518,30 @@ const CONVERSATION_TEMPLATES = [
       }
     },
   },
+  {
+    topic: 'command' as const,
+    pair: ['jb', 'jo_vincent'],
+    generate: (runIndex: number) => {
+      const features = ['Autonomous Go-Signal gateway', 'Multi-model LLM benchmarking', 'Real-time studio telemetry']
+      const feat = features[runIndex % features.length]
+      return {
+        text: `@Jo Vincent Key feature highlight for enterprise clients: ${feat}.`,
+        replyText: `@JB Adding dedicated interactive demo section in client pitch deck.`,
+      }
+    },
+  },
+  {
+    topic: 'command' as const,
+    pair: ['julian', 'gloria'],
+    generate: (runIndex: number) => {
+      const sprints = ['Sprint 45 planning', 'cross-team retro', 'deliverable review']
+      const s = sprints[runIndex % sprints.length]
+      return {
+        text: `@Gloria Agenda prepared for ${s}. Engineering and SecOps alignments ready.`,
+        replyText: `@Julian Perfect. Scheduling during the next All-Hands core session.`,
+      }
+    },
+  },
 
   // 7. Casual & Pantry / Gym Chit-Chat
   {
@@ -454,6 +574,30 @@ const CONVERSATION_TEMPLATES = [
       return {
         text: `@Anthony How about ${rec} once the security scan completes?`,
         replyText: `@Khent You're on! Meet you there in 10 minutes.`,
+      }
+    },
+  },
+  {
+    topic: 'casual' as const,
+    pair: ['keiru', 'gian'],
+    generate: (runIndex: number) => {
+      const activities = ['quick gym workout', 'hydration break at the pantry cooler', 'stretch break']
+      const act = activities[runIndex % activities.length]
+      return {
+        text: `@Gian Heading over for a ${act}. Want to join?`,
+        replyText: `@Keiru Sounds good, let me just save this test report. Be right there!`,
+      }
+    },
+  },
+  {
+    topic: 'casual' as const,
+    pair: ['john_lloyd', 'mary_grace'],
+    generate: (runIndex: number) => {
+      const snacks = ['green tea', 'dark chocolate biscuits', 'sparkling water']
+      const snack = snacks[runIndex % snacks.length]
+      return {
+        text: `@Mary Grace New batch of ${snack} arrived at the pantry kitchen counter.`,
+        replyText: `@John Lloyd Nice! Perfect timing after indexing the database tables.`,
       }
     },
   },

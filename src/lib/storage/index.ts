@@ -409,10 +409,6 @@ export function autoAssignDesks(agents: Agent[]): Agent[] {
  * Reads the office state from memory cache, falling back to brain/live_status.json
  */
 export async function getOfficeState(): Promise<OfficeData> {
-  if (cachedOfficeData) {
-    return cachedOfficeData
-  }
-
   const filePath = resolveStatusPath()
   if (fs.existsSync(filePath)) {
     try {
@@ -427,6 +423,10 @@ export async function getOfficeState(): Promise<OfficeData> {
         err
       )
     }
+  }
+
+  if (cachedOfficeData) {
+    return cachedOfficeData
   }
 
   // Minimal fallback state

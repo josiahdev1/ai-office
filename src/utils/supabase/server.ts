@@ -1,27 +1,37 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-export async function createClient() {
-  const cookieStore = await cookies()
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    ''
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseKey =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  ''
 
+export function createClient(
+  cookieStore?: ReturnType<typeof cookies> | Awaited<ReturnType<typeof cookies>>
+) {
   return createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
-      getAll() {
-        return cookieStore.getAll()
+      async getAll() {
+        const resolvedStore = cookieStore ? await cookieStore : await cookies()
+        return resolvedStore.getAll()
       },
       setAll(cookiesToSet) {
         try {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          )
+            const resolvedStore = cookieStore as unknown as {
+              set?: (
+                name: string,
+                value: string,
+                options?: Record<string, unknown>
+              ) => void
+            }
+            if (typeof resolvedStore?.set === 'function') {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                resolvedStore.set?.(name, value, options as Record<string, unknown>)
+              )
+            }
         } catch {
-          // The `setAll` method was called from a Server Component.
-          // This can be ignored if you have middleware refreshing user sessions.
+          // Server component read-only cookie context; ignore
         }
       },
     },

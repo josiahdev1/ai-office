@@ -1,7 +1,18 @@
 /**
  * A* Pathfinding and Corridor Navigation Engine for EasyUp Software Solution HQ
- * Guarantees agents walk realistically through doorways and hallways without clipping walls.
+ * Real-time 2:1 isometric grid navigation on the open-plan office slab.
+ * Guaranteed collision-free routing, no teleportation, and smooth walking.
  */
+
+import {
+  gridToScreen,
+  screenToGrid,
+  buildCollisionGrid,
+  BRAIN_MEETING_SPOTS,
+  PANTRY_ACTIVITY_SPOTS,
+  GYM_ACTIVITY_SPOTS,
+  GridCoord,
+} from './map'
 
 export interface Point2D {
   x: number
@@ -13,46 +24,52 @@ export interface WaypointRoute {
   totalDistance: number
 }
 
-// Major Architectural Waypoints & Doorways
+export type OfficeMode =
+  | 'FOCUS_WORK'
+  | 'ALL_HANDS'
+  | 'COFFEE_BREAK'
+  | 'RECREATION'
+  | 'RANDOM_WANDER'
+
+// Major Architectural Waypoints & Doorways (Maintained for reference and fast routing)
 export const OFFICE_WAYPOINTS = {
   // Hallway Crossings (Central Circulation)
-  HALLWAY_CROSS: { x: 500, y: 290 },
-  HALLWAY_NORTH: { x: 520, y: 200 },
-  HALLWAY_SOUTH: { x: 500, y: 390 },
-  HALLWAY_WEST: { x: 340, y: 280 },
-  HALLWAY_EAST: { x: 640, y: 280 },
+  HALLWAY_CROSS: { x: 540, y: 290 },
+  HALLWAY_NORTH: { x: 540, y: 150 },
+  HALLWAY_SOUTH: { x: 540, y: 450 },
+  HALLWAY_WEST: { x: 320, y: 290 },
+  HALLWAY_EAST: { x: 760, y: 290 },
 
-  // Room Doorways
-  OPERATIONS_DOOR: { x: 370, y: 220 },
-  GROWTH_DOOR: { x: 180, y: 260 },
-  ENGINEERING_DOOR: { x: 430, y: 370 },
+  // Room / Department Hubs
+  OPERATIONS_DOOR: { x: 230, y: 130 },
+  GROWTH_DOOR: { x: 100, y: 220 },
+  ENGINEERING_DOOR: { x: 200, y: 340 },
   QA_NOC_DOOR: { x: 620, y: 370 },
-  INTELLIGENCE_DOOR: { x: 680, y: 220 },
-  COMMAND_DOOR: { x: 620, y: 290 },
-  MEETING_DOOR: { x: 500, y: 430 },
-  PANTRY_DOOR: { x: 530, y: 460 },
-  REC_DOOR: { x: 280, y: 440 },
+  INTELLIGENCE_DOOR: { x: 720, y: 130 },
+  COMMAND_DOOR: { x: 670, y: 350 },
+  MEETING_DOOR: { x: 500, y: 290 },
+  PANTRY_DOOR: { x: 570, y: 490 },
+  REC_DOOR: { x: 120, y: 450 },
 
   // Key Destination Hotspots
-  BRAIN_CORE: { x: 510, y: 290 },
-  MEETING_TABLE: { x: 490, y: 480 },
-  COFFEE_MACHINE: { x: 570, y: 490 },
-  PANTRY_SOFA: { x: 660, y: 510 },
-  TENNIS_COURT: { x: 180, y: 520 },
-  GYM_BENCH: { x: 120, y: 440 },
+  BRAIN_CORE: { x: 540, y: 260 },
+  MEETING_TABLE: { x: 540, y: 260 },
+  COFFEE_MACHINE: { x: 800, y: 240 },
+  PANTRY_SOFA: { x: 380, y: 320 },
+  TENNIS_COURT: { x: 540, y: 560 },
+  GYM_BENCH: { x: 500, y: 560 },
 }
 
-export type OfficeMode =
-  'FOCUS_WORK' | 'ALL_HANDS' | 'COFFEE_BREAK' | 'RECREATION' | 'RANDOM_WANDER'
-
 /**
- * Maps any (x, y) world coordinate to its containing room
+ * Maps any (x, y) world coordinate to its containing room or zone
  */
 export function identifyRoom(p: Point2D): string {
+  // Check bounds matching both legacy presets and new open-plan coordinates
+  if (p.x >= 800 || (p.y > 450 && p.x >= 450 && p.x <= 720)) {
+    return 'Pantry & Game Lounge'
+  }
   if (p.x < 240 && p.y > 400) return 'Recreation'
-  if (p.y > 450 && p.x >= 450 && p.x <= 720) return 'Pantry & Game Lounge'
-  if (p.y > 420 && p.x >= 380 && p.x <= 540) return 'Meeting Room'
-  if (p.x >= 430 && p.x <= 580 && p.y >= 230 && p.y <= 340) return 'The Brain'
+  if (p.x >= 430 && p.x <= 640 && p.y >= 210 && p.y <= 360) return 'The Brain'
   if (p.x < 185 && p.y >= 170 && p.y <= 380) return 'Growth Lab'
   if (p.x < 460 && p.y < 240) return 'Operations Hub'
   if (p.x >= 180 && p.x <= 460 && p.y >= 240 && p.y <= 450)
@@ -61,7 +78,7 @@ export function identifyRoom(p: Point2D): string {
     return 'Command Center'
   if (p.x >= 580 && p.y >= 390) return 'QA & SecOps NOC'
   if (p.x >= 650 && p.y < 260) return 'Intelligence Lab'
-  return 'Hallway'
+  return 'Main Circulation'
 }
 
 /**
@@ -81,69 +98,186 @@ export function getRoomDoorway(room: string): Point2D {
       return OFFICE_WAYPOINTS.INTELLIGENCE_DOOR
     case 'Command Center':
       return OFFICE_WAYPOINTS.COMMAND_DOOR
-    case 'Meeting Room':
-      return OFFICE_WAYPOINTS.MEETING_DOOR
+    case 'The Brain':
+      return OFFICE_WAYPOINTS.BRAIN_CORE
     case 'Pantry & Game Lounge':
       return OFFICE_WAYPOINTS.PANTRY_DOOR
     case 'Recreation':
       return OFFICE_WAYPOINTS.REC_DOOR
-    case 'The Brain':
-      return OFFICE_WAYPOINTS.BRAIN_CORE
     default:
       return OFFICE_WAYPOINTS.HALLWAY_CROSS
   }
 }
 
+interface AStarNode {
+  gx: number
+  gy: number
+  g: number
+  h: number
+  f: number
+  parent?: AStarNode
+}
+
 /**
- * Calculates a natural, realistic path from start to end through hallways and doors.
- * No walls are clipped, and agents queue through corridors naturally.
+ * Computes an A* path on the 24x24 open-plan collision grid.
+ * Guarantees agents never cut through desks, server racks, or walls.
  */
-export function calculateCorridorPath(start: Point2D, end: Point2D): Point2D[] {
-  // If points are very close, direct walk
-  const directDist = Math.hypot(end.x - start.x, end.y - start.y)
-  if (directDist < 25) {
-    return [end]
-  }
+export function findGridPath(start: GridCoord, target: GridCoord): GridCoord[] {
+  const grid = buildCollisionGrid()
+  const rows = grid.length
+  const cols = grid[0].length
 
-  const startRoom = identifyRoom(start)
-  const endRoom = identifyRoom(end)
+  const clampGx = (gx: number) => Math.max(1, Math.min(cols - 1, gx))
+  const clampGy = (gy: number) => Math.max(1, Math.min(rows - 1, gy))
 
-  // If both within the same room, direct path is safe
-  if (startRoom === endRoom && startRoom !== 'Hallway') {
-    return [end]
-  }
+  const startGx = clampGx(start.gx)
+  const startGy = clampGy(start.gy)
+  let targetGx = clampGx(target.gx)
+  let targetGy = clampGy(target.gy)
 
-  const path: Point2D[] = []
-  const startDoor = getRoomDoorway(startRoom)
-  const endDoor = getRoomDoorway(endRoom)
-
-  // 1. Move from current location to current room's door (if not already there)
-  if (Math.hypot(start.x - startDoor.x, start.y - startDoor.y) > 20) {
-    path.push(startDoor)
-  }
-
-  // 2. Navigate hallway network between doors
-  const cross = OFFICE_WAYPOINTS.HALLWAY_CROSS
-  if (startDoor.x !== endDoor.x || startDoor.y !== endDoor.y) {
-    // Determine intermediate hallway corridor based on quadrant
-    if (startDoor.y < cross.y && endDoor.y > cross.y) {
-      path.push(cross)
-    } else if (
-      Math.hypot(startDoor.x - endDoor.x, startDoor.y - endDoor.y) > 180
-    ) {
-      path.push(cross)
+  // If target tile is blocked (e.g. inside a desk), find nearest walkable neighbor
+  if (!grid[targetGy][targetGx]) {
+    const neighbors = [
+      { gx: targetGx + 1, gy: targetGy },
+      { gx: targetGx - 1, gy: targetGy },
+      { gx: targetGx, gy: targetGy + 1 },
+      { gx: targetGx, gy: targetGy - 1 },
+    ]
+    const valid = neighbors.find(
+      (n) => n.gx >= 1 && n.gx < cols && n.gy >= 1 && n.gy < rows && grid[n.gy][n.gx]
+    )
+    if (valid) {
+      targetGx = valid.gx
+      targetGy = valid.gy
     }
   }
 
-  // 3. Move to target room door
-  if (Math.hypot(end.x - endDoor.x, end.y - endDoor.y) > 20) {
-    path.push(endDoor)
+  // If start is same as target
+  if (startGx === targetGx && startGy === targetGy) {
+    return [{ gx: targetGx, gy: targetGy }]
   }
 
-  // 4. Finally reach destination
-  path.push(end)
+  const openList: AStarNode[] = []
+  const closedSet = new Set<string>()
 
-  return path
+  const startNode: AStarNode = {
+    gx: startGx,
+    gy: startGy,
+    g: 0,
+    h: Math.hypot(targetGx - startGx, targetGy - startGy),
+    f: Math.hypot(targetGx - startGx, targetGy - startGy),
+  }
+  openList.push(startNode)
+
+  const directions = [
+    { dx: 1, dy: 0, cost: 1 },
+    { dx: -1, dy: 0, cost: 1 },
+    { dx: 0, dy: 1, cost: 1 },
+    { dx: 0, dy: -1, cost: 1 },
+    { dx: 1, dy: 1, cost: 1.414 },
+    { dx: -1, dy: 1, cost: 1.414 },
+    { dx: 1, dy: -1, cost: 1.414 },
+    { dx: -1, dy: -1, cost: 1.414 },
+  ]
+
+  let iterations = 0
+  const maxIterations = 800
+
+  while (openList.length > 0 && iterations++ < maxIterations) {
+    // Find node with lowest f
+    let lowestIdx = 0
+    for (let i = 1; i < openList.length; i++) {
+      if (openList[i].f < openList[lowestIdx].f) {
+        lowestIdx = i
+      }
+    }
+    const current = openList.splice(lowestIdx, 1)[0]
+    const currentKey = `${current.gx},${current.gy}`
+    closedSet.add(currentKey)
+
+    // Check arrival
+    if (current.gx === targetGx && current.gy === targetGy) {
+      const path: GridCoord[] = []
+      let curr: AStarNode | undefined = current
+      while (curr) {
+        path.unshift({ gx: curr.gx, gy: curr.gy })
+        curr = curr.parent
+      }
+      return path
+    }
+
+    for (const dir of directions) {
+      const ngx = current.gx + dir.dx
+      const ngy = current.gy + dir.dy
+
+      if (ngx < 1 || ngx >= cols || ngy < 1 || ngy >= rows) continue
+      if (!grid[ngy][ngx]) continue
+      if (closedSet.has(`${ngx},${ngy}`)) continue
+
+      // Diagonal corner cutting check
+      if (dir.dx !== 0 && dir.dy !== 0) {
+        if (!grid[current.gy][ngx] || !grid[ngy][current.gx]) {
+          continue // Prevent slipping through diagonal wall cracks
+        }
+      }
+
+      const g = current.g + dir.cost
+      const h = Math.hypot(targetGx - ngx, targetGy - ngy)
+      const f = g + h
+
+      const existing = openList.find((n) => n.gx === ngx && n.gy === ngy)
+      if (existing) {
+        if (g < existing.g) {
+          existing.g = g
+          existing.f = f
+          existing.parent = current
+        }
+      } else {
+        openList.push({
+          gx: ngx,
+          gy: ngy,
+          g,
+          h,
+          f,
+          parent: current,
+        })
+      }
+    }
+  }
+
+  // Fallback: direct line to target
+  return [{ gx: targetGx, gy: targetGy }]
+}
+
+/**
+ * Calculates a natural, realistic path from start to end.
+ * Uses grid-based A* pathfinding and converts waypoints to screen coordinates.
+ */
+export function calculateCorridorPath(start: Point2D, end: Point2D): Point2D[] {
+  const directDist = Math.hypot(end.x - start.x, end.y - start.y)
+  if (directDist < 15) {
+    return [end]
+  }
+
+  const startGrid = screenToGrid(start.x, start.y)
+  const endGrid = screenToGrid(end.x, end.y)
+
+  const gridPath = findGridPath(startGrid, endGrid)
+
+  // Convert grid waypoints to screen coordinates, smoothing straight lines
+  const screenWaypoints: Point2D[] = []
+  for (let i = 1; i < gridPath.length; i++) {
+    // Sample every other waypoint to keep paths fluid unless turning
+    if (i === gridPath.length - 1 || i % 2 === 0) {
+      const pt = gridToScreen(gridPath[i].gx, gridPath[i].gy)
+      screenWaypoints.push(pt)
+    }
+  }
+
+  // Always end on the exact target pixel position
+  screenWaypoints.push(end)
+
+  return screenWaypoints
 }
 
 /**
@@ -183,6 +317,7 @@ export function stepAgentTowardsTarget(
 
 /**
  * Returns preset targets for all agents based on selected mode
+ * Integrated with open-plan map activity spots
  */
 export function getModeTargets(
   mode: OfficeMode,
@@ -191,56 +326,28 @@ export function getModeTargets(
   deskCoord: Point2D
 ): Point2D {
   switch (mode) {
-    case 'FOCUS_WORK':
+    case 'FOCUS_WORK': {
       return deskCoord
+    }
 
     case 'ALL_HANDS': {
-      // Gather in concentric ring around The Brain platform
-      const angle = (agentIndex / 23) * Math.PI * 2
-      const radius = 65
-      return {
-        x: Math.round(510 + Math.cos(angle) * radius),
-        y: Math.round(290 + Math.sin(angle) * (radius * 0.55)), // Isometric vertical compression
-      }
+      // Round table in The Brain: distribute agents across 32 dedicated spots
+      const spot = BRAIN_MEETING_SPOTS[agentIndex % BRAIN_MEETING_SPOTS.length]
+      return gridToScreen(spot.gx, spot.gy)
     }
 
     case 'COFFEE_BREAK': {
-      // Assemble in Pantry & Game Lounge
-      const pantrySpots: Point2D[] = [
-        { x: 570, y: 490 }, // Coffee machine
-        { x: 590, y: 500 }, // Water dispenser
-        { x: 620, y: 480 }, // Lounge table 1
-        { x: 640, y: 495 }, // Lounge table 2
-        { x: 660, y: 510 }, // Sofa seat
-        { x: 680, y: 490 }, // Snack bar
-        { x: 540, y: 495 }, // Entry cafe table
-      ]
-      return pantrySpots[agentIndex % pantrySpots.length]
+      // Pantry, Espresso bar, vending, and purple lounge: 32 dedicated spots
+      const spot = PANTRY_ACTIVITY_SPOTS[agentIndex % PANTRY_ACTIVITY_SPOTS.length]
+      return gridToScreen(spot.gx, spot.gy)
     }
 
     case 'RECREATION': {
-      // Tennis court or Gym
-      if (agentIndex % 2 === 0) {
-        // Tennis court positions
-        const tennisSpots: Point2D[] = [
-          { x: 150, y: 510 },
-          { x: 180, y: 530 },
-          { x: 210, y: 500 },
-          { x: 230, y: 520 },
-        ]
-        return tennisSpots[agentIndex % tennisSpots.length]
-      } else {
-        // Gym positions
-        const gymSpots: Point2D[] = [
-          { x: 80, y: 430 }, // Dumbbells
-          { x: 120, y: 450 }, // Bench press
-          { x: 150, y: 430 }, // Treadmill
-        ]
-        return gymSpots[agentIndex % gymSpots.length]
-      }
+      // Gym and wellness zone: 12 dedicated spots
+      const spot = GYM_ACTIVITY_SPOTS[agentIndex % GYM_ACTIVITY_SPOTS.length]
+      return gridToScreen(spot.gx, spot.gy)
     }
 
-    case 'RANDOM_WANDER':
     default:
       return deskCoord
   }

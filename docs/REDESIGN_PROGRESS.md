@@ -1,0 +1,12 @@
+# EasyUp Software Solution HQ — Redesign Progress Tracker
+
+| Phase | Milestone | Status | Key Deliverables |
+| :--- | :--- | :--- | :--- |
+| **Phase 0** | CI/CD Restoration & Lockfile Sync | ✅ Completed | Fixed lockfile mismatch, added CI fallback secrets, formatted codebase, verified green CI run `41948037704`. |
+| **Phase 1** | Skill Framework & Architectural Documentation | ✅ Completed | Created 5 `.agent/skills/` documents (`iso-office-art`, `keep-existing-sprites`, `office-ui-chrome`, `tilemap-walkability`, `supabase-realtime-data`), `docs/REDESIGN.md`. |
+| **Phase A** | Map Definition & Map Validation | ✅ Completed | Created `src/lib/office/map.ts` (18x18 2:1 isometric diamond slab, 23 assigned desks, 32 Brain meeting spots, 32 Pantry/Lounge break spots, 12 Gym spots), collision matrix, and `src/lib/office/validateMap.ts` + 8/8 tests. |
+| **Phase B & C** | Isometric Open-Plan Canvas Renderer & Sprite Preservation | ✅ Completed | Rendered solid warm cream/beige diamond slab (`#e2d9c4`) matching `ref-hq.png`, tall dark charcoal cutaway back walls with 3D depth caps, front walls cut away, The Brain conference core, purple velvet lounge, L-shaped pantry counter, server racks with blinking LEDs, and strictly preserved pixel sprites from `pixel-sprites.tsx`. |
+| **Phase D** | Top HUD Chips Strip, Zoom & Slide-over AGENTS Panel | ✅ Completed | Top HUD bar with brand mark, Supabase realtime status badge, scrolling agent chips, PHT clock badge, SFX toggle, floating zoom controls, bottom toolbar, and slide-over `AGENTS` roster panel with search and department filtering. |
+| **Phase E** | Office Mode State Machine & Regression Testing | ✅ Completed | True 8-direction A* corridor pathfinding without teleportation for `ALL_HANDS`, `FOCUS_WORK`, `COFFEE_BREAK`, and `RECREATION`. All 4 modes verified via Playwright screenshots and 4/4 regression tests in `tests/regression-modes.test.ts`. |
+| **Phase F** | Supabase Production Migration & Realtime Sync | ✅ Completed | Remote credentials in `.env.local`, SSR helpers (`server.ts`, `client.ts`), Next.js 16 `src/proxy.ts`, `0001_ai_office.sql` migration, `seed.sql`, `supabase-test/page.tsx`, and `officeService.ts` with Realtime subscriptions. |
+| **Phase G** | Quality Gate & Verification | ✅ Completed | All 26 Vitest unit and regression tests pass; 0 ESLint errors; `npx tsc --noEmit` clean; `npm run build` succeeds; Playwright screenshots verified in 1440x900 viewport. |

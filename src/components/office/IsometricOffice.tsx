@@ -4,8 +4,8 @@ import React, {
   useState,
   useEffect,
   useRef,
-  useTransition,
   useCallback,
+  useMemo,
 } from 'react'
 import { Agent, Approval } from './types'
 import { PixelSprite } from './pixel-sprites'
@@ -17,6 +17,12 @@ import {
   OfficeMode,
   Point2D,
 } from '@/lib/office/pathfinding'
+import {
+  ASSIGNED_DESKS,
+  OFFICE_ZONES,
+  gridToScreen,
+  DeskSlot,
+} from '@/lib/office/map'
 import { officeBus } from '@/lib/office/bus'
 import { dialogueEngine } from '@/lib/office/dialogueEngine'
 import { officeSupabase } from '@/lib/supabase/officeService'
@@ -24,311 +30,16 @@ import { officeSupabase } from '@/lib/supabase/officeService'
 export interface IsometricOfficeProps {
   agents: Agent[]
   approvals?: Approval[]
-  onSelectAgent: (agent: Agent) => void
+  onSelectAgent: (agent: Agent | null) => void
   selectedAgentId?: string | null
   speedMode?: '1x' | '2x' | '5x'
   onSpeedChange?: (speed: '1x' | '2x' | '5x') => void
+  onGoSignal?: (approvalId: string, action: 'approve' | 'reject') => void
+  onDispatchDirective?: (agentId: string, directive: string) => Promise<void>
+  logs?: string[]
+  doneToday?: Array<{ id: string; title: string; agent: string; time: string }>
+  supabaseActive?: boolean
 }
-
-export interface DeskLayout {
-  id: string
-  agentId: string
-  name: string
-  room: string
-  roomLabel: string
-  x: number
-  y: number
-  facing: 'left' | 'right'
-  monitors: number
-}
-
-// 23 Specialized Workstations for EasyUp Software Solution HQ
-export const DESK_CONFIGS: Record<string, DeskLayout> = {
-  // 1. Engineering Core (Indigo Floor)
-  josiah: {
-    id: 'eng-1',
-    agentId: 'josiah',
-    name: 'Josiah',
-    room: 'Engineering Core',
-    roomLabel: 'ENGINEERING CORE',
-    x: 200,
-    y: 340,
-    facing: 'right',
-    monitors: 3,
-  },
-  arwin: {
-    id: 'eng-2',
-    agentId: 'arwin',
-    name: 'Arwin',
-    room: 'Engineering Core',
-    roomLabel: 'ENGINEERING CORE',
-    x: 280,
-    y: 340,
-    facing: 'right',
-    monitors: 2,
-  },
-  neil_mar: {
-    id: 'eng-3',
-    agentId: 'neil_mar',
-    name: 'Neil Mar',
-    room: 'Engineering Core',
-    roomLabel: 'ENGINEERING CORE',
-    x: 360,
-    y: 340,
-    facing: 'right',
-    monitors: 2,
-  },
-  nelmar: {
-    id: 'eng-4',
-    agentId: 'nelmar',
-    name: 'Nelmar',
-    room: 'Engineering Core',
-    roomLabel: 'ENGINEERING CORE',
-    x: 440,
-    y: 340,
-    facing: 'left',
-    monitors: 2,
-  },
-  bonnie: {
-    id: 'eng-5',
-    agentId: 'bonnie',
-    name: 'Bonnie',
-    room: 'Engineering Core',
-    roomLabel: 'ENGINEERING CORE',
-    x: 280,
-    y: 410,
-    facing: 'right',
-    monitors: 2,
-  },
-  john_lloyd: {
-    id: 'eng-6',
-    agentId: 'john_lloyd',
-    name: 'John Lloyd',
-    room: 'Engineering Core',
-    roomLabel: 'ENGINEERING CORE',
-    x: 360,
-    y: 410,
-    facing: 'right',
-    monitors: 2,
-  },
-
-  // 2. QA & SecOps NOC (Magenta Floor)
-  khent: {
-    id: 'qa-1',
-    agentId: 'khent',
-    name: 'Khent',
-    room: 'QA & SecOps NOC',
-    roomLabel: 'QA & SECOPS NOC',
-    x: 620,
-    y: 410,
-    facing: 'right',
-    monitors: 2,
-  },
-  john_arvy: {
-    id: 'qa-2',
-    agentId: 'john_arvy',
-    name: 'John Arvy',
-    room: 'QA & SecOps NOC',
-    roomLabel: 'QA & SECOPS NOC',
-    x: 700,
-    y: 410,
-    facing: 'right',
-    monitors: 2,
-  },
-  gian: {
-    id: 'qa-3',
-    agentId: 'gian',
-    name: 'Gian',
-    room: 'QA & SecOps NOC',
-    roomLabel: 'QA & SECOPS NOC',
-    x: 780,
-    y: 410,
-    facing: 'left',
-    monitors: 2,
-  },
-
-  // 3. Operations Hub (Green Floor)
-  mary_grace: {
-    id: 'ops-1',
-    agentId: 'mary_grace',
-    name: 'Mary Grace',
-    room: 'Operations Hub',
-    roomLabel: 'OPERATIONS HUB',
-    x: 230,
-    y: 130,
-    facing: 'right',
-    monitors: 2,
-  },
-  anthony: {
-    id: 'ops-2',
-    agentId: 'anthony',
-    name: 'Anthony',
-    room: 'Operations Hub',
-    roomLabel: 'OPERATIONS HUB',
-    x: 310,
-    y: 130,
-    facing: 'right',
-    monitors: 2,
-  },
-  blaze: {
-    id: 'ops-3',
-    agentId: 'blaze',
-    name: 'Blaze',
-    room: 'Operations Hub',
-    roomLabel: 'OPERATIONS HUB',
-    x: 250,
-    y: 190,
-    facing: 'right',
-    monitors: 2,
-  },
-  ferwin: {
-    id: 'ops-4',
-    agentId: 'ferwin',
-    name: 'Ferwin',
-    room: 'Operations Hub',
-    roomLabel: 'OPERATIONS HUB',
-    x: 330,
-    y: 190,
-    facing: 'left',
-    monitors: 2,
-  },
-
-  // 4. Growth Lab (Blue Floor)
-  jo_vincent: {
-    id: 'growth-1',
-    agentId: 'jo_vincent',
-    name: 'Jo Vincent',
-    room: 'Growth Lab',
-    roomLabel: 'GROWTH LAB',
-    x: 95,
-    y: 200,
-    facing: 'right',
-    monitors: 2,
-  },
-  jesmond: {
-    id: 'growth-2',
-    agentId: 'jesmond',
-    name: 'Jesmond',
-    room: 'Growth Lab',
-    roomLabel: 'GROWTH LAB',
-    x: 165,
-    y: 230,
-    facing: 'right',
-    monitors: 2,
-  },
-  kin: {
-    id: 'growth-3',
-    agentId: 'kin',
-    name: 'Kin',
-    room: 'Growth Lab',
-    roomLabel: 'GROWTH LAB',
-    x: 95,
-    y: 270,
-    facing: 'right',
-    monitors: 2,
-  },
-
-  // 5. Intelligence Lab (Cyan Floor)
-  roy_jhan: {
-    id: 'intel-1',
-    agentId: 'roy_jhan',
-    name: 'Roy Jhan',
-    room: 'Intelligence Lab',
-    roomLabel: 'INTELLIGENCE LAB',
-    x: 720,
-    y: 120,
-    facing: 'right',
-    monitors: 2,
-  },
-  gabriel: {
-    id: 'intel-2',
-    agentId: 'gabriel',
-    name: 'Gabriel',
-    room: 'Intelligence Lab',
-    roomLabel: 'INTELLIGENCE LAB',
-    x: 800,
-    y: 120,
-    facing: 'left',
-    monitors: 2,
-  },
-  keiru: {
-    id: 'intel-3',
-    agentId: 'keiru',
-    name: 'Keiru',
-    room: 'Intelligence Lab',
-    roomLabel: 'INTELLIGENCE LAB',
-    x: 720,
-    y: 180,
-    facing: 'right',
-    monitors: 2,
-  },
-  ryan: {
-    id: 'intel-4',
-    agentId: 'ryan',
-    name: 'Ryan',
-    room: 'Intelligence Lab',
-    roomLabel: 'INTELLIGENCE LAB',
-    x: 800,
-    y: 180,
-    facing: 'left',
-    monitors: 2,
-  },
-
-  // 6. Command Center (Obsidian Floor)
-  gloria: {
-    id: 'cmd-1',
-    agentId: 'gloria',
-    name: 'Gloria',
-    room: 'Command Center',
-    roomLabel: 'COMMAND CENTER',
-    x: 670,
-    y: 350,
-    facing: 'left',
-    monitors: 2,
-  },
-  jb: {
-    id: 'cmd-2',
-    agentId: 'jb',
-    name: 'JB',
-    room: 'Command Center',
-    roomLabel: 'COMMAND CENTER',
-    x: 760,
-    y: 350,
-    facing: 'right',
-    monitors: 2,
-  },
-  julian: {
-    id: 'cmd-3',
-    agentId: 'julian',
-    name: 'Julian',
-    room: 'Command Center',
-    roomLabel: 'COMMAND CENTER',
-    x: 715,
-    y: 290,
-    facing: 'right',
-    monitors: 2,
-  },
-}
-
-// Activity Spots for Canteen, Gym, and Lounges
-const CANTEEN_SPOTS: Point2D[] = [
-  { x: 570, y: 490 }, // Espresso Bar
-  { x: 590, y: 500 }, // Water & Beverage station
-  { x: 620, y: 480 }, // Canteen table 1
-  { x: 640, y: 495 }, // Canteen table 2
-  { x: 660, y: 510 }, // Lounge sofa
-  { x: 680, y: 490 }, // Snack buffet
-  { x: 540, y: 495 }, // Cafe dining table
-]
-
-const FITNESS_SPOTS: Point2D[] = [
-  { x: 120, y: 440 }, // Bench Press
-  { x: 80, y: 430 }, // Dumbbell rack
-  { x: 150, y: 430 }, // Treadmill
-  { x: 180, y: 520 }, // Tennis Court Baseline
-  { x: 230, y: 520 }, // Tennis Court Net
-  { x: 260, y: 540 }, // Tennis Court Baseline 2
-]
 
 interface AgentSimState {
   x: number
@@ -341,100 +52,128 @@ interface AgentSimState {
   facing: 'left' | 'right'
   hasCoffee: boolean
   isSeated: boolean
-  activity:
-    | 'typing'
-    | 'idle_at_desk'
-    | 'reading_logs'
-    | 'walking'
-    | 'eating_canteen'
-    | 'working_out'
-    | 'at_meeting'
-  breakTimer: number // Seconds remaining in break
+  activity: string
+  breakTimer: number
 }
+
+// Convert ASSIGNED_DESKS to quick lookup
+export const DESK_CONFIGS: Record<string, DeskSlot & { x: number; y: number; facingDirection: 'left' | 'right' }> = {}
+ASSIGNED_DESKS.forEach((d) => {
+  const screenPos = gridToScreen(d.chairGx, d.chairGy)
+  DESK_CONFIGS[d.agentId] = {
+    ...d,
+    x: screenPos.x,
+    y: screenPos.y,
+    facingDirection: d.facing === 'SW' || d.facing === 'NW' ? 'left' : 'right',
+  }
+})
 
 export function IsometricOffice({
   agents,
+  approvals = [],
   onSelectAgent,
   selectedAgentId,
-  speedMode = '1x',
+  onGoSignal,
+  onDispatchDirective,
+  logs = [],
+  doneToday = [],
+  supabaseActive = false,
 }: IsometricOfficeProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  // Compute Philippine Standard Time (UTC+8) Day vs Night
-  const getIsPhNight = () => {
-    const now = new Date()
-    const utcHours = now.getUTCHours()
-    const phHours = (utcHours + 8) % 24
-    return phHours < 6 || phHours >= 18 // 6:00 PM to 6:00 AM is night
-  }
-
-  const [zoom, setZoom] = useState(0.72)
+  // Navigation & Viewport State
+  const [zoom, setZoom] = useState(0.85)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const dragStartRef = useRef({ x: 0, y: 0 })
-  const [soundEnabled, setSoundEnabled] = useState(false)
-  const [isNightMode, setIsNightMode] = useState(false)
-  const [activeSpeech, setActiveSpeech] = useState<
-    Record<string, string | null>
-  >({})
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Office Modes & Audio
+  const [currentMode, setCurrentMode] = useState<OfficeMode>('FOCUS_WORK')
+  const currentModeRef = useRef<OfficeMode>('FOCUS_WORK')
+  const [soundEnabled, setSoundEnabled] = useState(true)
+
+  // Philippine Standard Time (PHT - UTC+8) Real-Time Clock
+  const [phtTimeString, setPhtTimeString] = useState('')
+
+  useEffect(() => {
+    const updatePHT = () => {
+      const now = new Date()
+      const utc = now.getTime() + now.getTimezoneOffset() * 60000
+      const pht = new Date(utc + 3600000 * 8)
+      setPhtTimeString(
+        pht.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      )
+    }
+    updatePHT()
+    const timer = setInterval(updatePHT, 10000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // UI Panels & Modals
+  const [showAgentsDrawer, setShowAgentsDrawer] = useState(false)
+  const [showLayoutOverlay, setShowLayoutOverlay] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [showGoSignalModal, setShowGoSignalModal] = useState(false)
+  const [showTelemetryModal, setShowTelemetryModal] = useState(false)
+  const [directiveInput, setDirectiveInput] = useState('')
+  const [isSubmittingDirective, setIsSubmittingDirective] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedDeptFilter, setSelectedDeptFilter] = useState('ALL')
+  const [spawnToast, setSpawnToast] = useState<string | null>(null)
+
+  // Dialogue & Inter-Agent Laser Links
+  const [activeSpeech, setActiveSpeech] = useState<Record<string, string>>({})
   const [activeLaserLink, setActiveLaserLink] = useState<{
     from: Point2D
     to: Point2D
   } | null>(null)
-  const [currentMode, setCurrentMode] = useState<OfficeMode>('FOCUS_WORK')
-  const [, startTransition] = useTransition()
 
-  // Periodically refresh Day/Night lighting with real Philippine Standard Time
-  useEffect(() => {
-    setIsNightMode(getIsPhNight())
-    const timer = setInterval(() => {
-      setIsNightMode(getIsPhNight())
-    }, 60000)
-    return () => clearInterval(timer)
-  }, [])
-
-  // 60 FPS Physics Simulation State Ref
-  const simStateRef = useRef<Record<string, AgentSimState>>({})
+  // Simulation positions state
   const [renderPositions, setRenderPositions] = useState<
-    Record<string, AgentSimState>
-  >(() => {
-    const init: Record<string, AgentSimState> = {}
-    Object.entries(DESK_CONFIGS).forEach(([id, cfg]) => {
-      init[id] = {
-        x: cfg.x,
-        y: cfg.y,
-        waypoints: [],
-        targetX: cfg.x,
-        targetY: cfg.y,
-        isWalking: false,
-        walkFrame: 0,
-        facing: cfg.facing,
-        hasCoffee: false,
-        isSeated: true,
-        activity: 'typing',
-        breakTimer: 0,
+    Record<string, { x: number; y: number; isWalking: boolean; walkFrame: number; facing: 'left' | 'right'; hasCoffee: boolean; isSeated: boolean; activity: string }>
+  >({})
+
+  // Physics simulation state ref
+  const simStateRef = useRef<Record<string, AgentSimState>>({})
+
+  // Initialize simulation positions for all agents
+  useEffect(() => {
+    agents.forEach((agent) => {
+      if (!simStateRef.current[agent.id]) {
+        const desk = DESK_CONFIGS[agent.id]
+        const fallback = desk ? { x: desk.x, y: desk.y } : { x: 540, y: 340 }
+        simStateRef.current[agent.id] = {
+          x: fallback.x,
+          y: fallback.y,
+          waypoints: [],
+          targetX: fallback.x,
+          targetY: fallback.y,
+          isWalking: false,
+          walkFrame: 0,
+          facing: desk?.facingDirection || 'right',
+          hasCoffee: false,
+          isSeated: true,
+          activity: 'typing',
+          breakTimer: 0,
+        }
       }
     })
-    return init
-  })
+  }, [agents])
 
-  // Keep references fresh
   const agentsRef = useRef(agents)
   useEffect(() => {
     agentsRef.current = agents
   }, [agents])
 
-  // Auto-fit overview camera to container size on mount and resize
+  // Responsive Auto-Fit Camera to Screen
   const fitOverviewCamera = useCallback(() => {
     if (!containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
     if (rect.width <= 0 || rect.height <= 0) return
-    const padding = 20
-    const scaleX = (rect.width - padding) / 1080
-    const scaleY = (rect.height - padding) / 640
-    const fitScale = Math.max(0.55, Math.min(scaleX, scaleY, 0.95))
+    const scaleX = (rect.width - 40) / 1400
+    const scaleY = (rect.height - 40) / 800
+    const fitScale = Math.max(0.6, Math.min(scaleX, scaleY, 1.05))
     setZoom(fitScale)
-    setPan({ x: 0, y: 0 })
+    setPan({ x: 0, y: -20 })
   }, [])
 
   useEffect(() => {
@@ -447,25 +186,21 @@ export function IsometricOffice({
     }
   }, [fitOverviewCamera])
 
-  // Non-passive wheel event listener so cursor over canvas zooms without scrolling the page
+  // Non-passive wheel zoom
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-
     const handleWheelNonPassive = (e: WheelEvent) => {
       e.preventDefault()
       e.stopPropagation()
-      const zoomFactor = e.deltaY < 0 ? 1.09 : 0.91
-      setZoom((prev) => Math.min(Math.max(prev * zoomFactor, 0.5), 2.5))
+      const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92
+      setZoom((prev) => Math.min(Math.max(prev * zoomFactor, 0.45), 2.2))
     }
-
     el.addEventListener('wheel', handleWheelNonPassive, { passive: false })
-    return () => {
-      el.removeEventListener('wheel', handleWheelNonPassive)
-    }
+    return () => el.removeEventListener('wheel', handleWheelNonPassive)
   }, [])
 
-  // Periodic authentic inter-agent conversations with visual laser beam links (Dynamic & Non-Looping)
+  // Authentic inter-agent dialogue cycle
   useEffect(() => {
     const chatInterval = setInterval(() => {
       const dialogue = dialogueEngine.getNextDialogue()
@@ -475,12 +210,10 @@ export function IsometricOffice({
       const senderSim = sim[dialogue.from]
       const recipientSim = sim[dialogue.to]
 
-      // Play subtle radio chirp
       try {
         if (soundEnabled) sfx?.playBlip?.(720)
       } catch {}
 
-      // 1. Show sender message and laser link
       setActiveSpeech((prev) => ({ ...prev, [dialogue.from]: dialogue.text }))
       if (senderSim && recipientSim) {
         setActiveLaserLink({
@@ -489,7 +222,6 @@ export function IsometricOffice({
         })
       }
 
-      // Publish to officeBus for global activity log
       officeBus.publish({
         from: dialogue.from,
         fromName: dialogue.fromName,
@@ -498,128 +230,72 @@ export function IsometricOffice({
         text: dialogue.text,
       })
 
-      // Persist to Supabase office_messages table
+      // Send to Supabase asynchronously
       void officeSupabase.postMessage({
         sender_id: dialogue.from,
         sender_name: dialogue.fromName,
-        sender_department: dialogue.topic.toUpperCase(),
-        recipient_id: dialogue.to,
-        recipient_name: dialogue.toName,
+        receiver_id: dialogue.to,
+        receiver_name: dialogue.toName,
         content: dialogue.text,
-        message_type: 'inter_agent_chat',
       })
 
-      // 2. Recipient replies after 2.4s
+      // Reply after short delay
       setTimeout(() => {
         try {
-          if (soundEnabled) sfx?.playBlip?.(540)
+          if (soundEnabled) sfx?.playBlip?.(840)
         } catch {}
-        setActiveSpeech((prev) => ({
-          ...prev,
-          [dialogue.to]: dialogue.replyText,
-        }))
-
-        void officeSupabase.postMessage({
-          sender_id: dialogue.to,
-          sender_name: dialogue.toName,
-          recipient_id: dialogue.from,
-          recipient_name: dialogue.fromName,
-          content: dialogue.replyText,
-          message_type: 'inter_agent_reply',
+        setActiveSpeech((prev) => ({ ...prev, [dialogue.to]: dialogue.replyText }))
+        officeBus.publish({
+          from: dialogue.to,
+          fromName: dialogue.toName,
+          to: dialogue.from,
+          toName: dialogue.fromName,
+          text: dialogue.replyText,
         })
       }, 2400)
 
-      // 3. Clear speech bubbles & laser after 6.8s
+      // Fade speech bubbles and laser
       setTimeout(() => {
-        setActiveSpeech((prev) => ({
-          ...prev,
-          [dialogue.from]: null,
-          [dialogue.to]: null,
-        }))
         setActiveLaserLink(null)
-      }, 6800)
-    }, 12000)
+      }, 4200)
+
+      setTimeout(() => {
+        setActiveSpeech((prev) => {
+          const next = { ...prev }
+          delete next[dialogue.from]
+          delete next[dialogue.to]
+          return next
+        })
+      }, 6500)
+    }, 11000)
 
     return () => clearInterval(chatInterval)
   }, [soundEnabled])
 
-  // Autonomous Organic Routine: periodic break cycle (Canteen, Coffee, Gym, or Walk)
-  useEffect(() => {
-    // Only wander organically if in FOCUS_WORK mode
-    const breakInterval = setInterval(() => {
-      if (currentMode !== 'FOCUS_WORK') return
-
-      const agentList = agentsRef.current.filter((a) => a.id !== 'josiah')
-      if (agentList.length === 0) return
-
-      // Pick 1 or 2 workers who are currently typing at their desk
-      const candidate = agentList[Math.floor(Math.random() * agentList.length)]
-      const sim = simStateRef.current
-      const state = sim[candidate.id]
-
-      if (
-        state &&
-        !state.isWalking &&
-        state.activity === 'typing' &&
-        state.breakTimer <= 0
-      ) {
-        // Choose destination: 70% Canteen/Pantry for snack/coffee, 30% Gym/Tennis for workout
-        const isFitness = Math.random() < 0.3
-        const targetList = isFitness ? FITNESS_SPOTS : CANTEEN_SPOTS
-        const target = targetList[Math.floor(Math.random() * targetList.length)]
-
-        const path = calculateCorridorPath({ x: state.x, y: state.y }, target)
-        state.waypoints = path
-        state.isWalking = true
-        state.isSeated = false
-        state.hasCoffee = !isFitness
-        state.activity = 'walking'
-        state.breakTimer = isFitness ? 14 : 16 // Break duration in seconds
-
-        if (path.length > 0) {
-          state.targetX = path[0].x
-          state.targetY = path[0].y
-        }
-
-        // Announce natural break
-        officeBus.publish({
-          from: candidate.id,
-          fromName: candidate.name,
-          to: 'josiah',
-          toName: 'Josiah',
-          text: isFitness
-            ? 'Heading to the recreation gym for a quick fitness stretch.'
-            : 'Taking a 5-minute coffee break at the canteen.',
-        })
-      }
-    }, 18000)
-
-    return () => clearInterval(breakInterval)
-  }, [currentMode])
-
-  // Mode Handlers: Smooth A* Pathfinding and Interactive Camera Focus
+  // Switch Office Mode (Smooth A* Pathfinding without Teleportation)
   const switchOfficeMode = useCallback(
     (newMode: OfficeMode) => {
       setCurrentMode(newMode)
       try {
-        if (soundEnabled) {
-          sfx?.playModeSwitch?.()
-        }
+        if (soundEnabled) sfx?.playModeSwitch?.()
       } catch {}
 
-      // Smoothly pan & zoom camera to the active department/zone
+      // Update in Supabase
+      void officeSupabase.setOfficeMode(newMode)
+
+      // Smoothly pan camera to the active zone
       if (newMode === 'FOCUS_WORK') {
-        setPan({ x: 80, y: 0 })
-        setZoom(0.82)
+        setPan({ x: 0, y: -20 })
+        setZoom(0.85)
       } else if (newMode === 'ALL_HANDS') {
-        setPan({ x: 0, y: 20 })
+        setPan({ x: 0, y: 40 })
         setZoom(1.05)
       } else if (newMode === 'COFFEE_BREAK') {
-        setPan({ x: -160, y: -160 })
-        setZoom(1.05)
+        setPan({ x: -220, y: -100 })
+        setZoom(1.0)
       } else if (newMode === 'RECREATION') {
-        setPan({ x: 280, y: -160 })
-        setZoom(1.05)
+        setPan({ x: 0, y: -200 })
+        setZoom(1.0)
       }
 
       const sim = simStateRef.current
@@ -627,11 +303,11 @@ export function IsometricOffice({
         const currentSim = sim[agent.id]
         if (!currentSim) return
 
-        const deskCoord = agent.desk_coord ||
-          DESK_CONFIGS[agent.id] || { x: 200, y: 340 }
-        const finalTarget = getModeTargets(newMode, agent.id, idx, deskCoord)
+        const desk = DESK_CONFIGS[agent.id]
+        const fallback = desk ? { x: desk.x, y: desk.y } : { x: 540, y: 340 }
+        const finalTarget = getModeTargets(newMode, agent.id, idx, fallback)
 
-        // Calculate safe multi-waypoint path through room doors and hallways
+        // Calculate smooth A* path avoiding furniture
         const waypoints = calculateCorridorPath(
           { x: currentSim.x, y: currentSim.y },
           finalTarget
@@ -642,7 +318,7 @@ export function IsometricOffice({
         currentSim.isSeated = false
         currentSim.hasCoffee = newMode === 'COFFEE_BREAK'
         currentSim.activity = 'walking'
-        currentSim.breakTimer = 0 // Reset individual timer when overriding with office mode
+        currentSim.breakTimer = 0
 
         if (waypoints.length > 0) {
           currentSim.targetX = waypoints[0].x
@@ -653,7 +329,11 @@ export function IsometricOffice({
     [soundEnabled]
   )
 
-  // 60 FPS Physics Simulation Loop
+  useEffect(() => {
+    currentModeRef.current = currentMode
+  }, [currentMode])
+
+  // 60 FPS Physics Movement Loop
   useEffect(() => {
     let animId: number
     let lastTime = performance.now()
@@ -662,27 +342,25 @@ export function IsometricOffice({
     const tick = (now: number) => {
       const rawDt = (now - lastTime) / 1000
       lastTime = now
-      const dt = Math.min(Math.max(rawDt, 0.005), 0.05) // Clamped delta
+      const dt = Math.min(Math.max(rawDt, 0.005), 0.05)
       frameTick++
 
-      const speedMultiplier = 1.0 // Strictly real-time 1x speed
-      const walkSpeed = 68 * speedMultiplier // Pixels per second
+      const walkSpeed = 72 // Pixels per second at 1x real time
       const sim = simStateRef.current
+      const activeMode = currentModeRef.current
       let hasStateChanged = false
 
-      // Update every active agent
       Object.keys(sim).forEach((agentId) => {
         const state = sim[agentId]
         if (!state) return
 
-        // Guaranteed NaN Protection
         if (!Number.isFinite(state.x) || !Number.isFinite(state.y)) {
-          const cfg = DESK_CONFIGS[agentId] || { x: 200, y: 340 }
+          const cfg = DESK_CONFIGS[agentId] || { x: 540, y: 340 }
           state.x = cfg.x
           state.y = cfg.y
         }
 
-        // 1. Waypoint Pathfinding Movement
+        // 1. Waypoint movement
         if (state.isWalking) {
           const stepResult = stepAgentTowardsTarget(
             { x: state.x, y: state.y },
@@ -704,7 +382,6 @@ export function IsometricOffice({
           }
 
           if (stepResult.arrived) {
-            // Advance to next waypoint
             state.waypoints.shift()
             if (state.waypoints.length > 0) {
               state.targetX = state.waypoints[0].x
@@ -713,70 +390,56 @@ export function IsometricOffice({
               // Reached final destination
               state.isWalking = false
 
-              if (currentMode === 'FOCUS_WORK') {
-                if (state.breakTimer > 0) {
-                  // Arrived at break location (Canteen or Gym)
-                  state.isSeated = state.hasCoffee
-                  state.activity = state.hasCoffee
-                    ? 'eating_canteen'
-                    : 'working_out'
-                } else {
-                  // Arrived back at desk
-                  state.isSeated = true
-                  state.hasCoffee = false
-                  state.activity = 'typing'
-                }
-              } else if (currentMode === 'COFFEE_BREAK') {
+              if (activeMode === 'FOCUS_WORK') {
+                state.isSeated = true
+                state.hasCoffee = false
+                state.activity = 'typing'
+              } else if (activeMode === 'ALL_HANDS') {
+                state.isSeated = true
+                state.hasCoffee = false
+                state.activity = 'seated_meeting'
+              } else if (activeMode === 'COFFEE_BREAK') {
                 state.isSeated = true
                 state.hasCoffee = true
                 state.activity = 'eating_canteen'
-              } else if (currentMode === 'ALL_HANDS') {
-                state.isSeated = false
-                state.hasCoffee = false
-                state.activity = 'at_meeting'
-              } else if (currentMode === 'RECREATION') {
+              } else if (activeMode === 'RECREATION') {
                 state.isSeated = false
                 state.activity = 'working_out'
               }
             }
           }
           hasStateChanged = true
-        } else {
-          // 2. Idle / Break Timer Count-down (Automatic return to desk after break)
-          if (currentMode === 'FOCUS_WORK' && state.breakTimer > 0) {
-            state.breakTimer -= dt * speedMultiplier
-            if (state.breakTimer <= 0) {
-              // Break finished -> walk back to assigned desk
-              const desk = DESK_CONFIGS[agentId] || { x: 200, y: 340 }
-              const returnPath = calculateCorridorPath(
-                { x: state.x, y: state.y },
-                { x: desk.x, y: desk.y }
-              )
-              state.waypoints = returnPath
-              state.isWalking = true
-              state.isSeated = false
-              state.hasCoffee = false
-              state.activity = 'walking'
-              if (returnPath.length > 0) {
-                state.targetX = returnPath[0].x
-                state.targetY = returnPath[0].y
-              }
-            }
-          }
-
-          // 3. Typing / Bob Animation Frame
-          if (frameTick % 12 === 0) {
-            state.walkFrame = (state.walkFrame + 1) % 4
-            hasStateChanged = true
-          }
         }
       })
 
-      // Synchronize render state every 2 frames for smooth 60 FPS
-      if (hasStateChanged && frameTick % 2 === 0) {
-        startTransition(() => {
-          setRenderPositions({ ...sim })
+      if (hasStateChanged || frameTick % 3 === 0) {
+        const nextRender: Record<
+          string,
+          {
+            x: number
+            y: number
+            isWalking: boolean
+            walkFrame: number
+            facing: 'left' | 'right'
+            hasCoffee: boolean
+            isSeated: boolean
+            activity: string
+          }
+        > = {}
+        Object.keys(sim).forEach((k) => {
+          const s = sim[k]
+          nextRender[k] = {
+            x: s.x,
+            y: s.y,
+            isWalking: s.isWalking,
+            walkFrame: s.walkFrame,
+            facing: s.facing,
+            hasCoffee: s.hasCoffee,
+            isSeated: s.isSeated,
+            activity: s.activity,
+          }
         })
+        setRenderPositions(nextRender)
       }
 
       animId = requestAnimationFrame(tick)
@@ -784,28 +447,25 @@ export function IsometricOffice({
 
     animId = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(animId)
-  }, [speedMode, currentMode])
+  }, [])
 
-  // Center camera only when user explicitly selects a NEW agent
-  const prevSelectedAgentRef = useRef<string | null>(null)
-  useEffect(() => {
-    if (!selectedAgentId) {
-      prevSelectedAgentRef.current = null
-      return
-    }
-    // Only center if the user picked a different agent
-    if (prevSelectedAgentRef.current !== selectedAgentId) {
-      prevSelectedAgentRef.current = selectedAgentId
-      const pos = simStateRef.current[selectedAgentId]
-      if (pos) {
-        const targetPanX = -(pos.x - 540) * zoom
-        const targetPanY = -(pos.y - 310) * zoom
-        setPan({ x: targetPanX, y: targetPanY })
-      }
-    }
-  }, [selectedAgentId, zoom])
+  // Center on agent when selected from external UI
+  const handleSelectAgentAndFollow = useCallback((agent: Agent) => {
+    onSelectAgent(agent)
+    try {
+      if (soundEnabled) sfx?.playSelect?.()
+    } catch {}
 
-  // Mouse drag pan handlers
+    const sim = simStateRef.current[agent.id]
+    if (sim) {
+      setPan({
+        x: -(sim.x - 700) * zoom,
+        y: -(sim.y - 420) * zoom,
+      })
+    }
+  }, [onSelectAgent, soundEnabled, zoom])
+
+  // Mouse pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return
     setIsDragging(true)
@@ -822,1031 +482,626 @@ export function IsometricOffice({
 
   const handleMouseUp = () => setIsDragging(false)
 
-  // Keyboard hotkeys
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      )
-        return
-      if (e.key === 'f' || e.key === 'F') {
-        switchOfficeMode('FOCUS_WORK')
-      } else if (e.key === 'a' || e.key === 'A') {
-        switchOfficeMode('ALL_HANDS')
-      } else if (e.key === 'c' || e.key === 'C') {
-        switchOfficeMode('COFFEE_BREAK')
-      } else if (e.key === 'r' || e.key === 'R') {
-        switchOfficeMode('RECREATION')
-      } else if (e.key === 'Escape') {
-        const josiah = agents.find((a) => a.id === 'josiah') || agents[0]
-        if (josiah) onSelectAgent(josiah)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [agents, onSelectAgent, switchOfficeMode])
+  // Zoom controls
+  const handleZoomIn = () => setZoom((z) => Math.min(z * 1.15, 2.2))
+  const handleZoomOut = () => setZoom((z) => Math.max(z * 0.85, 0.45))
+
+  // Filtered agents for AGENTS drawer
+  const filteredAgents = useMemo(() => {
+    return agents.filter((ag) => {
+      const matchesSearch =
+        ag.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ag.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ag.room.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesDept =
+        selectedDeptFilter === 'ALL' || ag.room === selectedDeptFilter
+      return matchesSearch && matchesDept
+    })
+  }, [agents, searchQuery, selectedDeptFilter])
+
+  // Dynamic depth-sorted list of agents
+  const sortedAgents = useMemo(() => {
+    return [...agents].sort((a, b) => {
+      const posA = renderPositions[a.id]?.y || 340
+      const posB = renderPositions[b.id]?.y || 340
+      return posA - posB
+    })
+  }, [agents, renderPositions])
 
   return (
     <div
       ref={containerRef}
-      className={`relative h-full w-full overflow-hidden transition-colors duration-500 select-none ${
-        isNightMode ? 'bg-[#05070d]' : 'bg-[#0a0d16]'
-      }`}
+      className="relative h-full w-full overflow-hidden bg-[#080b12] select-none"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       style={{ cursor: isDragging ? 'grabbing' : 'default' }}
     >
-      {/* ==================== HUD CONTROLS BAR ==================== */}
-      <div className="pointer-events-none absolute top-2 right-2 left-2 z-30 flex flex-wrap items-center justify-between gap-1.5">
-        {/* Left: Brand Badge & Mode Switchers */}
-        <div className="pointer-events-auto flex items-center gap-1.5">
-          <div className="flex items-center gap-1 rounded-md border border-[#1e293b] bg-[#111625]/95 px-2 py-1 shadow backdrop-blur-md">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-            <span className="font-mono text-[11px] font-bold tracking-tight whitespace-nowrap text-slate-200">
-              EASYUP HQ
+      {/* ==================== 1. TOP HEADER HUD ==================== */}
+      <header className="pointer-events-none absolute top-3 right-3 left-3 z-40 flex items-center justify-between gap-3">
+        {/* Left: Brand Capsule */}
+        <div className="pointer-events-auto flex items-center gap-2">
+          <div className="flex items-center gap-2 rounded-lg border border-[#1e283d] bg-[#0c101a]/95 px-3 py-1.5 shadow-xl backdrop-blur-md">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
+            <span className="font-mono text-xs font-bold tracking-wider text-slate-100 whitespace-nowrap uppercase">
+              EasyUp Headquarters
             </span>
-          </div>
-
-          <div className="flex items-center gap-0.5 rounded-md border border-[#1e293b] bg-[#111625]/95 p-0.5 shadow backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => switchOfficeMode('FOCUS_WORK')}
-              className={`flex cursor-pointer items-center gap-1 rounded px-2 py-1 font-mono text-[11px] whitespace-nowrap shadow transition active:scale-95 ${
-                currentMode === 'FOCUS_WORK'
-                  ? 'bg-blue-600 font-bold text-white ring-1 shadow-blue-500/20 ring-blue-400'
-                  : 'text-slate-300 hover:bg-[#1e293b] hover:text-white'
-              }`}
-              title="Focus Work: Return all agents to department desks (Shortcut: F)"
-            >
-              <span>🖥️</span>
-              <span>Focus Work</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => switchOfficeMode('ALL_HANDS')}
-              className={`flex cursor-pointer items-center gap-1 rounded px-2 py-1 font-mono text-[11px] whitespace-nowrap shadow transition active:scale-95 ${
-                currentMode === 'ALL_HANDS'
-                  ? 'bg-purple-600 font-bold text-white ring-1 shadow-purple-500/20 ring-purple-400'
-                  : 'text-slate-300 hover:bg-[#1e293b] hover:text-white'
-              }`}
-              title="All Hands Assembly: Assemble all agents around The Brain (Shortcut: A)"
-            >
-              <span>📢</span>
-              <span>All Hands</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => switchOfficeMode('COFFEE_BREAK')}
-              className={`flex cursor-pointer items-center gap-1 rounded px-2 py-1 font-mono text-[11px] whitespace-nowrap shadow transition active:scale-95 ${
-                currentMode === 'COFFEE_BREAK'
-                  ? 'bg-amber-600 font-bold text-white ring-1 shadow-amber-500/20 ring-amber-400'
-                  : 'text-slate-300 hover:bg-[#1e293b] hover:text-white'
-              }`}
-              title="Pantry & Canteen: Head to espresso bar & dining lounge (Shortcut: C)"
-            >
-              <span>☕</span>
-              <span>Pantry & Canteen</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => switchOfficeMode('RECREATION')}
-              className={`flex cursor-pointer items-center gap-1 rounded px-2 py-1 font-mono text-[11px] whitespace-nowrap shadow transition active:scale-95 ${
-                currentMode === 'RECREATION'
-                  ? 'bg-cyan-600 font-bold text-white ring-1 shadow-cyan-500/20 ring-cyan-400'
-                  : 'text-slate-300 hover:bg-[#1e293b] hover:text-white'
-              }`}
-              title="Recreation Court & Fitness Gym: Workout & tennis rally (Shortcut: R)"
-            >
-              <span>🎾</span>
-              <span>Rec & Gym</span>
-            </button>
+            <span className="rounded bg-emerald-950/80 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-300 whitespace-nowrap">
+              {agents.length} AGENTS
+            </span>
+            {supabaseActive && (
+              <span className="hidden sm:inline-flex items-center gap-1 rounded bg-blue-950/80 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-blue-300 whitespace-nowrap">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                SYNCED
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Right: Manila Real-Time Shift Badge, Audio Toggle, Overview Fit Button */}
-        <div className="pointer-events-auto flex items-center gap-1">
-          {/* Automatic Manila Standard Time Shift Badge */}
-          <div
-            className={`flex items-center gap-1 rounded-md border px-2 py-1 font-mono text-[11px] whitespace-nowrap shadow backdrop-blur-md ${
-              isNightMode
-                ? 'border-indigo-700/80 bg-indigo-950/90 text-indigo-300 shadow-indigo-950/50'
-                : 'border-[#2b244d] bg-[#111625]/90 text-amber-300 shadow-amber-950/20'
-            }`}
-            title="Automatically synchronized to Philippine Standard Time (UTC+8)"
-          >
-            <span>{isNightMode ? '🌙' : '☀️'}</span>
-            <span className="font-semibold">
-              PHT // {isNightMode ? 'NIGHT' : 'DAY'}
-            </span>
+        {/* Center: Horizontal Scrolling Agent Status Chips & Go-Signal Trigger */}
+        <div className="pointer-events-auto flex max-w-[50vw] items-center gap-2">
+          {approvals && approvals.length > 0 && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowGoSignalModal(true)
+              }}
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/80 bg-amber-950/90 px-2.5 py-1.5 font-mono text-xs font-bold text-amber-300 shadow-xl shadow-amber-950/50 transition hover:bg-amber-900 active:scale-95 animate-pulse whitespace-nowrap"
+              title="Pending Go-Signals Require Approval"
+            >
+              <span>⚠️</span>
+              <span>WAITING FOR YOU ({approvals.length})</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-1.5 overflow-x-auto rounded-lg border border-[#1e283d]/80 bg-[#0c101a]/90 p-1 shadow-lg backdrop-blur-md scrollbar-none">
+            {agents.map((ag) => {
+              const isSelected = selectedAgentId === ag.id
+              return (
+                <button
+                  key={ag.id}
+                  type="button"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleSelectAgentAndFollow(ag)
+                  }}
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 font-mono text-[11px] whitespace-nowrap transition active:scale-95 ${
+                    isSelected
+                      ? 'border border-amber-400/80 bg-amber-950/60 text-amber-200'
+                      : 'border border-transparent bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-800'
+                  }`}
+                  title={`Click to focus on ${ag.name} (${ag.role})`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      ag.status === 'working'
+                        ? 'bg-emerald-400'
+                        : ag.status === 'awaiting_approval'
+                          ? 'animate-ping bg-amber-400'
+                          : 'bg-slate-400'
+                    }`}
+                  />
+                  <span className="font-semibold">{ag.name}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Right: Manila Time, Sound Toggle, Reset Overview */}
+        <div className="pointer-events-auto flex items-center gap-2">
+          {/* Philippine Standard Time Badge */}
+          <div className="flex items-center gap-1.5 rounded-lg border border-[#1e283d] bg-[#0c101a]/95 px-2.5 py-1.5 font-mono text-xs text-slate-300 shadow-xl backdrop-blur-md whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+            <span className="font-bold text-slate-100">{phtTimeString || '09:00 AM'}</span>
+            <span className="text-[10px] text-slate-400">PHT (UTC+8)</span>
           </div>
 
           {/* Sound Toggle */}
           <button
             type="button"
-            onClick={() => {
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
               const next = !soundEnabled
               setSoundEnabled(next)
               if (sfx) {
                 sfx.enabled = next
-                if (next) {
-                  try {
-                    sfx?.playBlip?.(700)
-                  } catch {}
-                }
+                if (next) sfx.playBlip(700)
               }
             }}
-            className={`cursor-pointer rounded-md border px-2 py-1 font-mono text-[11px] whitespace-nowrap shadow transition ${
+            className={`cursor-pointer rounded-lg border px-2.5 py-1.5 font-mono text-xs whitespace-nowrap shadow-xl backdrop-blur-md transition ${
               soundEnabled
-                ? 'border-emerald-600 bg-emerald-950/90 text-emerald-300'
-                : 'border-[#1e293b] bg-[#111625]/90 text-slate-400 hover:text-slate-200'
+                ? 'border-emerald-600/80 bg-emerald-950/80 text-emerald-300'
+                : 'border-[#1e283d] bg-[#0c101a]/90 text-slate-400 hover:text-slate-200'
             }`}
           >
-            {soundEnabled ? '🔊 AUDIO' : '🔇 MUTED'}
-          </button>
-
-          {/* Reset Zoom / Center Overview Button */}
-          <button
-            type="button"
-            onClick={fitOverviewCamera}
-            className="flex cursor-pointer items-center gap-1 rounded-md border border-cyan-500/50 bg-[#181330]/95 px-2 py-1 font-mono text-[11px] font-bold whitespace-nowrap text-cyan-300 shadow-lg transition hover:border-cyan-400 hover:bg-cyan-950"
-            title="Reset to Full Overview Fit"
-          >
-            <span>🎯</span>
-            <span>OVERVIEW</span>
+            {soundEnabled ? '🔊 SFX' : '🔇 MUTED'}
           </button>
         </div>
+      </header>
+
+      {/* ==================== 2. TOP-LEFT FLOATING ZOOM CONTROLS ==================== */}
+      <div className="pointer-events-auto absolute top-16 left-3 z-30 flex flex-col rounded-lg border border-[#1e283d] bg-[#0c101a]/95 p-1 shadow-2xl backdrop-blur-md">
+        <button
+          type="button"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            handleZoomIn()
+          }}
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded font-mono text-sm font-bold text-slate-200 transition hover:bg-slate-800 active:scale-95"
+          title="Zoom In"
+        >
+          +
+        </button>
+        <div className="my-0.5 h-px bg-[#1e283d]" />
+        <button
+          type="button"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            handleZoomOut()
+          }}
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded font-mono text-sm font-bold text-slate-200 transition hover:bg-slate-800 active:scale-95"
+          title="Zoom Out"
+        >
+          -
+        </button>
+        <div className="my-0.5 h-px bg-[#1e283d]" />
+        <button
+          type="button"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            fitOverviewCamera()
+          }}
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded font-mono text-[10px] text-cyan-400 transition hover:bg-slate-800 active:scale-95"
+          title="Reset to Fit Overview"
+        >
+          ⛶
+        </button>
       </div>
 
-      {/* ==================== 2.5D ISOMETRIC VIEWPORT ==================== */}
-      <div className="relative flex h-full w-full flex-1 items-center justify-center overflow-hidden">
+      {/* ==================== 3. 2.5D ISOMETRIC VIEWPORT ==================== */}
+      <main className="relative flex h-full w-full flex-1 items-center justify-center overflow-hidden">
         <div
           className="relative origin-center transition-transform duration-75"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            width: '1080px',
-            height: '640px',
+            width: '1400px',
+            height: '860px',
             flexShrink: 0,
           }}
         >
-          {/* ==================== SVG MAP & ARCHITECTURE ==================== */}
+          {/* SVG Floor, Cutaway Charcoal Walls & Architecture */}
           <svg
-            viewBox="0 0 1080 640"
+            viewBox="0 0 1400 860"
             className="pointer-events-none absolute inset-0 h-full w-full"
             style={{ imageRendering: 'pixelated' }}
           >
             <defs>
-              {/* Floor Patterns */}
+              {/* Warm cream/beige floor tile pattern */}
               <pattern
-                id="cyanGridTiles"
-                width="22"
-                height="13"
+                id="warmFloorTile"
+                width="64"
+                height="32"
                 patternUnits="userSpaceOnUse"
               >
                 <polygon
-                  points="0,6.5 11,0 22,6.5 11,13"
-                  fill="#062e3f"
-                  stroke="#0891b2"
+                  points="32,0 64,16 32,32 0,16"
+                  fill="#e5dec9"
+                  stroke="#cfc6b0"
                   strokeWidth="0.8"
                 />
               </pattern>
 
-              <pattern
-                id="oakWoodTiles"
-                width="24"
-                height="14"
-                patternUnits="userSpaceOnUse"
-              >
-                <polygon
-                  points="0,7 12,0 24,7 12,14"
-                  fill="#3b2011"
-                  stroke="#5c3317"
-                  strokeWidth="0.8"
-                />
-              </pattern>
-
-              {/* Central Holographic Brain Glow */}
+              {/* The Brain pulsing cyan holographic core */}
               <radialGradient id="brainHoloGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.95" />
-                <stop offset="40%" stopColor="#06b6d4" stopOpacity="0.6" />
+                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.85" />
+                <stop offset="35%" stopColor="#06b6d4" stopOpacity="0.45" />
+                <stop offset="70%" stopColor="#0284c7" stopOpacity="0.15" />
                 <stop offset="100%" stopColor="#0891b2" stopOpacity="0" />
+              </radialGradient>
+
+              {/* Server rack LED glow */}
+              <radialGradient id="serverLedGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#22c55e" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
               </radialGradient>
             </defs>
 
-            {/* ==================== 3D FLOATING EXTRUDED SLAB EDGES ==================== */}
-            {/* Extruded Left/Bottom Edge */}
+            {/* ==================== 3D FLOATING SLAB EXTRUSION (BEVEL EDGES) ==================== */}
+            {/* Left Slab Thickness Face */}
             <polygon
-              points="15,315 15,340 460,670 460,615"
-              fill="#0d0a1a"
-              stroke="#1e1838"
-              strokeWidth="1.5"
+              points="124,408 124,438 700,726 700,696"
+              fill="#121620"
+              stroke="#1c2333"
+              strokeWidth="1.2"
             />
-            {/* Extruded Right/Bottom Edge */}
+            {/* Right Slab Thickness Face */}
             <polygon
-              points="460,615 460,670 1065,340 1065,315"
-              fill="#140f26"
-              stroke="#241c42"
-              strokeWidth="1.5"
+              points="700,696 700,726 1276,438 1276,408"
+              fill="#181e2b"
+              stroke="#242c3d"
+              strokeWidth="1.2"
             />
-            {/* Slab Perimeter Top Surface (Base Dark Purple Floor) */}
+
+            {/* ==================== ONE CONTINUOUS WARM BEIGE FLOOR SLAB ==================== */}
+            {/* Diamond Slab: Top (700, 120), Right (1276, 408), Bottom (700, 696), Left (124, 408) */}
             <polygon
-              points="540,15 1065,315 460,615 15,315"
-              fill="#100c21"
-              stroke="#312657"
-              strokeWidth="2.5"
+              points="700,120 1276,408 700,696 124,408"
+              fill="#e2d9c4"
+              stroke="#b5aa92"
+              strokeWidth="2"
             />
 
-            {/* Hallway Guidance Strip Lines */}
-            <line
-              x1="540"
-              y1="30"
-              x2="460"
-              y2="600"
-              stroke="#251d45"
-              strokeWidth="20"
-              strokeLinecap="round"
-            />
-            <line
-              x1="30"
-              y1="315"
-              x2="1050"
-              y2="315"
-              stroke="#251d45"
-              strokeWidth="20"
-              strokeLinecap="round"
-            />
-            {/* Dual White Center Lines */}
-            <line
-              x1="540"
-              y1="30"
-              x2="460"
-              y2="600"
-              stroke="#ffffff"
-              strokeOpacity="0.2"
+            {/* Subtle Grout Lines Across Floor Slab */}
+            <g stroke="#cfc5ae" strokeWidth="0.6" strokeOpacity="0.45">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((i) => {
+                const x1 = 700 - i * 32
+                const y1 = 120 + i * 16
+                const x2 = 1276 - i * 32
+                const y2 = 408 + i * 16
+
+                const x3 = 700 + i * 32
+                const y3 = 120 + i * 16
+                const x4 = 124 + i * 32
+                const y4 = 408 + i * 16
+                return (
+                  <React.Fragment key={`grid-${i}`}>
+                    <line x1={x1} y1={y1} x2={x2} y2={y2} />
+                    <line x1={x3} y1={y3} x2={x4} y2={y4} />
+                  </React.Fragment>
+                )
+              })}
+            </g>
+
+            {/* ==================== LAYOUT PLAN OVERLAY (WHEN TOGGLED) ==================== */}
+            {showLayoutOverlay && (
+              <g className="transition-opacity duration-300">
+                {OFFICE_ZONES.map((zone) => {
+                  const p1 = gridToScreen(zone.rect.x, zone.rect.y)
+                  const p2 = gridToScreen(zone.rect.x + zone.rect.w, zone.rect.y)
+                  const p3 = gridToScreen(
+                    zone.rect.x + zone.rect.w,
+                    zone.rect.y + zone.rect.h
+                  )
+                  const p4 = gridToScreen(zone.rect.x, zone.rect.y + zone.rect.h)
+                  const center = gridToScreen(
+                    zone.rect.x + zone.rect.w / 2,
+                    zone.rect.y + zone.rect.h / 2
+                  )
+                  return (
+                    <g key={zone.id}>
+                      <polygon
+                        points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
+                        fill={zone.color}
+                        fillOpacity="0.16"
+                        stroke={zone.color}
+                        strokeWidth="1.8"
+                        strokeDasharray="4 2"
+                      />
+                      <text
+                        x={center.x}
+                        y={center.y}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="#ffffff"
+                        fontSize="11"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                        className="select-none"
+                        style={{
+                          paintOrder: 'stroke',
+                          stroke: '#080b12',
+                          strokeWidth: 3,
+                          strokeLinejoin: 'round',
+                        }}
+                      >
+                        {zone.label || zone.name}
+                      </text>
+                    </g>
+                  )
+                })}
+              </g>
+            )}
+
+            {/* ==================== TWO TALL CHARCOAL CUTAWAY BACK WALLS ==================== */}
+            {/* Top-Left Back Wall (From Left (124, 408) to Top (700, 120)) */}
+            <polygon
+              points="124,408 124,338 700,50 700,120"
+              fill="#181c26"
+              stroke="#222735"
               strokeWidth="1.5"
-              strokeDasharray="6 6"
             />
-            <line
-              x1="30"
-              y1="315"
-              x2="1050"
-              y2="315"
-              stroke="#ffffff"
-              strokeOpacity="0.2"
+            {/* Top-Left Wall Cap */}
+            <polygon
+              points="124,338 138,331 714,43 700,50"
+              fill="#2e3546"
+              stroke="#3b4459"
+              strokeWidth="1"
+            />
+
+            {/* Top-Right Back Wall (From Top (700, 120) to Right (1276, 408)) */}
+            <polygon
+              points="700,120 700,50 1276,338 1276,408"
+              fill="#1e222d"
+              stroke="#2a303e"
               strokeWidth="1.5"
-              strokeDasharray="6 6"
+            />
+            {/* Top-Right Wall Cap */}
+            <polygon
+              points="700,50 714,43 1290,331 1276,338"
+              fill="#333b4e"
+              stroke="#404a60"
+              strokeWidth="1"
             />
 
-            {/* ==================== ZONE 1: OPERATIONS HUB (GREEN) ==================== */}
-            <g>
+            {/* Wall Monitor / Code Screen on Top-Right Back Wall */}
+            <g transform="translate(940, 200)">
               <polygon
-                points="170,160 380,45 520,120 310,235"
-                fill="#14532d"
-                stroke="#22c55e"
-                strokeWidth="2.5"
-              />
-              <polygon
-                points="175,160 380,48 515,120 310,232"
-                fill="#15803d"
-                fillOpacity="0.85"
-              />
-              {/* Sleek Room Signage Badge */}
-              <g transform="translate(345, 68)">
-                <rect
-                  x="-75"
-                  y="-10"
-                  width="150"
-                  height="18"
-                  rx="4"
-                  fill="#052e16"
-                  stroke="#4ade80"
-                  strokeWidth="1.2"
-                />
-                <text
-                  x="0"
-                  y="3"
-                  textAnchor="middle"
-                  className="fill-emerald-200 font-mono text-[9px] font-bold"
-                >
-                  OPERATIONS HUB
-                </text>
-              </g>
-              {/* Furniture: Whiteboard & Filing Cabinet */}
-              <g transform="translate(480, 115)">
-                <polygon points="-16,-16 0,-24 16,-16 0,-8" fill="#78350f" />
-                <polygon points="-16,-16 0,-8 0,14 -16,6" fill="#92400e" />
-                <line
-                  x1="-14"
-                  y1="-2"
-                  x2="-2"
-                  y2="4"
-                  stroke="#ffffff"
-                  strokeWidth="1.5"
-                />
-                <line
-                  x1="-14"
-                  y1="5"
-                  x2="-2"
-                  y2="11"
-                  stroke="#facc15"
-                  strokeWidth="1.5"
-                />
-              </g>
-              {/* Corner Potted Plants */}
-              <g transform="translate(195, 180)">
-                <polygon points="-4,0 4,0 3,7 -3,7" fill="#b45309" />
-                <circle cx="-1" cy="-5" r="5" fill="#16a34a" />
-                <circle cx="2" cy="-4" r="4.5" fill="#22c55e" />
-              </g>
-            </g>
-
-            {/* ==================== ZONE 2: GROWTH LAB (BLUE) ==================== */}
-            <g>
-              <polygon
-                points="40,240 210,140 280,210 110,310"
-                fill="#1e3a8a"
-                stroke="#3b82f6"
-                strokeWidth="2.5"
-              />
-              <polygon
-                points="45,240 210,143 275,210 110,307"
-                fill="#1d4ed8"
-                fillOpacity="0.85"
-              />
-              {/* Room Signage Badge */}
-              <g transform="translate(160, 162)">
-                <rect
-                  x="-60"
-                  y="-10"
-                  width="120"
-                  height="18"
-                  rx="4"
-                  fill="#0f172a"
-                  stroke="#60a5fa"
-                  strokeWidth="1.2"
-                />
-                <text
-                  x="0"
-                  y="3"
-                  textAnchor="middle"
-                  className="fill-blue-200 font-mono text-[9px] font-bold"
-                >
-                  GROWTH LAB
-                </text>
-              </g>
-              {/* Analytics Metrics Screen */}
-              <g transform="translate(80, 205)">
-                <polygon
-                  points="0,-15 20,-5 20,10 0,0"
-                  fill="#0f172a"
-                  stroke="#38bdf8"
-                  strokeWidth="1"
-                />
-                <line
-                  x1="4"
-                  y1="-7"
-                  x2="16"
-                  y2="0"
-                  stroke="#4ade80"
-                  strokeWidth="1.5"
-                />
-              </g>
-            </g>
-
-            {/* ==================== ZONE 3: ENGINEERING CORE (ELECTRIC INDIGO) ==================== */}
-            <g>
-              <polygon
-                points="140,380 340,270 510,360 310,470"
-                fill="#312e81"
-                stroke="#6366f1"
-                strokeWidth="2.5"
-              />
-              <polygon
-                points="145,380 340,273 505,360 310,467"
-                fill="#3730a3"
-                fillOpacity="0.85"
-              />
-              {/* Room Signage Badge */}
-              <g transform="translate(340, 290)">
-                <rect
-                  x="-80"
-                  y="-10"
-                  width="160"
-                  height="18"
-                  rx="4"
-                  fill="#1e1b4b"
-                  stroke="#818cf8"
-                  strokeWidth="1.2"
-                />
-                <text
-                  x="0"
-                  y="3"
-                  textAnchor="middle"
-                  className="fill-indigo-200 font-mono text-[9px] font-bold"
-                >
-                  ENGINEERING CORE
-                </text>
-              </g>
-              {/* High-Performance Server Rack Units */}
-              <g transform="translate(170, 360)">
-                <polygon
-                  points="0,-20 18,-10 18,15 0,5"
-                  fill="#090d16"
-                  stroke="#4f46e5"
-                  strokeWidth="1.2"
-                />
-                {/* Blinking Server Status LEDs */}
-                <circle
-                  cx="5"
-                  cy="-8"
-                  r="1.5"
-                  fill="#22c55e"
-                  className="animate-pulse"
-                />
-                <circle cx="10" cy="-5" r="1.5" fill="#38bdf8" />
-                <circle cx="15" cy="-2" r="1.5" fill="#22c55e" />
-                <circle cx="5" cy="0" r="1.5" fill="#f59e0b" />
-                <circle
-                  cx="10"
-                  cy="3"
-                  r="1.5"
-                  fill="#22c55e"
-                  className="animate-pulse"
-                />
-              </g>
-            </g>
-
-            {/* ==================== ZONE 4: QA & SECOPS NOC (NEON MAGENTA) ==================== */}
-            <g>
-              <polygon
-                points="560,420 740,320 900,410 720,510"
-                fill="#831843"
-                stroke="#ec4899"
-                strokeWidth="2.5"
-              />
-              <polygon
-                points="565,420 740,323 895,410 720,507"
-                fill="#9d174d"
-                fillOpacity="0.85"
-              />
-              {/* Room Signage Badge */}
-              <g transform="translate(740, 345)">
-                <rect
-                  x="-85"
-                  y="-10"
-                  width="170"
-                  height="18"
-                  rx="4"
-                  fill="#4a044e"
-                  stroke="#f472b6"
-                  strokeWidth="1.2"
-                />
-                <text
-                  x="0"
-                  y="3"
-                  textAnchor="middle"
-                  className="fill-pink-200 font-mono text-[9px] font-bold"
-                >
-                  QA & SECOPS NOC
-                </text>
-              </g>
-              {/* NOC Security Threat Matrix Screen */}
-              <g transform="translate(860, 385)">
-                <polygon
-                  points="-25,-12 0,-24 25,-12 0,0"
-                  fill="#0f172a"
-                  stroke="#ec4899"
-                  strokeWidth="1.2"
-                />
-                <polygon points="-25,-12 0,0 0,20 -25,8" fill="#1e1b4b" />
-                <circle cx="-10" cy="4" r="2" fill="#22c55e" />
-                <circle cx="0" cy="8" r="2" fill="#22c55e" />
-                <circle cx="10" cy="12" r="2" fill="#38bdf8" />
-              </g>
-            </g>
-
-            {/* ==================== ZONE 5: INTELLIGENCE LAB (CYAN TILED) ==================== */}
-            <g>
-              <polygon
-                points="660,160 850,55 990,135 800,240"
-                fill="url(#cyanGridTiles)"
-                stroke="#06b6d4"
-                strokeWidth="2.5"
-              />
-              {/* Room Signage Badge */}
-              <g transform="translate(830, 80)">
-                <rect
-                  x="-80"
-                  y="-10"
-                  width="160"
-                  height="18"
-                  rx="4"
-                  fill="#082f49"
-                  stroke="#22d3ee"
-                  strokeWidth="1.2"
-                />
-                <text
-                  x="0"
-                  y="3"
-                  textAnchor="middle"
-                  className="fill-cyan-200 font-mono text-[9px] font-bold"
-                >
-                  INTELLIGENCE LAB
-                </text>
-              </g>
-              {/* Neural Model Visualizer Rig */}
-              <g transform="translate(940, 105)">
-                <polygon
-                  points="-16,-16 0,-24 16,-16 0,-8"
-                  fill="#083344"
-                  stroke="#06b6d4"
-                  strokeWidth="1"
-                />
-                <circle
-                  cx="0"
-                  cy="-16"
-                  r="3"
-                  fill="#38bdf8"
-                  className="animate-pulse"
-                />
-              </g>
-            </g>
-
-            {/* ==================== ZONE 6: COMMAND CENTER (OBSIDIAN & AMBER) ==================== */}
-            <g>
-              <polygon
-                points="600,280 770,190 910,270 740,360"
-                fill="#090d16"
-                stroke="#f59e0b"
-                strokeWidth="2.5"
-              />
-              <polygon
-                points="605,280 770,193 905,270 740,357"
+                points="-50, -10 50, -35 50, 20 -50, 45"
                 fill="#0f172a"
-                fillOpacity="0.9"
-              />
-              {/* Room Signage Badge */}
-              <g transform="translate(755, 215)">
-                <rect
-                  x="-80"
-                  y="-10"
-                  width="160"
-                  height="18"
-                  rx="4"
-                  fill="#1c1917"
-                  stroke="#fbbf24"
-                  strokeWidth="1.2"
-                />
-                <text
-                  x="0"
-                  y="3"
-                  textAnchor="middle"
-                  className="fill-amber-200 font-mono text-[9px] font-bold"
-                >
-                  COMMAND CENTER
-                </text>
-              </g>
-            </g>
-
-            {/* ==================== ZONE 7: THE BRAIN (CENTRAL CORE) ==================== */}
-            <g transform="translate(510, 290)">
-              {/* Outer Circular Obsidian Platform */}
-              <ellipse
-                cx="0"
-                cy="0"
-                rx="80"
-                ry="46"
-                fill="#090d16"
-                stroke="#f59e0b"
-                strokeWidth="2.5"
-              />
-              <ellipse
-                cx="0"
-                cy="0"
-                rx="66"
-                ry="38"
-                fill="#0c1322"
-                stroke="#06b6d4"
-                strokeWidth="1.8"
-                strokeDasharray="8 4"
-              />
-              {/* Glowing Holographic Energy Core */}
-              <ellipse
-                cx="0"
-                cy="-6"
-                rx="30"
-                ry="18"
-                fill="url(#brainHoloGlow)"
-              />
-              <circle
-                cx="0"
-                cy="-10"
-                r="14"
-                fill="#38bdf8"
-                fillOpacity="0.8"
-                className="animate-pulse"
-              />
-              <ellipse
-                cx="0"
-                cy="-10"
-                rx="20"
-                ry="6"
-                fill="none"
-                stroke="#ffffff"
-                strokeWidth="1.2"
-              />
-              {/* Floating Quantum Particles */}
-              <circle
-                cx="-12"
-                cy="-18"
-                r="1.5"
-                fill="#a7f3d0"
-                className="animate-ping"
-              />
-              <circle
-                cx="14"
-                cy="-22"
-                r="2"
-                fill="#67e8f9"
-                className="animate-pulse"
-              />
-              <circle cx="6" cy="-28" r="1.5" fill="#fde047" />
-
-              {/* Core Badge */}
-              <g transform="translate(0, 24)">
-                <rect
-                  x="-45"
-                  y="-9"
-                  width="90"
-                  height="16"
-                  rx="4"
-                  fill="#020617"
-                  stroke="#38bdf8"
-                  strokeWidth="1.2"
-                />
-                <text
-                  x="0"
-                  y="3"
-                  textAnchor="middle"
-                  className="fill-cyan-300 font-mono text-[9px] font-bold"
-                >
-                  THE BRAIN
-                </text>
-              </g>
-            </g>
-
-            {/* ==================== ZONE 8: PANTRY & CANTEEN (OAK PARQUET DINING) ==================== */}
-            <g>
-              <polygon
-                points="460,460 620,380 730,440 570,520"
-                fill="url(#oakWoodTiles)"
-                stroke="#d97706"
-                strokeWidth="2.5"
-              />
-              {/* Sleek Room Signage Badge */}
-              <g transform="translate(605, 395)">
-                <rect
-                  x="-95"
-                  y="-10"
-                  width="190"
-                  height="18"
-                  rx="4"
-                  fill="#291605"
-                  stroke="#f59e0b"
-                  strokeWidth="1.2"
-                />
-                <text
-                  x="0"
-                  y="3"
-                  textAnchor="middle"
-                  className="fill-amber-200 font-mono text-[9px] font-bold"
-                >
-                  PANTRY & CANTEEN
-                </text>
-              </g>
-              {/* Espresso Machine Bar Counter */}
-              <g transform="translate(565, 475)">
-                <polygon
-                  points="-16,-10 0,-18 16,-10 0,-2"
-                  fill="#451a03"
-                  stroke="#78350f"
-                  strokeWidth="1"
-                />
-                <polygon points="-16,-10 0,-2 0,10 -16,2" fill="#78350f" />
-                <polygon points="0,-2 16,-10 16,2 0,10" fill="#92400e" />
-                {/* Silver Espresso Machine with Steam */}
-                <rect
-                  x="-8"
-                  y="-18"
-                  width="14"
-                  height="10"
-                  fill="#cbd5e1"
-                  stroke="#475569"
-                  strokeWidth="0.8"
-                  rx="1"
-                />
-                <circle cx="-1" cy="-14" r="1.5" fill="#ef4444" />
-                <circle cx="3" cy="-14" r="1.5" fill="#22c55e" />
-              </g>
-              {/* Canteen Dining Table with Coffee Cups */}
-              <g transform="translate(635, 480)">
-                <polygon
-                  points="-14,-7 0,-14 14,-7 0,0"
-                  fill="#5c3317"
-                  stroke="#92400e"
-                  strokeWidth="0.8"
-                />
-                <polygon points="-14,-7 0,0 0,6 -14,-1" fill="#451a03" />
-                <polygon points="0,0 14,-7 14,-1 0,6" fill="#78350f" />
-                {/* Mugs / Snack plate */}
-                <circle cx="-4" cy="-5" r="1.8" fill="#f8fafc" />
-                <circle cx="4" cy="-5" r="1.8" fill="#38bdf8" />
-              </g>
-              {/* Lounge Sofa */}
-              <g transform="translate(670, 495)">
-                <polygon points="-18,-8 0,-16 18,-8 0,0" fill="#3b0764" />
-                <polygon points="-18,-8 0,0 0,8 -18,0" fill="#581c87" />
-                <polygon points="0,0 18,-8 18,0 0,8" fill="#6b21a8" />
-              </g>
-            </g>
-
-            {/* ==================== ZONE 9: MEETING ROOM / ALL-HANDS (LAVENDER) ==================== */}
-            <g>
-              <polygon
-                points="380,480 500,410 580,455 460,525"
-                fill="#581c87"
-                stroke="#a855f7"
-                strokeWidth="2.5"
-              />
-              <polygon
-                points="385,480 500,413 575,455 460,522"
-                fill="#6b21a8"
-                fillOpacity="0.85"
-              />
-              {/* Conference Table */}
-              <g transform="translate(480, 470)">
-                <polygon
-                  points="-24,-12 0,-22 24,-12 0,-2"
-                  fill="#1e1b4b"
-                  stroke="#c084fc"
-                  strokeWidth="1"
-                />
-                <polygon points="-24,-12 0,-2 0,6 -24,-4" fill="#312e81" />
-                <polygon points="0,-2 24,-12 24,-4 0,6" fill="#3730a3" />
-              </g>
-            </g>
-
-            {/* ==================== ZONE 10: RECREATION AREA (TENNIS & FITNESS) ==================== */}
-            <g>
-              {/* Fitness Gym Floor (Dark Slate Rubber) */}
-              <polygon
-                points="40,430 160,370 230,410 110,470"
-                fill="#1e293b"
-                stroke="#475569"
-                strokeWidth="2"
-              />
-              {/* Gym Sign */}
-              <g transform="translate(130, 385)">
-                <rect
-                  x="-40"
-                  y="-8"
-                  width="80"
-                  height="14"
-                  rx="3"
-                  fill="#0f172a"
-                  stroke="#94a3b8"
-                  strokeWidth="1"
-                />
-                <text
-                  x="0"
-                  y="2"
-                  textAnchor="middle"
-                  className="fill-slate-300 font-mono text-[8px] font-bold"
-                >
-                  FITNESS GYM
-                </text>
-              </g>
-              {/* Weight Bench & Barbell */}
-              <g transform="translate(120, 440)">
-                <line
-                  x1="-12"
-                  y1="-4"
-                  x2="12"
-                  y2="4"
-                  stroke="#94a3b8"
-                  strokeWidth="2.5"
-                />
-                <circle
-                  cx="-12"
-                  cy="-4"
-                  r="3.5"
-                  fill="#0f172a"
-                  stroke="#ef4444"
-                  strokeWidth="1"
-                />
-                <circle
-                  cx="12"
-                  cy="4"
-                  r="3.5"
-                  fill="#0f172a"
-                  stroke="#ef4444"
-                  strokeWidth="1"
-                />
-              </g>
-              {/* Treadmill with Animated Screen */}
-              <g transform="translate(150, 430)">
-                <polygon
-                  points="-6,-6 0,-10 8,-6 2,-2"
-                  fill="#090d16"
-                  stroke="#64748b"
-                  strokeWidth="0.8"
-                />
-                <line
-                  x1="2"
-                  y1="-2"
-                  x2="6"
-                  y2="-8"
-                  stroke="#38bdf8"
-                  strokeWidth="1.5"
-                />
-              </g>
-
-              {/* Tennis / Pickleball Court (Vivid Blue Court with Net) */}
-              <polygon
-                points="120,530 250,460 340,510 210,580"
-                fill="#0284c7"
                 stroke="#38bdf8"
-                strokeWidth="2.5"
-              />
-              {/* Court Boundary Lines */}
-              <polygon
-                points="135,530 245,470 325,510 215,570"
-                fill="none"
-                stroke="#ffffff"
                 strokeWidth="1.5"
               />
-              {/* Tennis Net with posts */}
-              <line
-                x1="175"
-                y1="500"
-                x2="285"
-                y2="540"
-                stroke="#ffffff"
-                strokeWidth="3"
-                strokeDasharray="3 1"
-              />
-              <circle cx="175" cy="500" r="2" fill="#f8fafc" />
-              <circle cx="285" cy="540" r="2" fill="#f8fafc" />
-              {/* Tennis Court Sign */}
-              <g transform="translate(230, 480)">
-                <rect
-                  x="-45"
-                  y="-8"
-                  width="90"
-                  height="14"
-                  rx="3"
-                  fill="#082f49"
-                  stroke="#38bdf8"
-                  strokeWidth="1"
-                />
-                <text
-                  x="0"
-                  y="2"
-                  textAnchor="middle"
-                  className="fill-sky-200 font-mono text-[8px] font-bold"
-                >
-                  TENNIS COURT
-                </text>
-              </g>
+              <line x1="-35" y1="5" x2="35" y2="-12" stroke="#22c55e" strokeWidth="1.5" strokeDasharray="4 2" />
+              <line x1="-35" y1="18" x2="20" y2="4" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 2" />
             </g>
 
-            {/* ==================== ACTIVE LASER INTER-AGENT LINK ==================== */}
+            {/* Round Wall Clock on Top-Right Wall */}
+            <g transform="translate(1080, 270)">
+              <ellipse cx="0" cy="0" rx="14" ry="18" fill="#0f172a" stroke="#cbd5e1" strokeWidth="1.5" />
+              <line x1="0" y1="0" x2="0" y2="-10" stroke="#f8fafc" strokeWidth="1.5" />
+              <line x1="0" y1="0" x2="7" y2="3" stroke="#ef4444" strokeWidth="1" />
+            </g>
+
+            {/* Wall Bookshelf on Top-Left Wall */}
+            <g transform="translate(240, 310)">
+              <polygon
+                points="0,0 60,-30 60,30 0,60"
+                fill="#2b1810"
+                stroke="#452718"
+                strokeWidth="1.5"
+              />
+              <line x1="10" y1="5" x2="10" y2="45" stroke="#ef4444" strokeWidth="3" />
+              <line x1="18" y1="1" x2="18" y2="41" stroke="#3b82f6" strokeWidth="3" />
+              <line x1="26" y1="-3" x2="26" y2="37" stroke="#10b981" strokeWidth="3" />
+              <line x1="34" y1="-7" x2="34" y2="33" stroke="#f59e0b" strokeWidth="3" />
+              <line x1="42" y1="-11" x2="42" y2="29" stroke="#8b5cf6" strokeWidth="3" />
+            </g>
+
+            {/* Server Room Low Glass Partition (Top Center NOC) */}
+            <polygon
+              points="660,180 740,220 740,200 660,160"
+              fill="rgba(56, 189, 248, 0.15)"
+              stroke="#0284c7"
+              strokeWidth="1.2"
+            />
+
+            {/* ==================== THE BRAIN: CENTRAL ROUND CONFERENCE TABLE ==================== */}
+            {/* Glowing Floor Hologram Ring under The Brain table (Center: 700, 408) */}
+            <g transform="translate(700, 408)">
+              <ellipse
+                cx="0"
+                cy="0"
+                rx="140"
+                ry="70"
+                fill="url(#brainHoloGlow)"
+              />
+              <ellipse
+                cx="0"
+                cy="0"
+                rx="125"
+                ry="62"
+                fill="none"
+                stroke="#38bdf8"
+                strokeWidth="1.5"
+                strokeDasharray="6 4"
+                className="animate-spin"
+                style={{ animationDuration: '40s' }}
+              />
+            </g>
+
+            {/* Round Conference Table (Center: 700, 408) */}
+            <g transform="translate(700, 408)">
+              {/* Table shadow */}
+              <ellipse cx="0" cy="14" rx="72" ry="36" fill="rgba(0,0,0,0.3)" />
+              {/* Table pedestal base */}
+              <polygon points="-12,0 12,0 12,20 -12,20" fill="#1e293b" />
+              {/* Round table dark wood surface */}
+              <ellipse cx="0" cy="0" rx="70" ry="35" fill="#181c26" stroke="#38bdf8" strokeWidth="2" />
+              {/* Outer oak wooden rim */}
+              <ellipse cx="0" cy="0" rx="64" ry="32" fill="#121620" stroke="#524330" strokeWidth="1.5" />
+              {/* Central pulsing core light */}
+              <circle cx="0" cy="0" r="8" fill="#38bdf8" className="animate-pulse" />
+            </g>
+
+            {/* ==================== PANTRY & RECEPTION COUNTER (RIGHT WING) ==================== */}
+            {/* L-Shaped Wooden Bar Counter */}
+            <g transform="translate(1120, 360)">
+              <polygon
+                points="-90, -25 20, 30 0, 40 -110, -15"
+                fill="#4a2e1b"
+                stroke="#694025"
+                strokeWidth="1.5"
+              />
+              <rect x="-70" y="-30" width="22" height="18" rx="2" fill="#0f172a" stroke="#cbd5e1" strokeWidth="1" />
+              <circle cx="-42" cy="-12" r="3" fill="#f8fafc" />
+              <circle cx="-34" cy="-8" r="3" fill="#f8fafc" />
+            </g>
+
+            {/* Vending Machine, Fridge & Water Cooler */}
+            <g transform="translate(1210, 395)">
+              <polygon
+                points="-35,-45 -10,-58 -10,-5 -35,8"
+                fill="#1e293b"
+                stroke="#64748b"
+                strokeWidth="1"
+              />
+              <rect x="-31" y="-40" width="18" height="30" fill="#090d16" stroke="#38bdf8" strokeWidth="0.8" />
+              <ellipse cx="8" cy="-16" rx="5" ry="8" fill="#38bdf8" fillOpacity="0.8" stroke="#0284c7" />
+              <rect x="4" y="-8" width="8" height="16" fill="#f8fafc" stroke="#94a3b8" />
+              <polygon
+                points="20,-50 45,-62 45,-8 20,4"
+                fill="#cbd5e1"
+                stroke="#64748b"
+                strokeWidth="1"
+              />
+            </g>
+
+            {/* ==================== PURPLE VELVET LOUNGE SOFAS (LEFT WING) ==================== */}
+            <g transform="translate(300, 330)">
+              <polygon
+                points="-45,-10 0,-32 35,-14 -10,8"
+                fill="#581c87"
+                stroke="#7e22ce"
+                strokeWidth="1.5"
+              />
+              <polygon
+                points="-45,-10 -45,-26 0,-48 0,-32"
+                fill="#6b21a8"
+                stroke="#9333ea"
+                strokeWidth="1.5"
+              />
+              <polygon
+                points="10,0 30,-10 42,-4 22,6"
+                fill="#3e2415"
+                stroke="#5c3820"
+                strokeWidth="1"
+              />
+            </g>
+
+            {/* ==================== SERVER RACKS (TOP CENTER NOC) ==================== */}
+            <g transform="translate(700, 160)">
+              <polygon
+                points="-25,-35 0,-48 0,12 -25,25"
+                fill="#0a0f1d"
+                stroke="#1e293b"
+                strokeWidth="1.2"
+              />
+              <circle cx="-12" cy="-20" r="2" fill="#22c55e" className="animate-ping" />
+              <circle cx="-12" cy="-10" r="2" fill="#38bdf8" />
+              <circle cx="-12" cy="0" r="2" fill="#22c55e" />
+              <circle cx="-12" cy="10" r="2" fill="#38bdf8" className="animate-pulse" />
+            </g>
+
+            {/* ==================== FITNESS & WELLNESS CORNER (BOTTOM) ==================== */}
+            <g transform="translate(540, 600)">
+              <polygon
+                points="-50,-12 0,-37 50,-12 0,13"
+                fill="#1e293b"
+                stroke="#475569"
+                strokeWidth="1.5"
+              />
+              <polygon
+                points="-35,-8 -18,-16 -10,-12 -27,-4"
+                fill="#0f172a"
+                stroke="#38bdf8"
+                strokeWidth="1"
+              />
+              <line x1="16" y1="-8" x2="38" y2="2" stroke="#cbd5e1" strokeWidth="2.5" />
+              <circle cx="16" cy="-8" r="3" fill="#ef4444" />
+              <circle cx="38" cy="2" r="3" fill="#ef4444" />
+            </g>
+
+            {/* ==================== POTTED MONSTERA & FIDDLE-LEAF PLANTS ==================== */}
+            <g transform="translate(760, 170)">
+              <polygon points="-7,3 7,3 4,12 -4,12" fill="#b45309" stroke="#78350f" />
+              <circle cx="-3" cy="-2" r="6" fill="#15803d" />
+              <circle cx="4" cy="-5" r="5" fill="#16a34a" />
+              <circle cx="0" cy="-8" r="7" fill="#22c55e" />
+            </g>
+            <g transform="translate(1040, 290)">
+              <polygon points="-7,3 7,3 4,12 -4,12" fill="#b45309" stroke="#78350f" />
+              <circle cx="-4" cy="-3" r="7" fill="#15803d" />
+              <circle cx="3" cy="-7" r="6" fill="#16a34a" />
+              <circle cx="0" cy="-12" r="7" fill="#22c55e" />
+            </g>
+            <g transform="translate(260, 380)">
+              <polygon points="-7,3 7,3 4,12 -4,12" fill="#b45309" stroke="#78350f" />
+              <circle cx="0" cy="-5" r="7" fill="#15803d" />
+              <circle cx="-5" cy="-2" r="5" fill="#16a34a" />
+            </g>
+
+            {/* ==================== INTER-AGENT LASER LINK ==================== */}
             {activeLaserLink && (
               <g>
                 <line
                   x1={activeLaserLink.from.x}
-                  y1={activeLaserLink.from.y - 12}
+                  y1={activeLaserLink.from.y - 14}
                   x2={activeLaserLink.to.x}
-                  y2={activeLaserLink.to.y - 12}
-                  stroke="#ffffff"
-                  strokeWidth="1.5"
+                  y2={activeLaserLink.to.y - 14}
+                  stroke="#38bdf8"
+                  strokeWidth="2"
                   strokeDasharray="4 2"
                   className="animate-pulse"
                 />
-                <circle
-                  cx={activeLaserLink.from.x}
-                  cy={activeLaserLink.from.y - 12}
-                  r="3"
-                  fill="#38bdf8"
-                />
-                <circle
-                  cx={activeLaserLink.to.x}
-                  cy={activeLaserLink.to.y - 12}
-                  r="3"
-                  fill="#22c55e"
-                />
+                <circle cx={activeLaserLink.from.x} cy={activeLaserLink.from.y - 14} r="3.5" fill="#38bdf8" />
+                <circle cx={activeLaserLink.to.x} cy={activeLaserLink.to.y - 14} r="3.5" fill="#22c55e" />
               </g>
             )}
           </svg>
 
-          {/* ==================== FURNITURE RIGS LAYER (DESKS & MONITORS) ==================== */}
-          {Object.entries(DESK_CONFIGS).map(([agentId, desk]) => {
-            const isFounder = desk.monitors === 3
+          {/* ==================== FURNITURE RIGS LAYER (23 DESKS & DUAL/TRIPLE MONITORS) ==================== */}
+          {ASSIGNED_DESKS.map((d) => {
+            const deskScreen = gridToScreen(d.deskGx, d.deskGy)
+            const isFounder = d.agentId === 'josiah'
+
             return (
               <div
-                key={`desk-${agentId}`}
+                key={`desk-rig-${d.id}`}
                 className="pointer-events-none absolute"
                 style={{
-                  left: `${desk.x - (isFounder ? 28 : 20)}px`,
-                  top: `${desk.y - 14}px`,
-                  zIndex: Math.max(1, Math.round(desk.y)),
+                  left: `${deskScreen.x - (isFounder ? 32 : 24)}px`,
+                  top: `${deskScreen.y - 16}px`,
+                  zIndex: Math.max(1, Math.round(deskScreen.y)),
                 }}
               >
-                {/* 2.5D Isometric Desk Rig */}
                 <svg
-                  width={isFounder ? 56 : 40}
-                  height={32}
-                  viewBox={`0 0 ${isFounder ? 56 : 40} 32`}
+                  width={isFounder ? 64 : 48}
+                  height={38}
+                  viewBox={`0 0 ${isFounder ? 64 : 48} 38`}
                   className="overflow-visible"
                 >
-                  {/* Desk Surface */}
+                  {/* Wooden Desk Surface */}
                   {isFounder ? (
-                    // Josiah's Executive L-Desk
+                    // Josiah's Executive Triple-Monitor Rig
                     <>
                       <polygon
-                        points="0,12 28,0 56,12 28,24"
-                        fill="#1e293b"
-                        stroke="#38bdf8"
+                        points="0,14 32,0 64,14 32,28"
+                        fill="#3a271d"
+                        stroke="#63412f"
                         strokeWidth="1.2"
                       />
-                      <polygon points="0,12 28,24 28,30 0,18" fill="#0f172a" />
-                      <polygon
-                        points="28,24 56,12 56,18 28,30"
-                        fill="#334155"
-                      />
+                      <polygon points="0,14 32,28 32,35 0,21" fill="#241710" />
+                      <polygon points="32,28 64,14 64,21 32,35" fill="#4d3326" />
+                      {/* Left Angled Screen */}
+                      <polygon points="8,4 18,0 18,10 8,14" fill="#0284c7" stroke="#38bdf8" strokeWidth="0.8" />
+                      {/* Center Main Screen */}
+                      <polygon points="22,2 42,2 42,12 22,12" fill="#2563eb" stroke="#60a5fa" strokeWidth="0.8" />
+                      {/* Right Angled Screen */}
+                      <polygon points="46,0 56,4 56,14 46,10" fill="#0284c7" stroke="#38bdf8" strokeWidth="0.8" />
                     </>
                   ) : (
-                    // Standard Studio Desk
+                    // Standard Studio Workstation (Dual Monitors)
                     <>
                       <polygon
-                        points="0,10 20,0 40,10 20,20"
-                        fill="#1e293b"
-                        stroke="#475569"
+                        points="0,12 24,0 48,12 24,24"
+                        fill="#3e291e"
+                        stroke="#60402e"
                         strokeWidth="1"
                       />
-                      <polygon points="0,10 20,20 20,26 0,16" fill="#0f172a" />
-                      <polygon
-                        points="20,20 40,10 40,16 20,26"
-                        fill="#334155"
-                      />
-                    </>
-                  )}
-
-                  {/* Dual or Triple Glowing Monitors */}
-                  {isFounder ? (
-                    // Josiah's Triple Monitor Setup
-                    <>
-                      {/* Left Screen */}
-                      <polygon
-                        points="8,4 16,0 16,8 8,12"
-                        fill="#0284c7"
-                        stroke="#38bdf8"
-                        strokeWidth="0.8"
-                      />
-                      {/* Center Screen */}
-                      <polygon
-                        points="20,2 34,2 34,10 20,10"
-                        fill="#2563eb"
-                        stroke="#60a5fa"
-                        strokeWidth="0.8"
-                      />
-                      {/* Right Screen */}
-                      <polygon
-                        points="38,0 46,4 46,12 38,8"
-                        fill="#0284c7"
-                        stroke="#38bdf8"
-                        strokeWidth="0.8"
-                      />
-                    </>
-                  ) : (
-                    // Standard Dual Monitors
-                    <>
-                      <polygon
-                        points="6,4 16,0 16,7 6,11"
-                        fill="#0f172a"
-                        stroke="#38bdf8"
-                        strokeWidth="0.8"
-                      />
-                      <polygon
-                        points="20,0 30,4 30,11 20,7"
-                        fill="#0f172a"
-                        stroke="#22c55e"
-                        strokeWidth="0.8"
-                      />
+                      <polygon points="0,12 24,24 24,30 0,18" fill="#241710" />
+                      <polygon points="24,24 48,12 48,18 24,30" fill="#4d3326" />
+                      {/* Left Monitor */}
+                      <polygon points="8,4 18,0 18,8 8,12" fill="#0f172a" stroke="#38bdf8" strokeWidth="0.8" />
+                      {/* Right Monitor */}
+                      <polygon points="26,0 36,5 36,13 26,8" fill="#0f172a" stroke="#22c55e" strokeWidth="0.8" />
                     </>
                   )}
                 </svg>
@@ -1854,39 +1109,37 @@ export function IsometricOffice({
             )
           })}
 
-          {/* ==================== DYNAMIC AGENTS LAYER (SORTED BY DEPTH) ==================== */}
-          {agents.map((agent) => {
+          {/* ==================== DYNAMIC AGENTS LAYER (DEPTH SORTED) ==================== */}
+          {sortedAgents.map((agent) => {
             const sim = renderPositions[agent.id] || {
-              x: agent.desk_coord?.x || 200,
-              y: agent.desk_coord?.y || 340,
+              x: DESK_CONFIGS[agent.id]?.x || 540,
+              y: DESK_CONFIGS[agent.id]?.y || 340,
               isWalking: false,
               walkFrame: 0,
-              facing: 'right',
+              facing: DESK_CONFIGS[agent.id]?.facingDirection || 'right',
               hasCoffee: false,
               isSeated: true,
               activity: 'typing',
-              breakTimer: 0,
             }
 
             const isSelected = selectedAgentId === agent.id
             const speechText = activeSpeech[agent.id]
-            const safeX = Number.isFinite(sim.x) ? sim.x : 200
+            const safeX = Number.isFinite(sim.x) ? sim.x : 540
             const safeY = Number.isFinite(sim.y) ? sim.y : 340
-            const zIndexSafe = Math.max(10, Math.round(safeY) + 20)
+            const zIndexVal = Math.max(10, Math.round(safeY) + 30)
 
             return (
               <div
                 key={agent.id}
                 onClick={(e) => {
                   e.stopPropagation()
-                  onSelectAgent(agent)
-                  if (soundEnabled) sfx?.playSelect?.()
+                  handleSelectAgentAndFollow(agent)
                 }}
                 className="absolute cursor-pointer transition-transform duration-75 hover:scale-110"
                 style={{
                   left: `${safeX - 19}px`,
                   top: `${safeY - 32}px`,
-                  zIndex: zIndexSafe,
+                  zIndex: zIndexVal,
                 }}
               >
                 {/* Selection Highlight Reticle */}
@@ -1894,8 +1147,8 @@ export function IsometricOffice({
                   <div className="pointer-events-none absolute -inset-2 animate-pulse rounded-full border-2 border-amber-400 bg-amber-400/20" />
                 )}
 
-                {/* Floating Nameplate with Status Dot */}
-                <div className="pointer-events-none absolute -top-5 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded border border-slate-700/80 bg-[#090d16]/95 px-1.5 py-0.5 whitespace-nowrap shadow-md">
+                {/* Floating Clean Name Tag with Status Dot */}
+                <div className="pointer-events-none absolute -top-5 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded border border-slate-700/80 bg-[#090d16]/95 px-1.5 py-0.5 whitespace-nowrap shadow-lg">
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
                       agent.status === 'working'
@@ -1912,14 +1165,13 @@ export function IsometricOffice({
 
                 {/* Typewriter Speech Bubble */}
                 {speechText && (
-                  <div className="animate-in fade-in zoom-in-95 pointer-events-none absolute -top-14 left-1/2 z-50 max-w-[200px] -translate-x-1/2 rounded-lg border border-cyan-400/80 bg-[#0f172a] px-2.5 py-1.5 font-mono text-[10px] text-cyan-200 shadow-2xl duration-150">
+                  <div className="animate-in fade-in zoom-in-95 pointer-events-none absolute -top-16 left-1/2 z-50 max-w-[220px] -translate-x-1/2 rounded-lg border border-cyan-400/80 bg-[#0c1322] px-2.5 py-1.5 font-mono text-[10px] text-cyan-200 shadow-2xl duration-150">
                     <p className="leading-tight">{speechText}</p>
-                    {/* Speech bubble tail pointer */}
-                    <div className="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-r border-b border-cyan-400/80 bg-[#0f172a]" />
+                    <div className="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-r border-b border-cyan-400/80 bg-[#0c1322]" />
                   </div>
                 )}
 
-                {/* Pixel-Art Worker Sprite */}
+                {/* Preserved Pixel Sprite from pixel-sprites.tsx */}
                 <PixelSprite
                   id={agent.id}
                   name={agent.name}
@@ -1938,87 +1190,651 @@ export function IsometricOffice({
             )
           })}
         </div>
-      </div>
+      </main>
 
-      {/* ==================== INTERACTIVE MINIMAP HUD (BOTTOM RIGHT) ==================== */}
-      <div className="pointer-events-auto absolute right-3 bottom-3 z-20 flex h-28 w-44 flex-col justify-between rounded-lg border border-[#1e293b] bg-[#090d16]/95 p-1.5 shadow-2xl backdrop-blur-md">
-        <div className="flex items-center justify-between font-mono text-[9px] text-slate-400">
-          <span className="font-bold text-slate-200">FACILITY MINIMAP</span>
-          <span className="text-emerald-400">23 ACTIVE</span>
-        </div>
-
-        {/* Minimap Canvas Area */}
-        <div className="relative mt-1 w-full flex-1 overflow-hidden rounded border border-slate-800 bg-[#0f172a]">
-          {/* Room Boundaries Outline on Minimap */}
-          <svg viewBox="0 0 1080 640" className="h-full w-full">
-            <polygon
-              points="540,15 1065,315 460,615 15,315"
-              fill="#130f24"
-              stroke="#312657"
-              strokeWidth="8"
-            />
-            <polygon points="170,160 380,45 520,120 310,235" fill="#166534" />
-            <polygon points="40,240 210,140 280,210 110,310" fill="#1e3a8a" />
-            <polygon points="140,380 340,270 510,360 310,470" fill="#312e81" />
-            <polygon points="560,420 740,320 900,410 720,510" fill="#831843" />
-            <polygon points="660,160 850,55 990,135 800,240" fill="#082b3d" />
-            <polygon
-              points="600,280 770,190 910,270 740,360"
-              fill="#0f172a"
-              stroke="#f59e0b"
-              strokeWidth="4"
-            />
-            <ellipse
-              cx="510"
-              cy="290"
-              rx="70"
-              ry="40"
-              fill="#090d16"
-              stroke="#38bdf8"
-              strokeWidth="6"
-            />
-
-            {/* Agent Dots on Minimap */}
-            {agents.map((ag) => {
-              const pos = renderPositions[ag.id] || { x: 200, y: 340 }
-              const isLead = ag.id === 'josiah'
-              return (
-                <circle
-                  key={`map-dot-${ag.id}`}
-                  cx={pos.x}
-                  cy={pos.y}
-                  r={isLead ? 16 : 10}
-                  fill={
-                    isLead
-                      ? '#38bdf8'
-                      : selectedAgentId === ag.id
-                        ? '#facc15'
-                        : '#22c55e'
-                  }
-                />
-              )
-            })}
-          </svg>
-
-          {/* Current Camera Viewport Rect on Minimap */}
-          <div
-            className="pointer-events-none absolute rounded border border-amber-400/80 bg-amber-400/10"
-            style={{
-              left: `${Math.max(0, Math.min(100, 50 - pan.x * 0.05))}%`,
-              top: `${Math.max(0, Math.min(100, 50 - pan.y * 0.05))}%`,
-              width: `${Math.max(20, Math.min(80, 50 / zoom))}%`,
-              height: `${Math.max(20, Math.min(80, 50 / zoom))}%`,
-              transform: 'translate(-50%, -50%)',
+      {/* ==================== 4. BOTTOM ACTION TOOLBAR ==================== */}
+      <footer className="pointer-events-none absolute right-3 bottom-3 left-3 z-40 flex flex-wrap items-center justify-between gap-3">
+        {/* Left: Toolbar Actions (+ Agent, Layout, AGENTS, Telemetry, Settings) */}
+        <div className="pointer-events-auto flex items-center gap-2 rounded-lg border border-[#1e283d] bg-[#0c101a]/95 p-1.5 shadow-2xl backdrop-blur-md">
+          {/* + Agent Button */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              setSpawnToast('Agent roster capacity active (23/23 deployed)')
+              setTimeout(() => setSpawnToast(null), 3000)
             }}
-          />
+            className="flex cursor-pointer items-center gap-1.5 rounded-md border border-emerald-500/80 bg-emerald-950/60 px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-emerald-300 shadow transition hover:bg-emerald-900 active:scale-95"
+            title="Spawn / Add Agent"
+          >
+            <span>+</span>
+            <span>Agent</span>
+          </button>
+
+          {/* Layout Overlay Toggle */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowLayoutOverlay((prev) => !prev)
+            }}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-xs whitespace-nowrap transition active:scale-95 ${
+              showLayoutOverlay
+                ? 'bg-blue-600 font-bold text-white shadow-md shadow-blue-500/20'
+                : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800'
+            }`}
+            title="Toggle Floor Plan Layout"
+          >
+            <span>📐</span>
+            <span>Layout</span>
+          </button>
+
+          {/* AGENTS Slide-Over Toggle */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowAgentsDrawer((prev) => !prev)
+            }}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap transition active:scale-95 ${
+              showAgentsDrawer
+                ? 'bg-purple-600 text-white shadow-purple-500/20 shadow-md'
+                : 'bg-slate-900/80 text-purple-300 hover:bg-slate-800'
+            }`}
+            title="Open Agent Roster Panel"
+          >
+            <span>👥</span>
+            <span>AGENTS</span>
+            <span className="rounded-full bg-purple-900/90 px-1.5 py-0.2 font-mono text-[10px] text-purple-200">
+              {agents.length}
+            </span>
+          </button>
+
+          {/* Telemetry & Activity Stream Toggle */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowTelemetryModal(true)
+            }}
+            className="flex cursor-pointer items-center gap-1.5 rounded-md bg-slate-900/80 px-3 py-1.5 font-mono text-xs whitespace-nowrap text-slate-300 transition hover:bg-slate-800 active:scale-95"
+            title="Activity Stream, Goals & Telemetry"
+          >
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400" />
+            <span>Activity Log</span>
+          </button>
+
+          {/* Settings Modal Toggle */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowSettingsModal(true)
+            }}
+            className="flex cursor-pointer items-center gap-1.5 rounded-md bg-slate-900/80 px-3 py-1.5 font-mono text-xs whitespace-nowrap text-slate-300 transition hover:bg-slate-800 active:scale-95"
+            title="Office Settings"
+          >
+            <span>⚙️</span>
+            <span>Settings</span>
+          </button>
         </div>
 
-        {/* Speed / Mode Indicator in Minimap Footer */}
-        <div className="mt-0.5 flex items-center justify-between font-mono text-[8px] text-slate-500">
-          <span>MODE: {currentMode.replace('_', ' ')}</span>
-          <span className="font-semibold text-amber-400">{speedMode}</span>
+        {/* Center/Right: Interactive Office Modes (Focus Work, All Hands, Pantry, Gym) */}
+        <div className="pointer-events-auto flex items-center gap-1.5 rounded-lg border border-[#1e283d] bg-[#0c101a]/95 p-1.5 shadow-2xl backdrop-blur-md">
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              switchOfficeMode('FOCUS_WORK')
+            }}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-xs whitespace-nowrap transition active:scale-95 ${
+              currentMode === 'FOCUS_WORK'
+                ? 'bg-blue-600 font-bold text-white shadow-md shadow-blue-500/20'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            }`}
+            title="Focus Work: Return all agents to department desks"
+          >
+            <span>🖥️</span>
+            <span>Focus Work</span>
+          </button>
+
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              switchOfficeMode('ALL_HANDS')
+            }}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-xs whitespace-nowrap transition active:scale-95 ${
+              currentMode === 'ALL_HANDS'
+                ? 'bg-purple-600 font-bold text-white shadow-md shadow-purple-500/20'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            }`}
+            title="All Hands Assembly: Gather at The Brain meeting table"
+          >
+            <span>📢</span>
+            <span>All Hands</span>
+          </button>
+
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              switchOfficeMode('COFFEE_BREAK')
+            }}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-xs whitespace-nowrap transition active:scale-95 ${
+              currentMode === 'COFFEE_BREAK'
+                ? 'bg-amber-600 font-bold text-white shadow-md shadow-amber-500/20'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            }`}
+            title="Pantry & Canteen: Head to espresso bar & lounge"
+          >
+            <span>☕</span>
+            <span>Pantry & Canteen</span>
+          </button>
+
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              switchOfficeMode('RECREATION')
+            }}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-xs whitespace-nowrap transition active:scale-95 ${
+              currentMode === 'RECREATION'
+                ? 'bg-teal-600 font-bold text-white shadow-md shadow-teal-500/20'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            }`}
+            title="Rec & Gym: Head to fitness & wellness area"
+          >
+            <span>🎾</span>
+            <span>Rec & Gym</span>
+          </button>
         </div>
-      </div>
+      </footer>
+
+      {/* ==================== 5. TOAST NOTIFICATION ==================== */}
+      {spawnToast && (
+        <div className="pointer-events-none absolute top-16 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-emerald-500/80 bg-[#0c101a] px-4 py-2 font-mono text-xs text-emerald-300 shadow-2xl">
+          {spawnToast}
+        </div>
+      )}
+
+      {/* ==================== 6. SLIDE-OVER AGENTS ROSTER DRAWER ==================== */}
+      {showAgentsDrawer && (
+        <div className="pointer-events-auto absolute top-0 right-0 z-50 flex h-full w-96 flex-col border-l border-[#1e283d] bg-[#0c101a]/98 shadow-2xl backdrop-blur-xl">
+          {/* Drawer Header */}
+          <div className="flex items-center justify-between border-b border-[#1e283d] p-4">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm font-bold text-slate-100">
+                AGENTS ROSTER
+              </span>
+              <span className="rounded bg-purple-950/80 px-2 py-0.5 font-mono text-xs text-purple-300">
+                {filteredAgents.length}
+              </span>
+            </div>
+            <button
+              type="button"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => setShowAgentsDrawer(false)}
+              className="cursor-pointer font-mono text-sm text-slate-400 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Search & Department Filters */}
+          <div className="space-y-2.5 border-b border-[#1e283d] p-3">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search agent by name or role..."
+              className="w-full rounded-md border border-[#1e283d] bg-[#111625] px-3 py-1.5 font-mono text-xs text-slate-100 placeholder-slate-500 outline-none focus:border-cyan-400"
+            />
+            <div className="flex flex-wrap gap-1">
+              {[
+                'ALL',
+                'Engineering Core',
+                'QA & SecOps NOC',
+                'Intelligence Lab',
+                'Growth Lab',
+                'Operations Hub',
+                'Command Center',
+              ].map((dept) => (
+                <button
+                  key={dept}
+                  type="button"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={() => setSelectedDeptFilter(dept)}
+                  className={`cursor-pointer rounded px-2 py-0.5 font-mono text-[10px] whitespace-nowrap transition ${
+                    selectedDeptFilter === dept
+                      ? 'bg-cyan-600 font-bold text-white'
+                      : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                  }`}
+                >
+                  {dept === 'ALL' ? 'ALL' : dept.replace(' Lab', '').replace(' Core', '')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Agent Cards List */}
+          <div className="flex-1 space-y-2 overflow-y-auto p-3">
+            {filteredAgents.map((ag) => (
+              <div
+                key={ag.id}
+                onClick={() => handleSelectAgentAndFollow(ag)}
+                className={`cursor-pointer rounded-lg border p-2.5 transition ${
+                  selectedAgentId === ag.id
+                    ? 'border-cyan-400/80 bg-cyan-950/40'
+                    : 'border-[#1e283d] bg-[#111625]/80 hover:border-slate-600 hover:bg-[#151c2e]'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        ag.status === 'working'
+                          ? 'bg-emerald-400'
+                          : ag.status === 'awaiting_approval'
+                            ? 'bg-amber-400'
+                            : 'bg-slate-400'
+                      }`}
+                    />
+                    <span className="font-mono text-xs font-bold text-slate-100">
+                      {ag.name}
+                    </span>
+                  </div>
+                  <span className="font-mono text-[10px] text-slate-400">
+                    {ag.room}
+                  </span>
+                </div>
+                <p className="mt-1 font-mono text-[11px] text-cyan-300">
+                  {ag.role}
+                </p>
+                {ag.current_task && (
+                  <p className="mt-1 truncate font-mono text-[10px] text-slate-400">
+                    Task: {ag.current_task}
+                  </p>
+                )}
+                {ag.progress_pct !== undefined && (
+                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-slate-900">
+                    <div
+                      className="h-full bg-cyan-400 transition-all duration-300"
+                      style={{ width: `${ag.progress_pct}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ==================== 7. JOSIAH'S GO-SIGNAL MODAL ==================== */}
+      {showGoSignalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl border border-amber-500/50 bg-[#0c101a] p-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#1e283d] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 animate-ping rounded-full bg-amber-400" />
+                <h3 className="font-mono text-sm font-bold text-amber-300">
+                  JOSIAH&apos;S GO-SIGNAL GATEWAY ({approvals?.length || 0})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => setShowGoSignalModal(false)}
+                className="cursor-pointer font-mono text-sm text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-3 flex-1 space-y-3 overflow-y-auto pr-1">
+              {!approvals || approvals.length === 0 ? (
+                <div className="py-8 text-center font-mono text-xs text-slate-400">
+                  ✨ All Go-Signals cleared. Autonomous studio operating normally.
+                </div>
+              ) : (
+                approvals.map((app) => (
+                  <div
+                    key={app.id}
+                    className="flex flex-col gap-2 rounded-lg border border-[#2b2045] bg-[#141026] p-3.5 shadow-md"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="rounded bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-300 uppercase">
+                        {app.type || 'GATE'}
+                      </span>
+                      <span className="font-mono text-[11px] text-slate-400">
+                        by {app.agent_name}
+                      </span>
+                    </div>
+                    <h4 className="font-mono text-xs font-bold text-slate-100">
+                      {app.title}
+                    </h4>
+                    <p className="font-mono text-[11px] leading-relaxed text-slate-300">
+                      {app.summary}
+                    </p>
+                    <div className="flex items-center justify-end gap-2 border-t border-[#261d3d] pt-2">
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={() => onGoSignal?.(app.id, 'reject')}
+                        className="cursor-pointer rounded border border-rose-500/50 bg-rose-950/40 px-3 py-1 font-mono text-xs font-semibold text-rose-300 transition hover:bg-rose-900/60 active:scale-95"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={() => onGoSignal?.(app.id, 'approve')}
+                        className="cursor-pointer rounded bg-emerald-500 px-3 py-1 font-mono text-xs font-bold text-black shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400 active:scale-95"
+                      >
+                        Grant Go-Signal
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== 8. TELEMETRY & ACTIVITY LOG MODAL ==================== */}
+      {showTelemetryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[85vh] w-full max-w-4xl flex-col rounded-xl border border-[#1e283d] bg-[#0c101a] p-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#1e283d] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
+                <h3 className="font-mono text-sm font-bold text-slate-100">
+                  STUDIO TELEMETRY & ACTIVITY LOGS
+                </h3>
+              </div>
+              <button
+                type="button"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => setShowTelemetryModal(false)}
+                className="cursor-pointer font-mono text-sm text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 overflow-y-auto md:grid-cols-3">
+              {/* Column 1: Live Communication Stream */}
+              <div className="flex flex-col rounded-lg border border-[#1e283d] bg-[#111625] p-3">
+                <div className="flex items-center justify-between border-b border-[#1e283d] pb-2">
+                  <span className="font-mono text-xs font-bold text-cyan-300">
+                    INTER-AGENT COMMS
+                  </span>
+                  <span className="font-mono text-[10px] text-emerald-400">
+                    LIVE
+                  </span>
+                </div>
+                <div className="mt-2 max-h-80 space-y-2 overflow-y-auto font-mono text-[11px] text-slate-300">
+                  {logs.length === 0 ? (
+                    <p className="py-6 text-center text-slate-500">
+                      Listening for telemetry...
+                    </p>
+                  ) : (
+                    logs.map((line, i) => (
+                      <div
+                        key={i}
+                        className="border-b border-slate-800/80 pb-1.5 leading-snug last:border-b-0"
+                      >
+                        <span className="font-bold text-amber-400">&gt;</span>{' '}
+                        <span>{line}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Column 2: Running Sprint Goals */}
+              <div className="flex flex-col rounded-lg border border-[#1e283d] bg-[#111625] p-3">
+                <div className="flex items-center justify-between border-b border-[#1e283d] pb-2">
+                  <span className="font-mono text-xs font-bold text-amber-300">
+                    SPRINT GOALS
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-400">
+                    Q4 MILESTONE
+                  </span>
+                </div>
+                <div className="mt-2 space-y-2.5 font-mono text-xs">
+                  <div className="rounded border border-[#1e283d] bg-[#0c101a] p-2">
+                    <div className="flex justify-between font-bold">
+                      <span className="text-amber-400">1. ISOMETRIC 2.5D</span>
+                      <span className="text-emerald-400">✓ VERIFIED</span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-300">
+                      Open-plan solid warm beige diamond slab with A* corridor routing.
+                    </p>
+                  </div>
+                  <div className="rounded border border-[#1e283d] bg-[#0c101a] p-2">
+                    <div className="flex justify-between font-bold">
+                      <span className="text-cyan-400">2. SUPABASE REALTIME</span>
+                      <span className="text-emerald-400">✓ SYNCED</span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-300">
+                      Remote tables, RLS security rails, and live broadcast channels.
+                    </p>
+                  </div>
+                  <div className="rounded border border-[#1e283d] bg-[#0c101a] p-2">
+                    <div className="flex justify-between font-bold">
+                      <span className="text-purple-400">3. GO-SIGNAL GATEWAY</span>
+                      <span className="text-emerald-400">✓ ACTIVE</span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-300">
+                      Mandatory human-in-the-loop signoff on releases and migrations.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 3: Done Today */}
+              <div className="flex flex-col rounded-lg border border-[#1e283d] bg-[#111625] p-3">
+                <div className="flex items-center justify-between border-b border-[#1e283d] pb-2">
+                  <span className="font-mono text-xs font-bold text-emerald-300">
+                    DONE TODAY ({doneToday.length})
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-400">
+                    AUDITED
+                  </span>
+                </div>
+                <div className="mt-2 max-h-80 space-y-2 overflow-y-auto font-mono text-xs">
+                  {doneToday.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between rounded bg-[#0c101a] p-2"
+                    >
+                      <span className="truncate pr-2 text-slate-300">
+                        ✓ {item.title}
+                      </span>
+                      <span className="shrink-0 text-[10px] text-slate-500">
+                        {item.time}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== 9. FLOATING WORKSTATION INSPECTOR ==================== */}
+      {selectedAgentId && (() => {
+        const ag = agents.find((a) => a.id === selectedAgentId)
+        if (!ag) return null
+        return (
+          <div className="animate-in slide-in-from-bottom pointer-events-auto fixed right-4 bottom-16 z-50 flex w-96 flex-col gap-2.5 rounded-xl border border-[#1e283d] bg-[#0c101a]/95 p-3.5 shadow-2xl backdrop-blur-xl duration-200">
+            <div className="flex items-center justify-between border-b border-[#1e283d] pb-2">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    ag.status === 'working'
+                      ? 'animate-pulse bg-emerald-400'
+                      : 'bg-slate-400'
+                  }`}
+                />
+                <span className="font-mono text-xs font-bold text-amber-300 uppercase">
+                  {`${ag.name} // WORKSTATION`}
+                </span>
+              </div>
+              <button
+                type="button"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => onSelectAgent(null)}
+                className="cursor-pointer font-mono text-xs text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <PixelSprite
+                id={ag.id}
+                name={ag.name}
+                color={ag.color || '#3b82f6'}
+                hair={ag.hair || '#1e293b'}
+                skin={ag.skin || '#fcd34d'}
+                size={36}
+              />
+              <div className="min-w-0">
+                <h4 className="truncate font-mono text-sm font-bold text-white">
+                  {ag.name}
+                </h4>
+                <p className="truncate font-mono text-xs text-slate-400">
+                  {ag.role}
+                </p>
+                <p className="font-mono text-[10px] text-cyan-300">
+                  {ag.room}
+                </p>
+              </div>
+            </div>
+
+            {/* Current Task & Progress */}
+            <div className="space-y-1 rounded border border-[#1e283d] bg-[#111625] p-2.5 font-mono text-xs">
+              <div className="flex justify-between text-[10px] text-slate-400">
+                <span>ACTIVE WORK:</span>
+                <span className="font-bold text-emerald-400">
+                  {ag.progress_pct ?? 100}%
+                </span>
+              </div>
+              <p className="truncate text-[11px] text-slate-200">
+                {ag.current_task || 'Active at workstation'}
+              </p>
+              {ag.terminal_preview && (
+                <pre className="mt-1 max-h-24 overflow-x-auto rounded border border-emerald-950/60 bg-black/60 p-2 font-mono text-[10px] whitespace-pre-wrap text-emerald-400">
+                  {ag.terminal_preview}
+                </pre>
+              )}
+            </div>
+
+            {/* Directive Dispatch Form */}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                if (!directiveInput.trim() || !onDispatchDirective) return
+                setIsSubmittingDirective(true)
+                const text = directiveInput.trim()
+                setDirectiveInput('')
+                try {
+                  await onDispatchDirective(ag.id, text)
+                } finally {
+                  setIsSubmittingDirective(false)
+                }
+              }}
+              className="flex gap-2"
+            >
+              <input
+                type="text"
+                value={directiveInput}
+                onChange={(e) => setDirectiveInput(e.target.value)}
+                placeholder={`Assign directive to ${ag.name}...`}
+                className="flex-1 rounded border border-[#1e283d] bg-[#111625] px-2.5 py-1.5 font-mono text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400"
+              />
+              <button
+                type="submit"
+                disabled={isSubmittingDirective || !directiveInput.trim()}
+                className="cursor-pointer rounded bg-cyan-600 px-3 py-1.5 font-mono text-xs font-bold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+              >
+                {isSubmittingDirective ? '...' : 'Dispatch'}
+              </button>
+            </form>
+          </div>
+        )
+      })()}
+
+      {/* ==================== 10. SETTINGS MODAL ==================== */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl border border-[#1e283d] bg-[#0c101a] p-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#1e283d] pb-3">
+              <h3 className="font-mono text-sm font-bold text-slate-100">
+                HQ OFFICE PREFERENCES
+              </h3>
+              <button
+                type="button"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => setShowSettingsModal(false)}
+                className="cursor-pointer font-mono text-sm text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mt-4 space-y-4 font-mono text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-300">Audio Synthesizer</span>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={() => setSoundEnabled((prev) => !prev)}
+                  className={`cursor-pointer rounded px-2.5 py-1 ${
+                    soundEnabled ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'
+                  }`}
+                >
+                  {soundEnabled ? 'ENABLED' : 'MUTED'}
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-300">Active Timezone</span>
+                <span className="text-cyan-400">PHT (UTC+8 Manila)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-300">Simulation Speed</span>
+                <span className="font-bold text-emerald-400">1x (Real-Time Studio)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-300">Supabase Realtime Sync</span>
+                <span className={supabaseActive ? 'text-emerald-400' : 'text-slate-400'}>
+                  {supabaseActive ? 'ONLINE & SYNCED' : 'HYBRID MODE'}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => setShowSettingsModal(false)}
+              className="mt-6 w-full cursor-pointer rounded-lg bg-cyan-600 py-2 font-mono text-xs font-bold text-white transition hover:bg-cyan-500"
+            >
+              SAVE & CLOSE
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
