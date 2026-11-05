@@ -51,4 +51,7 @@ export interface OfficeData {
   agents: Agent[]
   approvals: Approval[]
   logs: string[]
+  dbConnected?: boolean
+  dbError?: string | null
+  tableCounts?: Record<string, number>
 }

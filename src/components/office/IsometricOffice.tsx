@@ -24,7 +24,7 @@ import {
   DeskSlot,
 } from '@/lib/office/map'
 import { officeBus } from '@/lib/office/bus'
-import { dialogueEngine } from '@/lib/office/dialogueEngine'
+import { dialogueEngine, generateAllHandsScript } from '@/lib/office/dialogueEngine'
 import { officeSupabase } from '@/lib/supabase/officeService'
 
 export interface IsometricOfficeProps {
@@ -39,6 +39,13 @@ export interface IsometricOfficeProps {
   logs?: string[]
   doneToday?: Array<{ id: string; title: string; agent: string; time: string }>
   supabaseActive?: boolean
+  tableCounts?: {
+    office_agents?: number
+    office_approvals?: number
+    office_logs?: number
+    office_messages?: number
+  }
+  onRefreshAgents?: () => Promise<void>
 }
 
 interface AgentSimState {
@@ -78,6 +85,8 @@ export function IsometricOffice({
   logs = [],
   doneToday = [],
   supabaseActive = false,
+  tableCounts,
+  onRefreshAgents,
 }: IsometricOfficeProps) {
   // Navigation & Viewport State
   const [zoom, setZoom] = useState(0.85)
@@ -119,6 +128,21 @@ export function IsometricOffice({
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDeptFilter, setSelectedDeptFilter] = useState('ALL')
   const [spawnToast, setSpawnToast] = useState<string | null>(null)
+
+  // + Agent Form State
+  const [showAddAgentModal, setShowAddAgentModal] = useState(false)
+  const [newAgentName, setNewAgentName] = useState('')
+  const [newAgentRole, setNewAgentRole] = useState('')
+  const [newAgentDept, setNewAgentDept] = useState('Engineering Core')
+  const [newAgentColor, setNewAgentColor] = useState('#3b82f6')
+  const [isAddingAgent, setIsAddingAgent] = useState(false)
+
+  // Meeting Transcript State
+  const [showTranscriptDrawer, setShowTranscriptDrawer] = useState(false)
+  const [meetingTranscript, setMeetingTranscript] = useState<
+    Array<{ speaker: string; role: string; text: string; time: string }>
+  >([])
+  const meetingTimeoutsRef = useRef<NodeJS.Timeout[]>([])
 
   // Dialogue & Inter-Agent Laser Links
   const [activeSpeech, setActiveSpeech] = useState<Record<string, string>>({})
@@ -234,8 +258,8 @@ export function IsometricOffice({
       void officeSupabase.postMessage({
         sender_id: dialogue.from,
         sender_name: dialogue.fromName,
-        receiver_id: dialogue.to,
-        receiver_name: dialogue.toName,
+        recipient_id: dialogue.to,
+        recipient_name: dialogue.toName,
         content: dialogue.text,
       })
 
@@ -325,9 +349,110 @@ export function IsometricOffice({
           currentSim.targetY = waypoints[0].y
         }
       })
+
+      // Clear previous meeting timers
+      meetingTimeoutsRef.current.forEach(clearTimeout)
+      meetingTimeoutsRef.current = []
+
+      if (newMode === 'ALL_HANDS') {
+        const lines = generateAllHandsScript(agentsRef.current, approvals.length)
+        let accumulatedDelay = 2500
+
+        lines.forEach((line) => {
+          const tid = setTimeout(() => {
+            if (currentModeRef.current !== 'ALL_HANDS') return
+
+            try {
+              if (soundEnabled) sfx?.playBlip?.(680)
+            } catch {}
+
+            setActiveSpeech((prev) => ({ ...prev, [line.speakerId]: line.text }))
+
+            const timeStr = new Date().toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+            setMeetingTranscript((prev) => [
+              ...prev,
+              { speaker: line.speakerName, role: line.speakerRole, text: line.text, time: timeStr },
+            ])
+
+            officeBus.publish({
+              from: line.speakerId,
+              fromName: line.speakerName,
+              to: 'all',
+              toName: 'All Hands Assembly',
+              text: line.text,
+            })
+
+            void officeSupabase.postMessage({
+              sender_id: line.speakerId,
+              sender_name: line.speakerName,
+              channel: 'brain_meeting',
+              content: line.text,
+              message_type: 'meeting_line',
+            })
+
+            void officeSupabase.logActivity(
+              'meeting',
+              `[ALL HANDS] ${line.speakerName}: "${line.text}"`,
+              { id: line.speakerId, name: line.speakerName },
+              'info'
+            )
+
+            const clearTid = setTimeout(() => {
+              setActiveSpeech((prev) => {
+                const next = { ...prev }
+                delete next[line.speakerId]
+                return next
+              })
+            }, Math.max(2500, line.delayMs - 500))
+            meetingTimeoutsRef.current.push(clearTid)
+          }, accumulatedDelay)
+
+          meetingTimeoutsRef.current.push(tid)
+          accumulatedDelay += line.delayMs
+        })
+      } else {
+        setActiveSpeech({})
+      }
     },
-    [soundEnabled]
+    [soundEnabled, approvals.length]
   )
+
+  const handleAddAgentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newAgentName.trim() || !newAgentRole.trim()) return
+    setIsAddingAgent(true)
+    try {
+      const res = await fetch('/api/office/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newAgentName.trim(),
+          role: newAgentRole.trim(),
+          department: newAgentDept,
+          room: newAgentDept,
+          color: newAgentColor,
+        }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setSpawnToast(`Specialist ${newAgentName} onboarded to ${newAgentDept}!`)
+        setShowAddAgentModal(false)
+        setNewAgentName('')
+        setNewAgentRole('')
+        if (onRefreshAgents) await onRefreshAgents()
+      } else {
+        setSpawnToast(`Error: ${data.error}`)
+      }
+    } catch (err: unknown) {
+      setSpawnToast(`Failed: ${(err as Error).message}`)
+    } finally {
+      setIsAddingAgent(false)
+      setTimeout(() => setSpawnToast(null), 4000)
+    }
+  }
 
   useEffect(() => {
     currentModeRef.current = currentMode
@@ -556,6 +681,22 @@ export function IsometricOffice({
             </button>
           )}
 
+          {currentMode === 'ALL_HANDS' && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowTranscriptDrawer((prev) => !prev)
+              }}
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-purple-500/80 bg-purple-950/90 px-2.5 py-1.5 font-mono text-xs font-bold text-purple-200 shadow-xl shadow-purple-950/50 transition hover:bg-purple-900 active:scale-95 animate-pulse whitespace-nowrap"
+              title="View Live Meeting Transcript"
+            >
+              <span>🎙️</span>
+              <span>ALL HANDS TRANSCRIPT ({meetingTranscript.length})</span>
+            </button>
+          )}
+
           <div className="flex items-center gap-1.5 overflow-x-auto rounded-lg border border-[#1e283d]/80 bg-[#0c101a]/90 p-1 shadow-lg backdrop-blur-md scrollbar-none">
             {agents.map((ag) => {
               const isSelected = selectedAgentId === ag.id
@@ -760,7 +901,59 @@ export function IsometricOffice({
               })}
             </g>
 
-            {/* ==================== LAYOUT PLAN OVERLAY (WHEN TOGGLED) ==================== */}
+            {/* ==================== PERMANENT DEPARTMENT ROOM FLOORS & AMBIENT TINTS ==================== */}
+            {OFFICE_ZONES.map((zone) => {
+              const p1 = gridToScreen(zone.rect.x, zone.rect.y)
+              const p2 = gridToScreen(zone.rect.x + zone.rect.w, zone.rect.y)
+              const p3 = gridToScreen(
+                zone.rect.x + zone.rect.w,
+                zone.rect.y + zone.rect.h
+              )
+              const p4 = gridToScreen(zone.rect.x, zone.rect.y + zone.rect.h)
+              return (
+                <g key={`room-floor-${zone.id}`}>
+                  {/* Department Floor Rug / Inlay with Color Tint */}
+                  <polygon
+                    points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
+                    fill={zone.color}
+                    fillOpacity="0.14"
+                    stroke={zone.color}
+                    strokeWidth="1.2"
+                    strokeOpacity="0.5"
+                  />
+                  {/* Subtle Inset Border */}
+                  <polygon
+                    points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
+                    fill="none"
+                    stroke={zone.color}
+                    strokeWidth="0.8"
+                    strokeDasharray="8 4"
+                    strokeOpacity="0.3"
+                  />
+                  {/* Monospace Department Name Engraved in Floor */}
+                  <text
+                    x={p1.x + 10}
+                    y={p1.y + 16}
+                    fill={zone.color}
+                    fillOpacity="0.8"
+                    fontSize="9.5"
+                    fontWeight="bold"
+                    fontFamily="monospace"
+                    className="select-none"
+                    style={{
+                      paintOrder: 'stroke',
+                      stroke: '#080b12',
+                      strokeWidth: 2,
+                      strokeLinejoin: 'round',
+                    }}
+                  >
+                    {`// ${zone.label || zone.name}`}
+                  </text>
+                </g>
+              )
+            })}
+
+            {/* ==================== LAYOUT DIAGNOSTIC OVERLAY (WHEN TOGGLED) ==================== */}
             {showLayoutOverlay && (
               <g className="transition-opacity duration-300">
                 {OFFICE_ZONES.map((zone) => {
@@ -776,13 +969,13 @@ export function IsometricOffice({
                     zone.rect.y + zone.rect.h / 2
                   )
                   return (
-                    <g key={zone.id}>
+                    <g key={`overlay-${zone.id}`}>
                       <polygon
                         points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
                         fill={zone.color}
-                        fillOpacity="0.16"
+                        fillOpacity="0.22"
                         stroke={zone.color}
-                        strokeWidth="1.8"
+                        strokeWidth="2"
                         strokeDasharray="4 2"
                       />
                       <text
@@ -818,7 +1011,7 @@ export function IsometricOffice({
               stroke="#222735"
               strokeWidth="1.5"
             />
-            {/* Top-Left Wall Cap */}
+            {/* Top-Left Wall Cap (Visible Thickness) */}
             <polygon
               points="124,338 138,331 714,43 700,50"
               fill="#2e3546"
@@ -833,7 +1026,7 @@ export function IsometricOffice({
               stroke="#2a303e"
               strokeWidth="1.5"
             />
-            {/* Top-Right Wall Cap */}
+            {/* Top-Right Wall Cap (Visible Thickness) */}
             <polygon
               points="700,50 714,43 1290,331 1276,338"
               fill="#333b4e"
@@ -841,38 +1034,79 @@ export function IsometricOffice({
               strokeWidth="1"
             />
 
-            {/* Wall Monitor / Code Screen on Top-Right Back Wall */}
-            <g transform="translate(940, 200)">
-              <polygon
-                points="-50, -10 50, -35 50, 20 -50, 45"
-                fill="#0f172a"
-                stroke="#38bdf8"
-                strokeWidth="1.5"
-              />
-              <line x1="-35" y1="5" x2="35" y2="-12" stroke="#22c55e" strokeWidth="1.5" strokeDasharray="4 2" />
-              <line x1="-35" y1="18" x2="20" y2="4" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 2" />
+            {/* ==================== ARCHITECTURAL WINDOWS ON TOP-LEFT WALL ==================== */}
+            {/* Window 1 (matching ref-agent-office.png daylight & green foliage) */}
+            <g transform="translate(200, 275)">
+              <polygon points="0,0 72,-36 72,54 0,90" fill="#0f172a" stroke="#334155" strokeWidth="2" />
+              <polygon points="4,3 68,-29 68,50 4,82" fill="#7dd3fc" />
+              <ellipse cx="36" cy="40" rx="26" ry="22" fill="#15803d" />
+              <ellipse cx="24" cy="50" rx="20" ry="18" fill="#16a34a" />
+              <ellipse cx="50" cy="35" rx="18" ry="16" fill="#22c55e" />
+              <ellipse cx="34" cy="24" rx="22" ry="16" fill="#15803d" />
+              <line x1="36" y1="-18" x2="36" y2="67" stroke="#475569" strokeWidth="2" />
+              <line x1="0" y1="45" x2="72" y2="9" stroke="#475569" strokeWidth="1.8" />
+            </g>
+            {/* Window 2 */}
+            <g transform="translate(340, 205)">
+              <polygon points="0,0 72,-36 72,54 0,90" fill="#0f172a" stroke="#334155" strokeWidth="2" />
+              <polygon points="4,3 68,-29 68,50 4,82" fill="#bae6fd" />
+              <ellipse cx="36" cy="42" rx="25" ry="20" fill="#16a34a" />
+              <ellipse cx="48" cy="48" rx="20" ry="18" fill="#22c55e" />
+              <ellipse cx="20" cy="38" rx="18" ry="16" fill="#15803d" />
+              <line x1="36" y1="-18" x2="36" y2="67" stroke="#475569" strokeWidth="2" />
+              <line x1="0" y1="45" x2="72" y2="9" stroke="#475569" strokeWidth="1.8" />
+            </g>
+
+            {/* ==================== ARCHITECTURAL DOORWAY ON TOP-RIGHT WALL ==================== */}
+            {/* Doorway with warm hallway glow spilling across floor (matching ref-agent-office.png) */}
+            <g transform="translate(1160, 310)">
+              {/* Door Frame */}
+              <polygon points="-24,-52 24,-28 24,32 -24,8" fill="#1e1814" stroke="#78350f" strokeWidth="2.5" />
+              {/* Warm Hallway Light inside Doorway */}
+              <polygon points="-20,-48 20,-28 20,28 -20,8" fill="#fef3c7" />
+              <polygon points="-20,-48 20,-28 20,28 -20,8" fill="rgba(245, 158, 11, 0.45)" />
+              {/* Light Spill Polygon across Floor */}
+              <polygon points="-24,8 24,32 54,46 6,22" fill="rgba(251, 191, 36, 0.28)" />
+              {/* Exit Indicator Sign */}
+              <rect x="-8" y="-58" width="18" height="6" rx="1" fill="#10b981" />
+              <text x="1" y="-53.5" fill="#ffffff" fontSize="4.5" fontFamily="monospace" fontWeight="bold" textAnchor="middle">EXIT</text>
+            </g>
+
+            {/* ==================== SYSTEM ARCHITECTURE WHITEBOARD ==================== */}
+            {/* Large Architectural Whiteboard (matching ref-agent-office.png) */}
+            <g transform="translate(870, 160)">
+              <polygon points="-44,-14 44,-36 44,24 -44,46" fill="#090d16" stroke="#38bdf8" strokeWidth="1.5" />
+              <rect x="-34" y="6" width="14" height="8" rx="1" fill="#1e293b" stroke="#38bdf8" strokeWidth="0.8" />
+              <rect x="-14" y="2" width="14" height="8" rx="1" fill="#1e293b" stroke="#22c55e" strokeWidth="0.8" />
+              <line x1="-20" y1="10" x2="-14" y2="6" stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 1" />
+              <line x1="-34" y1="24" x2="30" y2="8" stroke="#38bdf8" strokeWidth="1" />
+              {/* Mini Velocity Sprint Bars */}
+              <line x1="5" y1="15" x2="5" y2="7" stroke="#f59e0b" strokeWidth="3" />
+              <line x1="13" y1="13" x2="13" y2="3" stroke="#10b981" strokeWidth="3" />
+              <line x1="21" y1="11" x2="21" y2="-2" stroke="#38bdf8" strokeWidth="3" />
+              <line x1="29" y1="9" x2="29" y2="-7" stroke="#a855f7" strokeWidth="3" />
             </g>
 
             {/* Round Wall Clock on Top-Right Wall */}
-            <g transform="translate(1080, 270)">
+            <g transform="translate(1060, 260)">
               <ellipse cx="0" cy="0" rx="14" ry="18" fill="#0f172a" stroke="#cbd5e1" strokeWidth="1.5" />
               <line x1="0" y1="0" x2="0" y2="-10" stroke="#f8fafc" strokeWidth="1.5" />
               <line x1="0" y1="0" x2="7" y2="3" stroke="#ef4444" strokeWidth="1" />
             </g>
 
             {/* Wall Bookshelf on Top-Left Wall */}
-            <g transform="translate(240, 310)">
+            <g transform="translate(140, 340)">
               <polygon
-                points="0,0 60,-30 60,30 0,60"
+                points="0,0 50,-25 50,30 0,55"
                 fill="#2b1810"
                 stroke="#452718"
                 strokeWidth="1.5"
               />
-              <line x1="10" y1="5" x2="10" y2="45" stroke="#ef4444" strokeWidth="3" />
-              <line x1="18" y1="1" x2="18" y2="41" stroke="#3b82f6" strokeWidth="3" />
-              <line x1="26" y1="-3" x2="26" y2="37" stroke="#10b981" strokeWidth="3" />
-              <line x1="34" y1="-7" x2="34" y2="33" stroke="#f59e0b" strokeWidth="3" />
-              <line x1="42" y1="-11" x2="42" y2="29" stroke="#8b5cf6" strokeWidth="3" />
+              <line x1="8" y1="5" x2="8" y2="45" stroke="#ef4444" strokeWidth="2.8" />
+              <line x1="16" y1="1" x2="16" y2="41" stroke="#3b82f6" strokeWidth="2.8" />
+              <line x1="24" y1="-3" x2="24" y2="37" stroke="#10b981" strokeWidth="2.8" />
+              <line x1="32" y1="-7" x2="32" y2="33" stroke="#f59e0b" strokeWidth="2.8" />
+              <line x1="40" y1="-11" x2="40" y2="29" stroke="#8b5cf6" strokeWidth="2.8" />
             </g>
 
             {/* Server Room Low Glass Partition (Top Center NOC) */}
@@ -919,6 +1153,20 @@ export function IsometricOffice({
               <ellipse cx="0" cy="0" rx="64" ry="32" fill="#121620" stroke="#524330" strokeWidth="1.5" />
               {/* Central pulsing core light */}
               <circle cx="0" cy="0" r="8" fill="#38bdf8" className="animate-pulse" />
+
+              {/* 12 Conference Chairs Ring around Meeting Table */}
+              {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => {
+                const rad = (deg * Math.PI) / 180
+                const cx = Math.round(Math.cos(rad) * 94)
+                const cy = Math.round(Math.sin(rad) * 48)
+                return (
+                  <g key={`brain-chair-${deg}`} transform={`translate(${cx}, ${cy})`}>
+                    <ellipse cx="0" cy="8" rx="8" ry="4" fill="rgba(0,0,0,0.3)" />
+                    <polygon points="-6,2 0,-1 6,2 0,5" fill="#1e293b" stroke="#334155" strokeWidth="0.8" />
+                    <polygon points="-5,-6 5,-6 6,2 -6,2" fill="#0f172a" stroke="#475569" strokeWidth="0.9" />
+                  </g>
+                )
+              })}
             </g>
 
             {/* ==================== PANTRY & RECEPTION COUNTER (RIGHT WING) ==================== */}
@@ -933,6 +1181,32 @@ export function IsometricOffice({
               <rect x="-70" y="-30" width="22" height="18" rx="2" fill="#0f172a" stroke="#cbd5e1" strokeWidth="1" />
               <circle cx="-42" cy="-12" r="3" fill="#f8fafc" />
               <circle cx="-34" cy="-8" r="3" fill="#f8fafc" />
+
+              {/* Espresso machine animated steam wisps */}
+              <path
+                d="M -60,-32 Q -58,-38 -62,-44"
+                stroke="rgba(255,255,255,0.6)"
+                strokeWidth="1.2"
+                fill="none"
+                className="animate-pulse"
+              />
+              <path
+                d="M -54,-33 Q -52,-39 -56,-45"
+                stroke="rgba(255,255,255,0.4)"
+                strokeWidth="1.2"
+                fill="none"
+                className="animate-pulse"
+                style={{ animationDelay: '0.4s' }}
+              />
+
+              {/* 4 Wooden Bar Stools along the counter */}
+              {[-65, -42, -18, 6].map((sx, idx) => (
+                <g key={`bar-stool-${idx}`} transform={`translate(${sx}, 28)`}>
+                  <ellipse cx="0" cy="8" rx="6" ry="3" fill="rgba(0,0,0,0.3)" />
+                  <line x1="0" y1="8" x2="0" y2="0" stroke="#64748b" strokeWidth="1.5" />
+                  <ellipse cx="0" cy="0" rx="6" ry="3" fill="#92400e" stroke="#b45309" strokeWidth="1" />
+                </g>
+              ))}
             </g>
 
             {/* Vending Machine, Fridge & Water Cooler */}
@@ -1047,6 +1321,64 @@ export function IsometricOffice({
             )}
           </svg>
 
+          {/* ==================== WORKSTATION ERGONOMIC SWIVEL CHAIRS ==================== */}
+          {ASSIGNED_DESKS.map((d) => {
+            const chairScreen = gridToScreen(d.chairGx, d.chairGy)
+            return (
+              <div
+                key={`chair-${d.id}`}
+                className="pointer-events-none absolute"
+                style={{
+                  left: `${chairScreen.x - 16}px`,
+                  top: `${chairScreen.y - 20}px`,
+                  zIndex: Math.max(1, Math.round(chairScreen.y) - 2),
+                }}
+              >
+                <svg
+                  width={32}
+                  height={32}
+                  viewBox="0 0 32 32"
+                  className="overflow-visible"
+                >
+                  {/* Floor contact shadow under chair */}
+                  <ellipse cx="16" cy="25" rx="10" ry="4.5" fill="rgba(0,0,0,0.35)" />
+                  {/* 5-Star Wheel Base */}
+                  <line x1="16" y1="23" x2="10" y2="25" stroke="#1e293b" strokeWidth="1.8" />
+                  <line x1="16" y1="23" x2="22" y2="25" stroke="#1e293b" strokeWidth="1.8" />
+                  <line x1="16" y1="23" x2="16" y2="27" stroke="#1e293b" strokeWidth="1.8" />
+                  <line x1="16" y1="23" x2="11" y2="21" stroke="#1e293b" strokeWidth="1.8" />
+                  <line x1="16" y1="23" x2="21" y2="21" stroke="#1e293b" strokeWidth="1.8" />
+                  {/* Castor Wheels */}
+                  <circle cx="10" cy="25" r="1.3" fill="#0f172a" />
+                  <circle cx="22" cy="25" r="1.3" fill="#0f172a" />
+                  <circle cx="16" cy="27" r="1.3" fill="#0f172a" />
+                  {/* Chrome Hydraulic Post */}
+                  <line x1="16" y1="23" x2="16" y2="17" stroke="#475569" strokeWidth="2.2" />
+                  {/* Padded Dark Seat Cushion */}
+                  <polygon
+                    points="8,17 16,13 24,17 16,21"
+                    fill="#181e2b"
+                    stroke="#2e384d"
+                    strokeWidth="1"
+                  />
+                  {/* High Ergonomic Mesh Backrest */}
+                  <polygon
+                    points="9,6 23,6 24,15 8,15"
+                    fill="#0f172a"
+                    stroke="#3b4861"
+                    strokeWidth="1.2"
+                  />
+                  {/* Lumbar Support Ribs */}
+                  <line x1="10" y1="9" x2="22" y2="9" stroke="#1e293b" strokeWidth="1" />
+                  <line x1="9.5" y1="12" x2="22.5" y2="12" stroke="#1e293b" strokeWidth="1" />
+                  {/* Left & Right Armrests */}
+                  <path d="M 7,13 L 7,16 L 9,17" stroke="#475569" strokeWidth="1.2" fill="none" />
+                  <path d="M 25,13 L 25,16 L 23,17" stroke="#475569" strokeWidth="1.2" fill="none" />
+                </svg>
+              </div>
+            )
+          })}
+
           {/* ==================== FURNITURE RIGS LAYER (23 DESKS & DUAL/TRIPLE MONITORS) ==================== */}
           {ASSIGNED_DESKS.map((d) => {
             const deskScreen = gridToScreen(d.deskGx, d.deskGy)
@@ -1068,6 +1400,15 @@ export function IsometricOffice({
                   viewBox={`0 0 ${isFounder ? 64 : 48} 38`}
                   className="overflow-visible"
                 >
+                  {/* Floor Contact Shadow under Desk */}
+                  <ellipse
+                    cx={isFounder ? 32 : 24}
+                    cy={27}
+                    rx={isFounder ? 28 : 21}
+                    ry={8}
+                    fill="rgba(0,0,0,0.32)"
+                  />
+
                   {/* Wooden Desk Surface */}
                   {isFounder ? (
                     // Josiah's Executive Triple-Monitor Rig
@@ -1202,11 +1543,10 @@ export function IsometricOffice({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation()
-              setSpawnToast('Agent roster capacity active (23/23 deployed)')
-              setTimeout(() => setSpawnToast(null), 3000)
+              setShowAddAgentModal(true)
             }}
             className="flex cursor-pointer items-center gap-1.5 rounded-md border border-emerald-500/80 bg-emerald-950/60 px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-emerald-300 shadow transition hover:bg-emerald-900 active:scale-95"
-            title="Spawn / Add Agent"
+            title="Onboard / Add Specialist Agent"
           >
             <span>+</span>
             <span>Agent</span>
@@ -1784,7 +2124,7 @@ export function IsometricOffice({
           <div className="w-full max-w-md rounded-xl border border-[#1e283d] bg-[#0c101a] p-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-[#1e283d] pb-3">
               <h3 className="font-mono text-sm font-bold text-slate-100">
-                HQ OFFICE PREFERENCES
+                HQ OFFICE PREFERENCES & DB STATUS
               </h3>
               <button
                 type="button"
@@ -1795,8 +2135,40 @@ export function IsometricOffice({
                 ✕
               </button>
             </div>
-            <div className="mt-4 space-y-4 font-mono text-xs">
-              <div className="flex items-center justify-between">
+            <div className="mt-4 space-y-3.5 font-mono text-xs">
+              {/* Database Telemetry Badge */}
+              <div className="rounded-lg border border-emerald-500/40 bg-emerald-950/30 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
+                    <span className="font-bold text-emerald-300">DB CONNECTED (Postgres)</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-400 font-bold">ONLINE</span>
+                </div>
+                <p className="mt-1 text-[10px] text-slate-400 truncate">
+                  spacfnutrnhzxxbkjrji.supabase.co
+                </p>
+                <div className="mt-2.5 grid grid-cols-2 gap-2 border-t border-emerald-900/60 pt-2 text-[11px]">
+                  <div>
+                    <span className="text-slate-400">office_agents:</span>{' '}
+                    <span className="font-bold text-white">{tableCounts?.office_agents ?? agents.length}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">office_approvals:</span>{' '}
+                    <span className="font-bold text-white">{tableCounts?.office_approvals ?? approvals.length}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">office_logs:</span>{' '}
+                    <span className="font-bold text-white">{tableCounts?.office_logs ?? logs.length}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">office_messages:</span>{' '}
+                    <span className="font-bold text-white">{tableCounts?.office_messages ?? 47}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
                 <span className="text-slate-300">Audio Synthesizer</span>
                 <button
                   type="button"
@@ -1819,7 +2191,7 @@ export function IsometricOffice({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-300">Supabase Realtime Sync</span>
-                <span className={supabaseActive ? 'text-emerald-400' : 'text-slate-400'}>
+                <span className={supabaseActive ? 'text-emerald-400 font-bold' : 'text-slate-400'}>
                   {supabaseActive ? 'ONLINE & SYNCED' : 'HYBRID MODE'}
                 </span>
               </div>
@@ -1832,6 +2204,180 @@ export function IsometricOffice({
             >
               SAVE & CLOSE
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== 11. ONBOARD NEW SPECIALIST MODAL (+ AGENT) ==================== */}
+      {showAddAgentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl border border-emerald-500/50 bg-[#0c101a] p-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#1e283d] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <h3 className="font-mono text-sm font-bold text-emerald-300">
+                  ONBOARD SPECIALIST AGENT
+                </h3>
+              </div>
+              <button
+                type="button"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => setShowAddAgentModal(false)}
+                className="cursor-pointer font-mono text-sm text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleAddAgentSubmit} className="mt-4 space-y-3.5 font-mono text-xs">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  Full Name / Callsign
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newAgentName}
+                  onChange={(e) => setNewAgentName(e.target.value)}
+                  placeholder="e.g. Maria Santos"
+                  className="w-full rounded border border-[#1e283d] bg-[#111625] px-3 py-1.5 text-white placeholder-slate-500 outline-none focus:border-emerald-400"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  Role & Specialization
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newAgentRole}
+                  onChange={(e) => setNewAgentRole(e.target.value)}
+                  placeholder="e.g. AI Systems Performance Lead"
+                  className="w-full rounded border border-[#1e283d] bg-[#111625] px-3 py-1.5 text-white placeholder-slate-500 outline-none focus:border-emerald-400"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  Department / Office Room
+                </label>
+                <select
+                  value={newAgentDept}
+                  onChange={(e) => setNewAgentDept(e.target.value)}
+                  className="w-full rounded border border-[#1e283d] bg-[#111625] px-3 py-1.5 text-white outline-none focus:border-emerald-400 cursor-pointer"
+                >
+                  <option value="Engineering Core">Engineering Core</option>
+                  <option value="QA & SecOps NOC">QA & SecOps NOC</option>
+                  <option value="Intelligence Lab">Intelligence Lab</option>
+                  <option value="Growth Lab">Growth Lab</option>
+                  <option value="Operations Hub">Operations Hub</option>
+                  <option value="Command Center">Command Center</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  Badge Color
+                </label>
+                <div className="flex items-center gap-2">
+                  {['#3b82f6', '#10b981', '#06b6d4', '#a855f7', '#f59e0b', '#ec4899'].map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setNewAgentColor(c)}
+                      className={`h-6 w-6 rounded-full border-2 transition cursor-pointer ${
+                        newAgentColor === c ? 'scale-110 border-white' : 'border-transparent opacity-70 hover:opacity-100'
+                      }`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                  <input
+                    type="color"
+                    value={newAgentColor}
+                    onChange={(e) => setNewAgentColor(e.target.value)}
+                    className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent"
+                    title="Custom color"
+                  />
+                </div>
+              </div>
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddAgentModal(false)}
+                  className="flex-1 cursor-pointer rounded border border-[#1e283d] bg-slate-900 py-2 font-bold text-slate-300 hover:bg-slate-800 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAddingAgent || !newAgentName.trim() || !newAgentRole.trim()}
+                  className="flex-1 cursor-pointer rounded bg-emerald-500 py-2 font-bold text-black transition hover:bg-emerald-400 disabled:opacity-50"
+                >
+                  {isAddingAgent ? 'Deploying...' : 'Deploy to Office'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== 12. ALL HANDS MEETING TRANSCRIPT DRAWER ==================== */}
+      {showTranscriptDrawer && (
+        <div className="pointer-events-auto absolute top-0 right-0 z-50 flex h-full w-96 flex-col border-l border-purple-500/50 bg-[#0c101a]/98 shadow-2xl backdrop-blur-xl">
+          <div className="flex items-center justify-between border-b border-[#1e283d] p-4">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
+              <span className="font-mono text-sm font-bold text-purple-300">
+                ALL HANDS TRANSCRIPT
+              </span>
+              <span className="rounded bg-purple-950/80 px-2 py-0.5 font-mono text-xs text-purple-300">
+                {meetingTranscript.length} lines
+              </span>
+            </div>
+            <button
+              type="button"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => setShowTranscriptDrawer(false)}
+              className="cursor-pointer font-mono text-sm text-slate-400 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="p-3 border-b border-[#1e283d] bg-[#111625]/60 flex items-center justify-between">
+            <span className="font-mono text-[11px] text-slate-400">
+              Session: EasyUp HQ All Hands
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                const text = meetingTranscript
+                  .map((t) => `[${t.time}] ${t.speaker} (${t.role}): ${t.text}`)
+                  .join('\n')
+                navigator.clipboard.writeText(text)
+                setSpawnToast('Meeting transcript copied to clipboard!')
+                setTimeout(() => setSpawnToast(null), 2500)
+              }}
+              className="cursor-pointer rounded border border-purple-500/50 bg-purple-950/50 px-2 py-1 font-mono text-[10px] text-purple-300 hover:bg-purple-900"
+            >
+              Copy Log
+            </button>
+          </div>
+          <div className="flex-1 space-y-3 overflow-y-auto p-4 font-mono text-xs">
+            {meetingTranscript.length === 0 ? (
+              <div className="py-12 text-center text-slate-500">
+                No meeting speeches recorded yet. Start All Hands to begin deliberation.
+              </div>
+            ) : (
+              meetingTranscript.map((t, idx) => (
+                <div key={idx} className="rounded-lg border border-[#1e283d] bg-[#111625] p-3 space-y-1">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="font-bold text-amber-300">{t.speaker}</span>
+                    <span className="text-slate-500">{t.time}</span>
+                  </div>
+                  <div className="text-[10px] text-cyan-400">{t.role}</div>
+                  <p className="text-slate-200 text-[11px] leading-relaxed pt-1">
+                    &ldquo;{t.text}&rdquo;
+                  </p>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

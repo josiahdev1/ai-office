@@ -267,7 +267,7 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     monitors: 2,
   },
 
-  // 2. QA & SecOps NOC (4 Desks)
+  // 2. QA & SecOps NOC (3 Desks)
   {
     id: 'qa-1',
     agentId: 'khent',
@@ -282,8 +282,8 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
   },
   {
     id: 'qa-2',
-    agentId: 'joshua',
-    name: 'Joshua',
+    agentId: 'john_arvy',
+    name: 'John Arvy',
     room: 'QA & SecOps NOC',
     deskGx: 2,
     deskGy: 15,
@@ -294,25 +294,13 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
   },
   {
     id: 'qa-3',
-    agentId: 'reymark',
-    name: 'Reymark',
+    agentId: 'gian',
+    name: 'Gian',
     room: 'QA & SecOps NOC',
     deskGx: 4,
     deskGy: 14,
     chairGx: 5,
     chairGy: 14,
-    facing: 'SE',
-    monitors: 2,
-  },
-  {
-    id: 'qa-4',
-    agentId: 'bryan',
-    name: 'Bryan',
-    room: 'QA & SecOps NOC',
-    deskGx: 4,
-    deskGy: 15,
-    chairGx: 5,
-    chairGy: 15,
     facing: 'SE',
     monitors: 2,
   },
@@ -405,11 +393,11 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     monitors: 2,
   },
 
-  // 5. Operations Hub & Command (6 Desks)
+  // 5. Operations Hub (4 Desks)
   {
     id: 'ops-1',
-    agentId: 'christian',
-    name: 'Christian',
+    agentId: 'mary_grace',
+    name: 'Mary Grace',
     room: 'Operations Hub',
     deskGx: 13,
     deskGy: 12,
@@ -420,8 +408,8 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
   },
   {
     id: 'ops-2',
-    agentId: 'kenneth',
-    name: 'Kenneth',
+    agentId: 'anthony',
+    name: 'Anthony',
     room: 'Operations Hub',
     deskGx: 13,
     deskGy: 13,
@@ -432,8 +420,8 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
   },
   {
     id: 'ops-3',
-    agentId: 'michael',
-    name: 'Michael',
+    agentId: 'blaze',
+    name: 'Blaze',
     room: 'Operations Hub',
     deskGx: 15,
     deskGy: 12,
@@ -444,8 +432,8 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
   },
   {
     id: 'ops-4',
-    agentId: 'aljon',
-    name: 'Aljon',
+    agentId: 'ferwin',
+    name: 'Ferwin',
     room: 'Operations Hub',
     deskGx: 15,
     deskGy: 13,
@@ -454,6 +442,8 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     facing: 'SE',
     monitors: 2,
   },
+
+  // 6. Command Center (3 Desks)
   {
     id: 'cmd-1',
     agentId: 'gloria',
@@ -474,6 +464,18 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     deskGx: 15,
     deskGy: 15,
     chairGx: 16,
+    chairGy: 15,
+    facing: 'SE',
+    monitors: 2,
+  },
+  {
+    id: 'cmd-3',
+    agentId: 'julian',
+    name: 'Julian',
+    room: 'Command Center',
+    deskGx: 14,
+    deskGy: 16,
+    chairGx: 14,
     chairGy: 15,
     facing: 'SE',
     monitors: 2,

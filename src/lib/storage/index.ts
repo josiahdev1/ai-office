@@ -1,12 +1,33 @@
-import fs from 'fs'
-import path from 'path'
+/**
+ * Unified Server-Side Storage & Supabase Sync Layer
+ * 
+ * Master persistence layer for EasyUp Software Solution HQ.
+ * Directly reads & writes to live Supabase tables (`office_agents`, `office_approvals`,
+ * `office_logs`, `office_messages`, `office_tasks`, `office_settings`) through db-map.ts.
+ */
+
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { Agent, Approval, OfficeData } from '@/components/office/types'
+import {
+  dbRowToAgent,
+  agentToDbRow,
+  dbRowToApproval,
+  dbRowToLogString,
+  logToDbRow,
+  OfficeAgentRow,
+  OfficeApprovalRow,
+  OfficeLogRow,
+} from '@/lib/office/db-map'
 
-// Zod Validation Schemas
+// =============================================================================
+// 1. Zod Validation Schemas
+// =============================================================================
+
 export const ApprovalRequestSchema = z.object({
   approvalId: z.string().min(1, 'approvalId is required'),
   action: z.enum(['approve', 'reject']),
+  resolvedBy: z.string().optional(),
 })
 
 export const TriggerRequestSchema = z.object({
@@ -25,365 +46,115 @@ export const AgentUpdateSchema = z.object({
   terminal_preview: z.string().optional(),
   progress_pct: z.number().min(0).max(100).optional(),
   last_action: z.string().optional(),
+  room: z.string().optional(),
+  color: z.string().optional(),
 })
 
-// Room desk coordinates grid (supporting 38+ desks dynamically)
-export interface RoomDeskSlot {
-  id: string
-  room: string
-  x: number
-  y: number
-  facing: 'left' | 'right'
-  monitors: number
+// =============================================================================
+// 2. Sliding Window Rate Limiter
+// =============================================================================
+
+const RATE_LIMIT_WINDOW_MS = 60_000 // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 120
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+
+export function checkRateLimit(key = 'global'): { allowed: boolean; remaining: number } {
+  const now = Date.now()
+  const entry = rateLimitMap.get(key)
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+    return { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW - 1 }
+  }
+
+  if (entry.count >= MAX_REQUESTS_PER_WINDOW) {
+    return { allowed: false, remaining: 0 }
+  }
+
+  entry.count++
+  return { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW - entry.count }
 }
 
-export const ROOM_DESK_SLOTS: Record<string, RoomDeskSlot[]> = {
-  'Engineering Core': [
-    {
-      id: 'eng-1',
-      room: 'Engineering Core',
-      x: 200,
-      y: 340,
-      facing: 'right',
-      monitors: 3,
-    }, // Josiah (Triple monitor)
-    {
-      id: 'eng-2',
-      room: 'Engineering Core',
-      x: 280,
-      y: 340,
-      facing: 'right',
-      monitors: 2,
-    }, // Arwin
-    {
-      id: 'eng-3',
-      room: 'Engineering Core',
-      x: 360,
-      y: 340,
-      facing: 'right',
-      monitors: 2,
-    }, // Neil Mar
-    {
-      id: 'eng-4',
-      room: 'Engineering Core',
-      x: 440,
-      y: 340,
-      facing: 'left',
-      monitors: 2,
-    }, // Nelmar
-    {
-      id: 'eng-5',
-      room: 'Engineering Core',
-      x: 280,
-      y: 410,
-      facing: 'right',
-      monitors: 2,
-    }, // Bonnie
-    {
-      id: 'eng-6',
-      room: 'Engineering Core',
-      x: 360,
-      y: 410,
-      facing: 'right',
-      monitors: 2,
-    }, // John Lloyd
-    {
-      id: 'eng-7',
-      room: 'Engineering Core',
-      x: 440,
-      y: 410,
-      facing: 'left',
-      monitors: 2,
-    }, // Exp slot 1
-    {
-      id: 'eng-8',
-      room: 'Engineering Core',
-      x: 200,
-      y: 410,
-      facing: 'right',
-      monitors: 2,
-    }, // Exp slot 2
-  ],
-  'QA & SecOps NOC': [
-    {
-      id: 'qa-1',
-      room: 'QA & SecOps NOC',
-      x: 620,
-      y: 410,
-      facing: 'right',
-      monitors: 2,
-    }, // Khent
-    {
-      id: 'qa-2',
-      room: 'QA & SecOps NOC',
-      x: 700,
-      y: 410,
-      facing: 'right',
-      monitors: 2,
-    }, // John Arvy
-    {
-      id: 'qa-3',
-      room: 'QA & SecOps NOC',
-      x: 780,
-      y: 410,
-      facing: 'left',
-      monitors: 2,
-    }, // Gian
-    {
-      id: 'qa-4',
-      room: 'QA & SecOps NOC',
-      x: 620,
-      y: 470,
-      facing: 'right',
-      monitors: 2,
-    }, // Exp slot 1
-    {
-      id: 'qa-5',
-      room: 'QA & SecOps NOC',
-      x: 700,
-      y: 470,
-      facing: 'right',
-      monitors: 2,
-    }, // Exp slot 2
-    {
-      id: 'qa-6',
-      room: 'QA & SecOps NOC',
-      x: 780,
-      y: 470,
-      facing: 'left',
-      monitors: 2,
-    }, // Exp slot 3
-  ],
-  'Operations Hub': [
-    {
-      id: 'ops-1',
-      room: 'Operations Hub',
-      x: 230,
-      y: 130,
-      facing: 'right',
-      monitors: 2,
-    }, // Mary Grace
-    {
-      id: 'ops-2',
-      room: 'Operations Hub',
-      x: 310,
-      y: 130,
-      facing: 'right',
-      monitors: 2,
-    }, // Anthony
-    {
-      id: 'ops-3',
-      room: 'Operations Hub',
-      x: 250,
-      y: 190,
-      facing: 'right',
-      monitors: 2,
-    }, // Blaze
-    {
-      id: 'ops-4',
-      room: 'Operations Hub',
-      x: 330,
-      y: 190,
-      facing: 'left',
-      monitors: 2,
-    }, // Ferwin
-    {
-      id: 'ops-5',
-      room: 'Operations Hub',
-      x: 410,
-      y: 160,
-      facing: 'left',
-      monitors: 2,
-    }, // Exp slot 1
-    {
-      id: 'ops-6',
-      room: 'Operations Hub',
-      x: 410,
-      y: 220,
-      facing: 'left',
-      monitors: 2,
-    }, // Exp slot 2
-  ],
-  'Growth Lab': [
-    {
-      id: 'growth-1',
-      room: 'Growth Lab',
-      x: 95,
-      y: 200,
-      facing: 'right',
-      monitors: 2,
-    }, // Jo Vincent
-    {
-      id: 'growth-2',
-      room: 'Growth Lab',
-      x: 165,
-      y: 230,
-      facing: 'right',
-      monitors: 2,
-    }, // Jesmond
-    {
-      id: 'growth-3',
-      room: 'Growth Lab',
-      x: 95,
-      y: 270,
-      facing: 'right',
-      monitors: 2,
-    }, // Kin
-    {
-      id: 'growth-4',
-      room: 'Growth Lab',
-      x: 165,
-      y: 290,
-      facing: 'right',
-      monitors: 2,
-    }, // Exp slot 1
-    {
-      id: 'growth-5',
-      room: 'Growth Lab',
-      x: 95,
-      y: 340,
-      facing: 'right',
-      monitors: 2,
-    }, // Exp slot 2
-    {
-      id: 'growth-6',
-      room: 'Growth Lab',
-      x: 165,
-      y: 360,
-      facing: 'right',
-      monitors: 2,
-    }, // Exp slot 3
-  ],
-  'Intelligence Lab': [
-    {
-      id: 'intel-1',
-      room: 'Intelligence Lab',
-      x: 720,
-      y: 120,
-      facing: 'right',
-      monitors: 2,
-    }, // Roy Jhan
-    {
-      id: 'intel-2',
-      room: 'Intelligence Lab',
-      x: 800,
-      y: 120,
-      facing: 'left',
-      monitors: 2,
-    }, // Gabriel
-    {
-      id: 'intel-3',
-      room: 'Intelligence Lab',
-      x: 720,
-      y: 180,
-      facing: 'right',
-      monitors: 2,
-    }, // Keiru
-    {
-      id: 'intel-4',
-      room: 'Intelligence Lab',
-      x: 800,
-      y: 180,
-      facing: 'left',
-      monitors: 2,
-    }, // Ryan
-    {
-      id: 'intel-5',
-      room: 'Intelligence Lab',
-      x: 880,
-      y: 150,
-      facing: 'left',
-      monitors: 2,
-    }, // Exp slot 1
-    {
-      id: 'intel-6',
-      room: 'Intelligence Lab',
-      x: 720,
-      y: 240,
-      facing: 'right',
-      monitors: 2,
-    }, // Exp slot 2
-  ],
-  'Command Center': [
-    {
-      id: 'cmd-1',
-      room: 'Command Center',
-      x: 670,
-      y: 350,
-      facing: 'left',
-      monitors: 2,
-    }, // Gloria
-    {
-      id: 'cmd-2',
-      room: 'Command Center',
-      x: 760,
-      y: 350,
-      facing: 'right',
-      monitors: 2,
-    }, // JB
-    {
-      id: 'cmd-3',
-      room: 'Command Center',
-      x: 715,
-      y: 290,
-      facing: 'right',
-      monitors: 2,
-    }, // Julian
-    {
-      id: 'cmd-4',
-      room: 'Command Center',
-      x: 630,
-      y: 290,
-      facing: 'left',
-      monitors: 2,
-    }, // Exp slot 1
-    {
-      id: 'cmd-5',
-      room: 'Command Center',
-      x: 800,
-      y: 290,
-      facing: 'right',
-      monitors: 2,
-    }, // Exp slot 2
-    {
-      id: 'cmd-6',
-      room: 'Command Center',
-      x: 715,
-      y: 390,
-      facing: 'left',
-      monitors: 2,
-    }, // Exp slot 3
-  ],
+// =============================================================================
+// 3. Supabase Client Initialization
+// =============================================================================
+
+let serverSupabaseClient: SupabaseClient | null = null
+
+function getSupabase(): SupabaseClient | null {
+  if (serverSupabaseClient) return serverSupabaseClient
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    ''
+
+  if (!url || !key) {
+    return null
+  }
+
+  serverSupabaseClient = createClient(url, key, {
+    auth: { persistSession: false },
+  })
+  return serverSupabaseClient
 }
 
-// Global in-memory cache
+// =============================================================================
+// 4. In-Memory Fallback Cache (for offline dev or network drop)
+// =============================================================================
+
 let cachedOfficeData: OfficeData | null = null
 
-function resolveStatusPath(): string {
-  return path.join(process.cwd(), 'brain', 'live_status.json')
+// Desk Coordinate Map for Dynamic Agents
+export const ROOM_DESK_SLOTS: Record<string, { id: string; room: string; x: number; y: number }[]> = {
+  'Engineering Core': [
+    { id: 'eng-1', room: 'Engineering Core', x: 2, y: 10 },
+    { id: 'eng-2', room: 'Engineering Core', x: 2, y: 11 },
+    { id: 'eng-3', room: 'Engineering Core', x: 2, y: 12 },
+    { id: 'eng-4', room: 'Engineering Core', x: 4, y: 10 },
+    { id: 'eng-5', room: 'Engineering Core', x: 4, y: 11 },
+    { id: 'eng-6', room: 'Engineering Core', x: 4, y: 12 },
+  ],
+  'QA & SecOps NOC': [
+    { id: 'qa-1', room: 'QA & SecOps NOC', x: 2, y: 14 },
+    { id: 'qa-2', room: 'QA & SecOps NOC', x: 2, y: 15 },
+    { id: 'qa-3', room: 'QA & SecOps NOC', x: 4, y: 14 },
+  ],
+  'Growth Lab': [
+    { id: 'growth-1', room: 'Growth Lab', x: 13, y: 9 },
+    { id: 'growth-2', room: 'Growth Lab', x: 13, y: 10 },
+    { id: 'growth-3', room: 'Growth Lab', x: 15, y: 9 },
+  ],
+  'Intelligence Lab': [
+    { id: 'intel-1', room: 'Intelligence Lab', x: 13, y: 5 },
+    { id: 'intel-2', room: 'Intelligence Lab', x: 13, y: 6 },
+    { id: 'intel-3', room: 'Intelligence Lab', x: 15, y: 5 },
+    { id: 'intel-4', room: 'Intelligence Lab', x: 15, y: 6 },
+  ],
+  'Operations Hub': [
+    { id: 'ops-1', room: 'Operations Hub', x: 13, y: 12 },
+    { id: 'ops-2', room: 'Operations Hub', x: 13, y: 13 },
+    { id: 'ops-3', room: 'Operations Hub', x: 15, y: 12 },
+    { id: 'ops-4', room: 'Operations Hub', x: 15, y: 13 },
+  ],
+  'Command Center': [
+    { id: 'cmd-1', room: 'Command Center', x: 13, y: 15 },
+    { id: 'cmd-2', room: 'Command Center', x: 15, y: 15 },
+    { id: 'cmd-3', room: 'Command Center', x: 14, y: 16 },
+  ],
 }
 
-/**
- * Assigns desks dynamically to any agents who do not have an assigned desk_coord,
- * ensuring seamless scaling to 30+ agents without collisions.
- */
 export function autoAssignDesks(agents: Agent[]): Agent[] {
   const occupiedSlots = new Set<string>()
-
-  // Mark already claimed slots
   agents.forEach((ag) => {
-    if (ag.desk_id) {
-      occupiedSlots.add(ag.desk_id)
-    }
+    if (ag.desk_id) occupiedSlots.add(ag.desk_id)
   })
 
   return agents.map((agent) => {
-    if (agent.desk_coord && agent.desk_id) {
-      return agent
-    }
+    if (agent.desk_coord && agent.desk_id) return agent
 
-    const roomSlots =
-      ROOM_DESK_SLOTS[agent.room] || ROOM_DESK_SLOTS['Engineering Core']
+    const roomSlots = ROOM_DESK_SLOTS[agent.room] || ROOM_DESK_SLOTS['Engineering Core']
     const availableSlot = roomSlots.find((slot) => !occupiedSlots.has(slot.id))
 
     if (availableSlot) {
@@ -395,123 +166,186 @@ export function autoAssignDesks(agents: Agent[]): Agent[] {
       }
     }
 
-    // Dynamic fallback offset within room
-    const fallbackX = 400 + (agents.indexOf(agent) % 5) * 40
-    const fallbackY = 300 + Math.floor(agents.indexOf(agent) / 5) * 40
     return {
       ...agent,
-      desk_coord: { x: fallbackX, y: fallbackY },
+      desk_coord: { x: 3, y: 10 },
     }
   })
 }
 
+// =============================================================================
+// 5. Database Read Operations
+// =============================================================================
+
 /**
- * Reads the office state from memory cache, falling back to brain/live_status.json
+ * Reads live office state directly from Supabase tables:
+ * - office_agents
+ * - office_approvals
+ * - office_logs
+ * - office_messages
  */
 export async function getOfficeState(): Promise<OfficeData> {
-  const filePath = resolveStatusPath()
-  if (fs.existsSync(filePath)) {
-    try {
-      const raw = fs.readFileSync(filePath, 'utf8')
-      const parsed: OfficeData = JSON.parse(raw)
-      parsed.agents = autoAssignDesks(parsed.agents || [])
-      cachedOfficeData = parsed
-      return cachedOfficeData
-    } catch (err) {
-      console.warn(
-        'Failed to parse live_status.json, initializing default state:',
-        err
-      )
+  const supabase = getSupabase()
+
+  if (!supabase) {
+    if (cachedOfficeData) return cachedOfficeData
+    return {
+      company_name: 'EasyUp Software Solution',
+      playback_speed: '1x',
+      agents: [],
+      approvals: [],
+      logs: ['[OFFLINE] Supabase environment variables not configured.'],
+      dbConnected: false,
+      dbError: 'Supabase credentials missing',
     }
   }
 
-  if (cachedOfficeData) {
-    return cachedOfficeData
-  }
+  try {
+    // 1. Fetch office_agents
+    const { data: rawAgents, error: agentsError } = await supabase
+      .from('office_agents')
+      .select('*')
+      .order('name', { ascending: true })
 
-  // Minimal fallback state
-  cachedOfficeData = {
-    company_name: 'EasyUp Software Solution',
-    playback_speed: '1x',
-    agents: [],
-    approvals: [],
-    logs: ['[BOOT] EasyUp Software Solution HQ telemetry initialized.'],
-  }
+    if (agentsError) {
+      console.warn('[Storage] Error reading office_agents:', agentsError.message)
+      if (cachedOfficeData) {
+        return {
+          ...cachedOfficeData,
+          dbConnected: false,
+          dbError: agentsError.message,
+        }
+      }
+      throw agentsError
+    }
 
-  return cachedOfficeData
+    const agents: Agent[] = autoAssignDesks(
+      ((rawAgents as OfficeAgentRow[]) || []).map(dbRowToAgent)
+    )
+
+    // 2. Fetch office_approvals (pending)
+    const { data: rawApprovals, error: approvalsError } = await supabase
+      .from('office_approvals')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+
+    if (approvalsError) {
+      console.warn('[Storage] Error reading office_approvals:', approvalsError.message)
+    }
+
+    const approvals: Approval[] = ((rawApprovals as OfficeApprovalRow[]) || []).map(
+      dbRowToApproval
+    )
+
+    // 3. Fetch office_logs (recent telemetry)
+    const { data: rawLogs, error: logsError } = await supabase
+      .from('office_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(30)
+
+    if (logsError) {
+      console.warn('[Storage] Error reading office_logs:', logsError.message)
+    }
+
+    const logs: string[] = ((rawLogs as OfficeLogRow[]) || []).map(dbRowToLogString)
+
+    // 4. Count messages in office_messages
+    const { count: messageCount } = await supabase
+      .from('office_messages')
+      .select('*', { count: 'exact', head: true })
+
+    const state: OfficeData = {
+      company_name: 'EasyUp Software Solution',
+      playback_speed: '1x',
+      agents,
+      approvals,
+      logs: logs.length > 0 ? logs : ['[BOOT] Live Supabase connection established.'],
+      dbConnected: true,
+      dbError: null,
+      tableCounts: {
+        office_agents: agents.length,
+        office_approvals: approvals.length,
+        office_logs: logs.length,
+        office_messages: messageCount || 0,
+      },
+    }
+
+    cachedOfficeData = state
+    return state
+  } catch (err: unknown) {
+    const errorMsg = (err as Error).message || 'Database connection error'
+    console.error('[Storage] getOfficeState error:', errorMsg)
+    
+    if (cachedOfficeData) {
+      return {
+        ...cachedOfficeData,
+        dbConnected: false,
+        dbError: errorMsg,
+      }
+    }
+
+    return {
+      company_name: 'EasyUp Software Solution',
+      playback_speed: '1x',
+      agents: [],
+      approvals: [],
+      logs: [`[DB ERROR] Failed to connect: ${errorMsg}`],
+      dbConnected: false,
+      dbError: errorMsg,
+    }
+  }
 }
 
 /**
- * Safely persists office state to memory and disk (if filesystem is writable)
+ * Saves full state to in-memory cache and syncs modified agents to office_agents
  */
 export async function saveOfficeState(state: OfficeData): Promise<void> {
   cachedOfficeData = state
+  const supabase = getSupabase()
+  if (!supabase) return
 
   try {
-    const filePath = resolveStatusPath()
-    const dir = path.dirname(filePath)
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true })
-    }
-    fs.writeFileSync(filePath, JSON.stringify(state, null, 2), 'utf8')
+    const rows = state.agents.map(agentToDbRow)
+    await supabase.from('office_agents').upsert(rows, { onConflict: 'id' })
   } catch (err) {
-    // Graceful fallback for read-only / serverless deployment environments (e.g. Vercel)
-    console.warn(
-      '[Storage] Filesystem write skipped or unavailable in serverless environment:',
-      err
-    )
+    console.warn('[Storage] Background saveOfficeState skipped:', err)
   }
 }
 
+// =============================================================================
+// 6. Database Write Operations
+// =============================================================================
+
 /**
- * Updates a specific agent's properties
+ * Updates a single agent in office_agents
  */
 export async function updateAgent(
   agentId: string,
   partial: Partial<Agent>
 ): Promise<OfficeData> {
-  const state = await getOfficeState()
-  state.agents = state.agents.map((ag) => {
-    if (ag.id === agentId) {
-      return {
-        ...ag,
-        ...partial,
-        updated_at: new Date().toISOString(),
-      }
+  const supabase = getSupabase()
+
+  if (supabase) {
+    const dbRow = agentToDbRow({ ...partial, id: agentId })
+    const { error } = await supabase
+      .from('office_agents')
+      .update(dbRow)
+      .eq('id', agentId)
+
+    if (error) {
+      console.warn(`[Storage] Failed to update agent ${agentId} in DB:`, error.message)
     }
-    return ag
-  })
+  }
 
-  await saveOfficeState(state)
-  return state
-}
-
-/**
- * Resolves a pending Human-in-the-Loop Go-Signal approval
- */
-export async function resolveApproval(
-  approvalId: string,
-  action: 'approve' | 'reject'
-): Promise<{ remaining: Approval[]; logs: string[]; resolvedItem?: Approval }> {
-  const state = await getOfficeState()
-  const item = state.approvals.find((a) => a.id === approvalId)
-
-  state.approvals = state.approvals.filter((a) => a.id !== approvalId)
-
-  const timestamp = new Date().toLocaleTimeString()
-  const logEntry = `[${timestamp}] [GO-SIGNAL] ${action.toUpperCase()} granted for "${item?.title || approvalId}".`
-  state.logs = [logEntry, ...(state.logs || [])].slice(0, 25)
-
-  // If approved and associated with an agent, advance their state
-  if (item && action === 'approve') {
-    state.agents = state.agents.map((ag) => {
-      if (ag.id === item.agent_id) {
+  // Update in-memory state
+  if (cachedOfficeData) {
+    cachedOfficeData.agents = cachedOfficeData.agents.map((ag) => {
+      if (ag.id === agentId) {
         return {
           ...ag,
-          status: 'working',
-          sub_state: 'typing',
-          last_action: `Executing approved Go-Signal: ${item.title}`,
-          progress_pct: 10,
+          ...partial,
           updated_at: new Date().toISOString(),
         }
       }
@@ -519,67 +353,149 @@ export async function resolveApproval(
     })
   }
 
-  await saveOfficeState(state)
+  return getOfficeState()
+}
 
-  // Write audit trail if possible
-  try {
-    const auditDir = path.join(process.cwd(), 'brain', 'logs')
-    if (!fs.existsSync(auditDir)) fs.mkdirSync(auditDir, { recursive: true })
-    fs.appendFileSync(
-      path.join(auditDir, 'audit.log'),
-      `[${new Date().toISOString()}] ${action.toUpperCase()} | id: ${approvalId} | title: ${item?.title || 'Unknown'}\n`
+/**
+ * Resolves a pending Go-Signal approval in office_approvals and records audit in office_logs
+ */
+export async function resolveApproval(
+  approvalId: string,
+  action: 'approve' | 'reject',
+  resolvedBy = 'Josiah'
+): Promise<{ remaining: Approval[]; logs: string[]; resolvedItem?: Approval }> {
+  const supabase = getSupabase()
+  let resolvedItem: Approval | undefined
+
+  if (supabase) {
+    // 1. Get approval details
+    const { data: existing } = await supabase
+      .from('office_approvals')
+      .select('*')
+      .eq('id', approvalId)
+      .single()
+
+    if (existing) {
+      resolvedItem = dbRowToApproval(existing as OfficeApprovalRow)
+    }
+
+    // 2. Update status in office_approvals
+    await supabase
+      .from('office_approvals')
+      .update({
+        status: action === 'approve' ? 'approved' : 'rejected',
+        resolved_by: resolvedBy,
+        resolved_at: new Date().toISOString(),
+      })
+      .eq('id', approvalId)
+
+    // 3. Write audit log to office_logs
+    await supabase.from('office_logs').insert(
+      logToDbRow({
+        category: 'approval',
+        level: 'audit',
+        agentName: resolvedBy,
+        message: `[GO-SIGNAL] ${action.toUpperCase()} granted for approval "${existing?.title || approvalId}".`,
+        details: { approvalId, action, resolvedBy },
+      })
     )
-  } catch (err) {
-    console.warn('[Storage] Audit log write skipped:', err)
+
+    // 4. If approved, advance agent state in office_agents
+    if (existing && action === 'approve' && existing.requested_by) {
+      const agentId = existing.requested_by.toLowerCase().replace(/\s+/g, '_')
+      await supabase
+        .from('office_agents')
+        .update({
+          status: 'coding',
+          sub_state: 'typing',
+          current_task: `Executing approved Go-Signal: ${existing.title}`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', agentId)
+    }
   }
 
+  const updatedState = await getOfficeState()
   return {
-    remaining: state.approvals,
-    logs: state.logs,
-    resolvedItem: item,
+    remaining: updatedState.approvals,
+    logs: updatedState.logs,
+    resolvedItem,
   }
 }
 
 /**
- * Dispatches a directive / task to an agent
+ * Dispatches a task to an agent: updates office_agents and records to office_logs (and office_tasks)
  */
 export async function triggerTask(
   agentId: string,
   task: string
 ): Promise<OfficeData> {
-  const state = await getOfficeState()
-  const timestamp = new Date().toLocaleTimeString()
+  const supabase = getSupabase()
 
-  state.agents = state.agents.map((ag) => {
-    if (ag.id === agentId) {
-      return {
-        ...ag,
-        status: 'working',
+  if (supabase) {
+    // 1. Update agent in office_agents
+    await supabase
+      .from('office_agents')
+      .update({
+        status: 'coding',
         sub_state: 'typing',
         current_task: task,
-        last_action: `Executing: ${task}`,
-        progress_pct: 0,
         updated_at: new Date().toISOString(),
-      }
+      })
+      .eq('id', agentId)
+
+    // 2. Insert telemetry into office_logs
+    await supabase.from('office_logs').insert(
+      logToDbRow({
+        category: 'task',
+        level: 'info',
+        agentId,
+        message: `Agent ${agentId.toUpperCase()} initiated: "${task}".`,
+        details: { task, agentId },
+      })
+    )
+
+    // 3. Optional insert into office_tasks if table exists
+    try {
+      await supabase.from('office_tasks').insert({
+        title: task,
+        assigned_to: agentId,
+        department: 'ENGINEERING',
+        status: 'in_progress',
+        progress: 10,
+      })
+    } catch {
+      // Ignored if office_tasks table has not been created yet
     }
-    return ag
-  })
+  }
 
-  const logEntry = `[${timestamp}] [TASK TRIGGERED] ${agentId.toUpperCase()} initiated: "${task}".`
-  state.logs = [logEntry, ...(state.logs || [])].slice(0, 25)
-
-  await saveOfficeState(state)
-  return state
+  return getOfficeState()
 }
 
 /**
- * Appends a log entry to the office activity log
+ * Appends a log line to office_logs in Supabase
  */
-export async function addOfficeLog(message: string): Promise<string[]> {
-  const state = await getOfficeState()
-  const timestamp = new Date().toLocaleTimeString()
-  const logEntry = `[${timestamp}] ${message}`
-  state.logs = [logEntry, ...(state.logs || [])].slice(0, 25)
-  await saveOfficeState(state)
-  return state.logs
+export async function addOfficeLog(
+  message: string,
+  category = 'system',
+  agentId?: string,
+  agentName?: string,
+  level = 'info'
+): Promise<string[]> {
+  const supabase = getSupabase()
+
+  if (supabase) {
+    await supabase.from('office_logs').insert(
+      logToDbRow({
+        category,
+        message,
+        agentId,
+        agentName,
+        level,
+      })
+    )
+  }
+
+  const updatedState = await getOfficeState()
+  return updatedState.logs
 }

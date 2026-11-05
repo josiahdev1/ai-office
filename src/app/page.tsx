@@ -17,6 +17,12 @@ export default function EasyUpOfficeHQ() {
   const [logs, setLogs] = useState<string[]>([])
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   const [supabaseActive, setSupabaseActive] = useState<boolean>(false)
+  const [tableCounts, setTableCounts] = useState<{
+    office_agents?: number
+    office_approvals?: number
+    office_logs?: number
+    office_messages?: number
+  } | null>(null)
 
   // Completed items list for "DONE TODAY"
   const [doneToday, setDoneToday] = useState([
@@ -122,6 +128,13 @@ export default function EasyUpOfficeHQ() {
             }
             return prev
           })
+
+          if (json.data.tableCounts) {
+            setTableCounts(json.data.tableCounts)
+          }
+          if (json.data.dbConnected !== undefined) {
+            setSupabaseActive(json.data.dbConnected)
+          }
 
           setSelectedAgent((prev) => {
             if (!prev) return null
@@ -243,6 +256,20 @@ export default function EasyUpOfficeHQ() {
     }
   }
 
+  const handleRefreshAgents = async () => {
+    try {
+      const res = await fetch('/api/office/status')
+      const json = await res.json()
+      if (json.ok && json.data) {
+        setAgents(json.data.agents || [])
+        setApprovals(json.data.approvals || [])
+        if (json.data.tableCounts) setTableCounts(json.data.tableCounts)
+      }
+    } catch (err) {
+      console.error('Error refreshing agents:', err)
+    }
+  }
+
   return (
     <main className="h-screen w-screen overflow-hidden bg-[#080b12]">
       <IsometricOffice
@@ -255,6 +282,8 @@ export default function EasyUpOfficeHQ() {
         logs={logs}
         doneToday={doneToday}
         supabaseActive={supabaseActive}
+        tableCounts={tableCounts || undefined}
+        onRefreshAgents={handleRefreshAgents}
       />
     </main>
   )

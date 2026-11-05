@@ -1,22 +1,38 @@
 /**
  * Supabase Office Service for EasyUp Software Solution HQ
  * Real-time synchronization layer for agents, tasks, approvals, messages, and office settings.
- * Supports live Supabase cloud database with graceful local fallback.
+ * Directly synchronized with live Supabase tables:
+ * - public.office_agents
+ * - public.office_approvals
+ * - public.office_logs
+ * - public.office_messages
+ * - public.office_settings
+ * - public.office_tasks
  */
 
 import { createClient as createBrowserSupabase } from '@/utils/supabase/client'
 import { Agent, Approval } from '@/components/office/types'
+import {
+  dbRowToAgent,
+  agentToDbRow,
+  dbRowToApproval,
+  OfficeAgentRow,
+  OfficeApprovalRow,
+  OfficeMessageRow,
+} from '@/lib/office/db-map'
 
 export interface OfficeMessageRecord {
   id: string
   sender_id: string
   sender_name: string
+  sender_department?: string
   receiver_id?: string
   receiver_name?: string
   recipient_id?: string
   recipient_name?: string
   channel: string
   content: string
+  message_type?: string
   created_at: string
 }
 
@@ -25,57 +41,21 @@ export interface OfficeLogRecord {
   agent_id?: string
   agent_name?: string
   action?: string
-  category?: string
-  details?: string | Record<string, unknown>
-  message?: string
-  department?: string
+  category: string
+  details?: Record<string, unknown>
+  message: string
   level?: string
-  timestamp?: string
-  created_at?: string
+  created_at: string
 }
 
 export interface OfficeSettingsRecord {
   id: string
   mode: string
   sound_enabled: boolean
-  speed: string
-  company_name: string
+  speed: number
+  theme: string
+  layout: string
   updated_at: string
-}
-
-interface DbAgentRow {
-  id: string
-  name: string
-  role: string
-  department: string
-  status: Agent['status']
-  sub_state?: Agent['sub_state']
-  current_task?: string
-  current_file?: string
-  terminal_preview?: string
-  progress_pct?: number
-  updated_at: string
-  desk_id?: string
-  desk_x?: number | string
-  desk_y?: number | string
-  color?: string
-  hair?: string
-  skin?: string
-  last_action?: string
-}
-
-interface DbApprovalRow {
-  id: string
-  agent_id?: string
-  requested_by?: string
-  agent_name?: string
-  room?: string
-  type?: string
-  title: string
-  summary?: string
-  details?: string
-  created_at: string
-  status?: 'pending' | 'approved' | 'rejected'
 }
 
 class SupabaseOfficeService {
@@ -83,12 +63,12 @@ class SupabaseOfficeService {
   private isSupabaseReady: boolean | null = null
 
   /**
-   * Probes whether Supabase tables exist in the user's remote project.
+   * Probes whether office_agents table exists and is accessible.
    */
   public async checkHealth(): Promise<boolean> {
     try {
       const { error } = await this.client
-        .from('agents')
+        .from('office_agents')
         .select('id', { head: true, count: 'exact' })
 
       if (error && (error.message.includes('not find the table') || error.code === '42P01')) {
@@ -96,8 +76,8 @@ class SupabaseOfficeService {
         return false
       }
 
-      this.isSupabaseReady = true
-      return true
+      this.isSupabaseReady = !error
+      return !error
     } catch {
       this.isSupabaseReady = false
       return false
@@ -109,60 +89,60 @@ class SupabaseOfficeService {
   }
 
   /**
-   * Fetch all agents from Supabase.
+   * Fetch table row counts for DB CONNECTED status reporting.
    */
-  public async getAgents(): Promise<Agent[] | null> {
+  public async getTableCounts(): Promise<{
+    office_agents: number
+    office_approvals: number
+    office_logs: number
+    office_messages: number
+  } | null> {
     try {
-      const { data, error } = await this.client
-        .from('agents')
-        .select('*')
-        .order('id', { ascending: true })
+      const [agentsRes, apprRes, logsRes, msgRes] = await Promise.all([
+        this.client.from('office_agents').select('*', { count: 'exact', head: true }),
+        this.client.from('office_approvals').select('*', { count: 'exact', head: true }),
+        this.client.from('office_logs').select('*', { count: 'exact', head: true }),
+        this.client.from('office_messages').select('*', { count: 'exact', head: true }),
+      ])
 
-      if (error || !data || data.length === 0) return null
-
-      return (data as DbAgentRow[]).map((row) => ({
-        id: row.id,
-        name: row.name,
-        role: row.role,
-        room: row.department,
-        status: row.status,
-        sub_state: row.sub_state,
-        current_task: row.current_task,
-        current_file: row.current_file,
-        terminal_preview: row.terminal_preview,
-        progress_pct: row.progress_pct,
-        updated_at: row.updated_at,
-        desk_id: row.desk_id,
-        desk_coord: { x: Number(row.desk_x) || 200, y: Number(row.desk_y) || 340 },
-        color: row.color,
-        hair: row.hair,
-        skin: row.skin,
-        last_action: row.last_action,
-      }))
+      return {
+        office_agents: agentsRes.count || 0,
+        office_approvals: apprRes.count || 0,
+        office_logs: logsRes.count || 0,
+        office_messages: msgRes.count || 0,
+      }
     } catch {
       return null
     }
   }
 
   /**
-   * Update an agent's status or current task in Supabase.
+   * Fetch all agents from office_agents table.
+   */
+  public async getAgents(): Promise<Agent[] | null> {
+    try {
+      const { data, error } = await this.client
+        .from('office_agents')
+        .select('*')
+        .order('name', { ascending: true })
+
+      if (error || !data || data.length === 0) return null
+
+      return (data as OfficeAgentRow[]).map(dbRowToAgent)
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Update an agent's status or current task in office_agents.
    */
   public async updateAgent(agentId: string, updates: Partial<Agent>): Promise<boolean> {
     try {
-      const payload: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
-      }
-      if (updates.status) payload.status = updates.status
-      if (updates.sub_state) payload.sub_state = updates.sub_state
-      if (updates.current_task !== undefined) payload.current_task = updates.current_task
-      if (updates.current_file !== undefined) payload.current_file = updates.current_file
-      if (updates.terminal_preview !== undefined) payload.terminal_preview = updates.terminal_preview
-      if (updates.progress_pct !== undefined) payload.progress_pct = updates.progress_pct
-      if (updates.last_action !== undefined) payload.last_action = updates.last_action
-
+      const row = agentToDbRow({ ...updates, id: agentId })
       const { error } = await this.client
-        .from('agents')
-        .update(payload)
+        .from('office_agents')
+        .update(row)
         .eq('id', agentId)
 
       return !error
@@ -172,46 +152,63 @@ class SupabaseOfficeService {
   }
 
   /**
-   * Fetch recent messages from Supabase or fallback.
+   * Fetch recent messages from office_messages table.
    */
-  public async getMessages(limit = 35): Promise<OfficeMessageRecord[]> {
+  public async getMessages(limit = 45): Promise<OfficeMessageRecord[]> {
     try {
       const { data, error } = await this.client
-        .from('messages')
+        .from('office_messages')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(limit)
 
       if (error || !data) return []
-      return data as OfficeMessageRecord[]
+      return (data as OfficeMessageRow[]).map((m) => ({
+        id: m.id,
+        sender_id: m.sender_id,
+        sender_name: m.sender_name,
+        sender_department: m.sender_department,
+        receiver_id: m.recipient_id || undefined,
+        receiver_name: m.recipient_name || undefined,
+        recipient_id: m.recipient_id || undefined,
+        recipient_name: m.recipient_name || undefined,
+        channel: m.channel || 'general',
+        content: m.content,
+        message_type: m.message_type || 'chat',
+        created_at: m.created_at,
+      }))
     } catch {
       return []
     }
   }
 
   /**
-   * Post a new inter-agent message to Supabase.
+   * Post a new inter-agent message to office_messages.
    */
   public async postMessage(message: {
     sender_id: string
     sender_name: string
-    receiver_id?: string
-    receiver_name?: string
+    sender_department?: string
+    recipient_id?: string
+    recipient_name?: string
     channel?: string
     content: string
+    message_type?: string
   }): Promise<OfficeMessageRecord | null> {
     try {
       const record = {
         sender_id: message.sender_id,
         sender_name: message.sender_name,
-        receiver_id: message.receiver_id || 'josiah',
-        receiver_name: message.receiver_name || 'Josiah',
-        channel: message.channel || 'engineering',
+        sender_department: message.sender_department || 'ENGINEERING',
+        recipient_id: message.recipient_id || null,
+        recipient_name: message.recipient_name || null,
+        channel: message.channel || 'general',
         content: message.content,
+        message_type: message.message_type || 'chat',
       }
 
       const { data, error } = await this.client
-        .from('messages')
+        .from('office_messages')
         .insert(record)
         .select()
         .single()
@@ -224,24 +221,23 @@ class SupabaseOfficeService {
   }
 
   /**
-   * Log an office event/telemetry to Supabase activity_log.
+   * Log an office event/telemetry to office_logs.
    */
   public async logActivity(
-    action: string,
-    details: string,
+    category: string,
+    message: string,
     agent?: { id: string; name: string },
     level = 'info',
-    department = 'Engineering Core'
+    details: Record<string, unknown> = {}
   ): Promise<void> {
     try {
-      await this.client.from('activity_log').insert({
+      await this.client.from('office_logs').insert({
         agent_id: agent?.id || null,
         agent_name: agent?.name || 'System',
-        action,
-        details,
-        department,
+        category,
+        message,
         level,
-        timestamp: new Date().toISOString(),
+        details,
       })
     } catch {
       // Gracefully ignore if offline
@@ -249,35 +245,25 @@ class SupabaseOfficeService {
   }
 
   /**
-   * Fetch pending approvals from Supabase.
+   * Fetch pending approvals from office_approvals.
    */
   public async getApprovals(): Promise<Approval[]> {
     try {
       const { data, error } = await this.client
-        .from('approvals')
+        .from('office_approvals')
         .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
 
       if (error || !data) return []
-      return (data as DbApprovalRow[]).map((row) => ({
-        id: row.id,
-        agent_id: row.agent_id || row.requested_by || 'system',
-        agent_name: row.agent_name || 'Agent',
-        room: row.room || 'Engineering Core',
-        type: row.type || 'DEPLOYMENT',
-        title: row.title,
-        summary: row.summary || row.details || '',
-        created_at: row.created_at,
-        status: row.status,
-      }))
+      return (data as OfficeApprovalRow[]).map(dbRowToApproval)
     } catch {
       return []
     }
   }
 
   /**
-   * Update Go-Signal Approval status in Supabase.
+   * Update Go-Signal Approval status in office_approvals.
    */
   public async resolveApproval(
     approvalId: string,
@@ -286,7 +272,7 @@ class SupabaseOfficeService {
   ): Promise<boolean> {
     try {
       const { error } = await this.client
-        .from('approvals')
+        .from('office_approvals')
         .update({
           status: action === 'approve' ? 'approved' : 'rejected',
           resolved_by: resolvedBy,
@@ -308,7 +294,7 @@ class SupabaseOfficeService {
       await this.client
         .from('office_settings')
         .upsert({
-          id: 'default_hq',
+          id: 'default',
           mode,
           updated_at: new Date().toISOString(),
         })
@@ -330,7 +316,7 @@ class SupabaseOfficeService {
         .channel('easyup-hq-realtime')
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'messages' },
+          { event: 'INSERT', schema: 'public', table: 'office_messages' },
           (payload) => {
             if (payload.new && callbacks.onMessage) {
               callbacks.onMessage(payload.new as OfficeMessageRecord)
@@ -339,7 +325,7 @@ class SupabaseOfficeService {
         )
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'activity_log' },
+          { event: 'INSERT', schema: 'public', table: 'office_logs' },
           (payload) => {
             if (payload.new && callbacks.onLog) {
               callbacks.onLog(payload.new as OfficeLogRecord)
@@ -348,19 +334,19 @@ class SupabaseOfficeService {
         )
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'agents' },
+          { event: '*', schema: 'public', table: 'office_agents' },
           (payload) => {
             if (payload.new && callbacks.onAgentUpdate) {
-              callbacks.onAgentUpdate(payload.new as Partial<Agent>)
+              callbacks.onAgentUpdate(dbRowToAgent(payload.new as OfficeAgentRow))
             }
           }
         )
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'approvals' },
+          { event: '*', schema: 'public', table: 'office_approvals' },
           (payload) => {
             if (payload.new && callbacks.onApprovalUpdate) {
-              callbacks.onApprovalUpdate(payload.new as Partial<Approval>)
+              callbacks.onApprovalUpdate(dbRowToApproval(payload.new as OfficeApprovalRow))
             }
           }
         )

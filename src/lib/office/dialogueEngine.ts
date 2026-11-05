@@ -670,4 +670,86 @@ class DynamicDialogueEngine {
   }
 }
 
+export interface MeetingSpeechLine {
+  speakerId: string
+  speakerName: string
+  speakerRole: string
+  text: string
+  delayMs: number
+}
+
+export function generateAllHandsScript(
+  agents: TeamMember[] | { id: string; name: string; role: string }[],
+  pendingApprovalsCount = 0
+): MeetingSpeechLine[] {
+  return [
+    {
+      speakerId: 'josiah',
+      speakerName: 'Josiah',
+      speakerRole: 'Founder & Lead Architect',
+      text: "Good morning team! Welcome to today's All Hands at The Brain. Let's run our cross-department sync.",
+      delayMs: 2500,
+    },
+    {
+      speakerId: 'arwin',
+      speakerName: 'Arwin',
+      speakerRole: 'Lead Backend Engineer',
+      text: 'Engineering Core update: Realtime WebSockets and Postgres sync are holding 100% green with sub-20ms latency.',
+      delayMs: 3500,
+    },
+    {
+      speakerId: 'neil_mar',
+      speakerName: 'Neil Mar',
+      speakerRole: 'Frontend / UI Architect',
+      text: 'Frontend report: 2.5D Isometric Canvas is locked at a steady 60 FPS across all 23 active workstations.',
+      delayMs: 3500,
+    },
+    {
+      speakerId: 'khent',
+      speakerName: 'Khent',
+      speakerRole: 'Lead Security & QA Engineer',
+      text: 'QA & SecOps: All penetration test suites passing. Row Level Security verified on all office_* tables.',
+      delayMs: 3500,
+    },
+    {
+      speakerId: 'roy_jhan',
+      speakerName: 'Roy Jhan',
+      speakerRole: 'Chief AI Research Engineer',
+      text: 'Intelligence Lab: Multi-agent prompt pipelines and context compression benchmarks are operating with high precision.',
+      delayMs: 3500,
+    },
+    {
+      speakerId: 'jo_vincent',
+      speakerName: 'Jo Vincent',
+      speakerRole: 'Growth & Marketing Strategist',
+      text: 'Growth Lab: Studio conversion funnel and user onboarding analytics are up 18% week-over-week.',
+      delayMs: 3500,
+    },
+    {
+      speakerId: 'mary_grace',
+      speakerName: 'Mary Grace',
+      speakerRole: 'Head of Operations',
+      text: 'Operations Hub: All 23 agent work allocations and sprint dependencies are staffed with zero bottlenecks.',
+      delayMs: 3500,
+    },
+    {
+      speakerId: 'gloria',
+      speakerName: 'Gloria',
+      speakerRole: 'Executive Operations Manager',
+      text:
+        pendingApprovalsCount > 0
+          ? `Command Center: We have ${pendingApprovalsCount} pending Go-Signal approvals queued for Josiah's authorization.`
+          : 'Command Center: Q4 OKR milestones are fully on track. Production gates cleared.',
+      delayMs: 3500,
+    },
+    {
+      speakerId: 'josiah',
+      speakerName: 'Josiah',
+      speakerRole: 'Founder & Lead Architect',
+      text: "Great work team! Keep shipping with high quality. Let's return to Focus Work!",
+      delayMs: 3000,
+    },
+  ]
+}
+
 export const dialogueEngine = new DynamicDialogueEngine()

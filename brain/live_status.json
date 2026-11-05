@@ -122,17 +122,17 @@
         "y": 410
       },
       "role": "Database & Infrastructure Eng",
-      "status": "working",
-      "sub_state": "typing",
-      "current_task": "PostgreSQL indexing & query latency optimization",
-      "current_file": "prisma/schema.prisma",
-      "terminal_preview": "$ psql -d easyup_prod -c 'EXPLAIN ANALYZE SELECT * FROM telemetry;'\nPlanning Time: 0.082 ms\nExecution Time: 0.312 ms",
-      "progress_pct": 10,
-      "updated_at": "2026-11-05T00:27:46.965Z",
+      "status": "done",
+      "sub_state": "seated",
+      "current_task": "do your task",
+      "current_file": "src/lib/john-lloyd/service.ts",
+      "terminal_preview": "$ agy execute --agent=john_lloyd --task=\"do your task\"\n[EasyUp Multi-Agent Runtime] Executing workflow...\n✓ Verified static types (0 errors)\n✓ Unit tests passed: 18/18\nStatus: SUCCESS (240ms)",
+      "progress_pct": 100,
+      "updated_at": "2026-11-05T08:12:51.561Z",
       "color": "#f59e0b",
       "hair": "#1e293b",
       "skin": "#fcd34d",
-      "last_action": "Executing approved Go-Signal: Execute Zero-Downtime Telemetry Partitioning"
+      "last_action": "[SIM_MODE] do your task"
     },
     {
       "id": "khent",
@@ -511,6 +511,7 @@
   ],
   "approvals": [],
   "logs": [
+    "[4:12:51 PM] [SIM_MODE] John Lloyd executed: \"do your task\".",
     "[9:56:13 AM] [GO-SIGNAL] APPROVE granted for \"Deploy v2.5D Isometric Engine to Production\".",
     "[9:01:22 AM] [SIM_MODE] Arwin executed: \"Run high-concurrency Supabase stress test\".",
     "[8:41:48 AM] [SIM_MODE] Josiah executed: \"Synchronize multi-agent telemetry\".",
