@@ -13,6 +13,11 @@ export interface OfficeCanvas3DProps {
   agentRouteOverrides?: Record<string, DepartmentMode>
   selectedAgentId?: string | null
   onSelectAgent: (agent: Agent) => void
+  onArriveAgent?: (
+    agentId: string,
+    finalPos: [number, number, number],
+    effectiveMode: DepartmentMode
+  ) => void
   onResetCamera?: () => void
   className?: string
 }
@@ -23,6 +28,7 @@ export default function OfficeCanvas3D({
   agentRouteOverrides = {},
   selectedAgentId,
   onSelectAgent,
+  onArriveAgent,
   onResetCamera,
   className = '',
 }: OfficeCanvas3DProps) {
@@ -57,6 +63,7 @@ export default function OfficeCanvas3D({
             agentRouteOverrides={agentRouteOverrides}
             selectedAgentId={selectedAgentId}
             onSelectAgent={onSelectAgent}
+            onArriveAgent={onArriveAgent}
           />
         </Suspense>
       </Canvas>

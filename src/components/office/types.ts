@@ -19,12 +19,15 @@ export type AgentStatus =
   | 'on_break'
   | 'in_meeting'
   | 'gym'
+  | 'at_gym'
 
 
 export type AgentSubState =
   | 'typing'
   | 'reading_logs'
   | 'seated'
+  | 'standing_up'
+  | 'standing'
   | 'documenting'
   | 'analyzing'
   | 'hologram_review'
@@ -52,6 +55,8 @@ export interface Agent {
   skin?: string
   desk_id?: string
   desk_coord?: { x: number; y: number }
+  current_coord?: { x: number; y: number }
+  target_coord?: { x: number; y: number }
   kind?: 'resident' | 'external'
   cli?: 'claude-code' | 'antigravity' | 'codex' | 'opencode' | 'cursor' | 'other'
   session_id?: string

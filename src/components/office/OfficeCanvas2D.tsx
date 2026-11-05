@@ -28,6 +28,11 @@ export interface OfficeCanvas2DProps {
   agentRouteOverrides?: Record<string, DepartmentMode>
   selectedAgentId?: string | null
   onSelectAgent: (agent: Agent) => void
+  onArriveAgent?: (
+    agentId: string,
+    finalPos: [number, number, number],
+    effectiveMode: DepartmentMode
+  ) => void
   onResetCamera?: () => void
   className?: string
 }
@@ -62,6 +67,7 @@ export default function OfficeCanvas2D({
   agentRouteOverrides = {},
   selectedAgentId,
   onSelectAgent,
+  onArriveAgent,
   onResetCamera,
   className = '',
 }: OfficeCanvas2DProps) {
@@ -73,6 +79,7 @@ export default function OfficeCanvas2D({
   const overridesRef = useRef<Record<string, DepartmentMode>>(agentRouteOverrides)
   const selectedIdRef = useRef<string | null | undefined>(selectedAgentId)
   const onSelectRef = useRef(onSelectAgent)
+  const onArriveRef = useRef(onArriveAgent)
 
   useEffect(() => {
     agentsRef.current = agents
@@ -93,6 +100,10 @@ export default function OfficeCanvas2D({
   useEffect(() => {
     onSelectRef.current = onSelectAgent
   }, [onSelectAgent])
+
+  useEffect(() => {
+    onArriveRef.current = onArriveAgent
+  }, [onArriveAgent])
 
   // Camera state (targetX, targetZ, zoom) + user pan/zoom offsets
   const camStateRef = useRef({
@@ -933,21 +944,52 @@ export default function OfficeCanvas2D({
           finalRot = Math.atan2(0 - desiredTarget[0], 16 - desiredTarget[2])
         }
 
+        const isDeskMode =
+          effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
+
         if (!agentNavMapRef.current[agent.id]) {
+          let initMode = currentMode
+          let initOverride = routeOverride
+          if (typeof window !== 'undefined') {
+            try {
+              const savedMode = window.localStorage.getItem('easyup_hq_mode_v3') as DepartmentMode | null
+              if (savedMode) initMode = savedMode
+              const savedOverrides = window.localStorage.getItem('easyup_hq_overrides_v3')
+              if (savedOverrides && !initOverride) {
+                const parsed = JSON.parse(savedOverrides) as Record<string, DepartmentMode>
+                if (parsed[agent.id]) initOverride = parsed[agent.id]
+              }
+            } catch {}
+          }
+          const spawnPos = getAgentTargetPosition(ws, initMode, initOverride)
+          const eff = initOverride || initMode
+          const spawnAtDesk = eff === 'OVERVIEW' || eff === 'FOCUS_WORK'
           agentNavMapRef.current[agent.id] = {
-            currentPos: [ws.deskPos[0], ws.deskPos[1], ws.deskPos[2]],
-            targetPos: [ws.deskPos[0], ws.deskPos[1], ws.deskPos[2]],
+            currentPos: [spawnPos[0], spawnPos[1], spawnPos[2]],
+            targetPos: [spawnPos[0], spawnPos[1], spawnPos[2]],
             waypoints: [],
             waypointIndex: 0,
-            rotationY: deskRot,
-            subState: 'seated',
+            rotationY: finalRot,
+            subState: spawnAtDesk ? 'seated' : 'standing',
             walkPhase: 0,
+            staggerRemainingSec: 0,
+            standingUpRemainingSec: 0,
+            hasNotifiedArrival: true,
           }
         }
         const nav = agentNavMapRef.current[agent.id]
-        const isDeskMode =
-          effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
-        stepAgentNavigation(nav, desiredTarget, finalRot, isDeskMode, dt, 6.4)
+        stepAgentNavigation(
+          nav,
+          desiredTarget,
+          finalRot,
+          isDeskMode,
+          dt,
+          6.4,
+          idx,
+          onArriveRef.current
+            ? (finalPos) => onArriveRef.current?.(agent.id, finalPos, effectiveMode)
+            : undefined
+        )
 
         const ax = nav.currentPos[0]
         const ay = nav.currentPos[1]

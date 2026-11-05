@@ -18,6 +18,11 @@ export interface OfficeSceneProps {
   agentRouteOverrides?: Record<string, DepartmentMode>
   selectedAgentId?: string | null
   onSelectAgent: (agent: Agent) => void
+  onArriveAgent?: (
+    agentId: string,
+    finalPos: [number, number, number],
+    effectiveMode: DepartmentMode
+  ) => void
 }
 
 export function OfficeScene({
@@ -26,6 +31,7 @@ export function OfficeScene({
   agentRouteOverrides = {},
   selectedAgentId,
   onSelectAgent,
+  onArriveAgent,
 }: OfficeSceneProps) {
   // Compute real Philippine Standard Time (PHT, Asia/Manila, UTC+8) for lighting
   const lighting = useMemo(() => {
@@ -76,7 +82,7 @@ export function OfficeScene({
           name: agent.name,
         }
       }
-      return { agent, workstation: ws }
+      return { agent, workstation: ws, idx }
     })
   }, [agents])
 
@@ -118,15 +124,17 @@ export function OfficeScene({
 
       {/* 6. All Registered Database Agents with A* Walking & Distinct Styles */}
       <group name="AgentFleet">
-        {renderedAgents.map(({ agent, workstation }) => (
+        {renderedAgents.map(({ agent, workstation, idx }) => (
           <ProceduralAgent3D
             key={agent.id}
             agent={agent}
+            agentIndex={idx}
             workstation={workstation}
             mode={mode}
             routeOverride={agentRouteOverrides[agent.id]}
             isSelected={selectedAgentId === agent.id}
             onSelect={onSelectAgent}
+            onArrive={onArriveAgent}
           />
         ))}
       </group>

@@ -18,6 +18,11 @@ import {
   stepAgentNavigation,
   AgentNavState,
 } from '@/config/walkwayGrid'
+import {
+  formatPHTTime,
+  mapDbStatusToAgentStatus,
+  mapAgentStatusToDbStatus,
+} from '@/lib/office/db-map'
 
 describe('2D == 3D Architectural, Pathfinding & Character Parity', () => {
   it('defines all 9 architectural rooms in the 3x3 layout with The Brain at [0, 0, 0]', () => {
@@ -59,7 +64,7 @@ describe('2D == 3D Architectural, Pathfinding & Character Parity', () => {
     expect(centerProj.py).toBeCloseTo(400, 3)
   })
 
-  it('computes multi-waypoint A* corridor paths and advances walking smoothly without teleporting', () => {
+  it('executes 3-phase A* navigation (standing_up -> walking -> arrival) without teleporting', () => {
     // Path from Josiah's Engineering desk (-19, -19) to Pantry (-20, 13.2)
     const waypoints = computeAStarWaypoints(-19, -19, -20, 13.2)
     expect(waypoints.length).toBeGreaterThan(1)
@@ -77,12 +82,27 @@ describe('2D == 3D Architectural, Pathfinding & Character Parity', () => {
       walkPhase: 0,
     }
 
-    // Trigger walk to Pantry -> should enter 'walking' state and move partially, NOT teleport
-    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.1, 6.0)
+    // Phase 1: Trigger walk from seated -> enters 'standing_up' for 300ms
+    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.1, 6.0, 0)
+    expect(nav.subState).toBe('standing_up')
+
+    // Phase 2: After 300ms stand-up completes -> enters 'walking' and moves smoothly along A* waypoints
+    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.25, 6.0, 0)
+    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.1, 6.0, 0)
     expect(nav.subState).toBe('walking')
     const distFromStart = Math.hypot(nav.currentPos[0] - -19, nav.currentPos[2] - -19)
     expect(distFromStart).toBeGreaterThan(0.1)
-    expect(distFromStart).toBeLessThan(2.0)
+    expect(distFromStart).toBeLessThan(3.0)
+  })
+
+  it('formats PHT timestamps accurately and preserves routing statuses in db-map', () => {
+    const pht = formatPHTTime(new Date())
+    expect(pht).toMatch(/PHT$/)
+    expect(mapDbStatusToAgentStatus('at_gym')).toBe('at_gym')
+    expect(mapDbStatusToAgentStatus('on_break')).toBe('on_break')
+    expect(mapDbStatusToAgentStatus('in_meeting')).toBe('in_meeting')
+    expect(mapAgentStatusToDbStatus('at_gym')).toBe('at_gym')
+    expect(mapAgentStatusToDbStatus('on_break')).toBe('on_break')
   })
 
   it('assigns distinct gender, hair, outfit, and status dot colors across the roster', () => {

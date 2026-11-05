@@ -39,7 +39,17 @@ export const TriggerRequestSchema = z.object({
 
 export const AgentUpdateSchema = z.object({
   status: z
-    .enum(['active', 'working', 'idle', 'awaiting_approval', 'done'])
+    .enum([
+      'active',
+      'working',
+      'idle',
+      'awaiting_approval',
+      'done',
+      'on_break',
+      'in_meeting',
+      'gym',
+      'at_gym',
+    ])
     .optional(),
   sub_state: z.string().optional(),
   current_task: z.string().optional(),
@@ -49,6 +59,12 @@ export const AgentUpdateSchema = z.object({
   last_action: z.string().optional(),
   room: z.string().optional(),
   color: z.string().optional(),
+  current_coord: z
+    .object({ x: z.number(), y: z.number() })
+    .optional(),
+  target_coord: z
+    .object({ x: z.number(), y: z.number() })
+    .optional(),
 })
 
 // =============================================================================

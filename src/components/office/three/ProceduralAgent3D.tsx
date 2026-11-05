@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useMemo } from 'react'
+import React, { useRef, useMemo, useLayoutEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Agent } from '@/components/office/types'
@@ -20,11 +20,17 @@ import {
 
 export interface ProceduralAgent3DProps {
   agent: Agent
+  agentIndex?: number
   workstation: AgentWorkstation3D
   mode: DepartmentMode
   routeOverride?: DepartmentMode
   isSelected: boolean
   onSelect: (agent: Agent) => void
+  onArrive?: (
+    agentId: string,
+    finalPos: [number, number, number],
+    effectiveMode: DepartmentMode
+  ) => void
 }
 
 function getFacingAngle(facing: 'SE' | 'SW' | 'NE' | 'NW'): number {
@@ -95,11 +101,13 @@ function createNameplateTexture(
 
 export function ProceduralAgent3D({
   agent,
+  agentIndex = 0,
   workstation,
   mode,
   routeOverride,
   isSelected,
   onSelect,
+  onArrive,
 }: ProceduralAgent3DProps) {
   const groupRef = useRef<THREE.Group>(null)
   const leftHandRef = useRef<THREE.Mesh>(null)
@@ -151,16 +159,59 @@ export function ProceduralAgent3D({
 
   const isDeskMode = effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
 
-  // Persistent A* navigation state for smooth corridor walking
+  // Determine initial spawn position on mount (accounting for persisted localStorage state on F5 reload)
+  const initialSpawn = useMemo(() => {
+    let initMode = mode
+    let initOverride = routeOverride
+    if (typeof window !== 'undefined') {
+      try {
+        const savedMode = window.localStorage.getItem('easyup_hq_mode_v3') as DepartmentMode | null
+        if (savedMode) initMode = savedMode
+        const savedOverrides = window.localStorage.getItem('easyup_hq_overrides_v3')
+        if (savedOverrides && !initOverride) {
+          const parsed = JSON.parse(savedOverrides) as Record<string, DepartmentMode>
+          if (parsed[agent.id]) initOverride = parsed[agent.id]
+        }
+      } catch {}
+    }
+    const eff = initOverride || initMode
+    const pos = getAgentTargetPosition(workstation, initMode, initOverride)
+    let rot = deskRotationY
+    if (eff === 'ALL_HANDS') rot = Math.atan2(0 - pos[0], 0 - pos[2])
+    else if (eff === 'PANTRY') rot = Math.atan2(-16 - pos[0], 16 - pos[2])
+    else if (eff === 'GYM') rot = Math.atan2(0 - pos[0], 16 - pos[2])
+    const atDesk = eff === 'OVERVIEW' || eff === 'FOCUS_WORK'
+    return { pos, rot, atDesk }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Persistent 3-phase A* navigation state.
+  // Spawns at hydrated initialSpawn.pos on initial mount so F5 reload keeps agents at their persisted station!
   const navRef = useRef<AgentNavState>({
-    currentPos: [workstation.deskPos[0], workstation.deskPos[1], workstation.deskPos[2]],
-    targetPos: [workstation.deskPos[0], workstation.deskPos[1], workstation.deskPos[2]],
+    currentPos: [initialSpawn.pos[0], initialSpawn.pos[1], initialSpawn.pos[2]],
+    targetPos: [initialSpawn.pos[0], initialSpawn.pos[1], initialSpawn.pos[2]],
     waypoints: [],
     waypointIndex: 0,
-    rotationY: deskRotationY,
-    subState: 'seated',
+    rotationY: initialSpawn.rot,
+    subState: initialSpawn.atDesk ? 'seated' : 'standing',
     walkPhase: 0,
+    staggerRemainingSec: 0,
+    standingUpRemainingSec: 0,
+    hasNotifiedArrival: true,
   })
+
+  // Set initial transform once on mount without passing static position props to <group>
+  useLayoutEffect(() => {
+    if (groupRef.current) {
+      const nav = navRef.current
+      groupRef.current.position.set(
+        nav.currentPos[0],
+        nav.currentPos[1],
+        nav.currentPos[2]
+      )
+      groupRef.current.rotation.y = nav.rotationY
+    }
+  }, [])
 
   useFrame((state, delta) => {
     const dt = Math.min(0.1, delta)
@@ -173,7 +224,11 @@ export function ProceduralAgent3D({
       finalStationRotationY,
       isDeskMode,
       dt,
-      6.4
+      6.4,
+      agentIndex,
+      onArrive
+        ? (finalPos) => onArrive(agent.id, finalPos, effectiveMode)
+        : undefined
     )
 
     if (groupRef.current) {
@@ -332,8 +387,6 @@ export function ProceduralAgent3D({
       {/* ========================================================================= */}
       <group
         ref={groupRef}
-        position={workstation.deskPos}
-        rotation={[0, deskRotationY, 0]}
         name={`Agent-${agent.id}`}
         onClick={(e) => {
           e.stopPropagation()
