@@ -185,20 +185,27 @@ export function ProceduralAgent3D({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Persistent 3-phase A* navigation state.
+  // Persistent 3-phase A* navigation state with pathQueue.
   // Spawns at hydrated initialSpawn.pos on initial mount so F5 reload keeps agents at their persisted station!
   const navRef = useRef<AgentNavState>({
     currentPos: [initialSpawn.pos[0], initialSpawn.pos[1], initialSpawn.pos[2]],
     targetPos: [initialSpawn.pos[0], initialSpawn.pos[1], initialSpawn.pos[2]],
     waypoints: [],
+    pathQueue: [],
     waypointIndex: 0,
+    isWalking: false,
+    facingAngle: initialSpawn.rot,
     rotationY: initialSpawn.rot,
     subState: initialSpawn.atDesk ? 'seated' : 'standing',
     walkPhase: 0,
+    walkCycle: 0,
     staggerRemainingSec: 0,
     standingUpRemainingSec: 0,
+    sittingDownRemainingSec: 0,
     hasNotifiedArrival: true,
   })
+
+  const lastGlobalModeRef = useRef<DepartmentMode>(mode)
 
   // Set initial transform once on mount without passing static position props to <group>
   useLayoutEffect(() => {
@@ -218,17 +225,25 @@ export function ProceduralAgent3D({
     const t = state.clock.getElapsedTime()
     const nav = navRef.current
 
+    // If global mode changed, stagger by agentIndex * 80ms; if individual agent override changed, start immediately (0ms stagger)
+    const isGroupModeSwitch = lastGlobalModeRef.current !== mode
+    if (isGroupModeSwitch) {
+      lastGlobalModeRef.current = mode
+    }
+    const staggerIdx = isGroupModeSwitch ? agentIndex : 0
+
     stepAgentNavigation(
       nav,
       targetPos,
       finalStationRotationY,
       isDeskMode,
       dt,
-      6.4,
+      3.6,
       agentIndex,
       onArrive
         ? (finalPos) => onArrive(agent.id, finalPos, effectiveMode)
-        : undefined
+        : undefined,
+      staggerIdx
     )
 
     if (groupRef.current) {

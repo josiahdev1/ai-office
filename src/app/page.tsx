@@ -215,47 +215,43 @@ function HQCommandPage() {
         const json = await res.json()
         if (isMounted && json.ok && json.data) {
           const fleet: Agent[] = json.data.agents || []
-          setAgents(fleet)
           setApprovals(json.data.approvals || [])
           if (json.data.dbConnected !== undefined) {
             setSupabaseActive(json.data.dbConnected)
           }
 
-          // Hydrate route overrides from database room/status on initial load so F5 reload preserves stations
           if (isFirstLoad && fleet.length > 0) {
-            const dbOverrides: Record<string, DepartmentMode> = {}
-            for (const ag of fleet) {
-              const derived = deriveRouteOverrideFromAgent(ag)
-              if (derived) {
-                dbOverrides[ag.id] = derived
+            setAgents(fleet)
+            const savedOverridesRaw =
+              typeof window !== 'undefined'
+                ? window.localStorage.getItem(STORAGE_OVERRIDES_KEY)
+                : null
+
+            // Only derive route overrides from DB if localStorage does not already have an explicit override map
+            if (savedOverridesRaw === null) {
+              const dbOverrides: Record<string, DepartmentMode> = {}
+              for (const ag of fleet) {
+                const derived = deriveRouteOverrideFromAgent(ag)
+                if (derived) {
+                  dbOverrides[ag.id] = derived
+                }
+              }
+              if (Object.keys(dbOverrides).length > 0) {
+                setAgentRouteOverrides(dbOverrides)
               }
             }
-            if (Object.keys(dbOverrides).length > 0) {
-              setAgentRouteOverrides((prev) => {
-                const merged = { ...dbOverrides, ...prev }
-                try {
-                  window.localStorage.setItem(
-                    STORAGE_OVERRIDES_KEY,
-                    JSON.stringify(merged)
-                  )
-                } catch {}
-                return merged
-              })
-            }
-          }
 
-          setSelectedAgent((prev) => {
-            if (!prev && fleet.length > 0) {
-              return fleet.find((a) => a.id === 'josiah') || fleet[0]
-            }
-            if (prev) {
-              const updated = fleet.find((a) => a.id === prev.id)
-              if (updated) return { ...prev, ...updated }
-            }
-            return prev
-          })
+            setSelectedAgent((prev) => {
+              if (!prev && fleet.length > 0) {
+                return fleet.find((a) => a.id === 'josiah') || fleet[0]
+              }
+              if (prev) {
+                const updated = fleet.find((a) => a.id === prev.id)
+                if (updated) return { ...prev, ...updated }
+              }
+              return prev
+            })
 
-          if (isFirstLoad) {
             const bootLog = `${formatPHTTime()} [INFO] [SYSTEM] Synchronized ${fleet.length || 24} agents & 3-phase A* navigation from Supabase.`
             const remoteLogs: string[] = Array.isArray(json.data.logs)
               ? json.data.logs
@@ -274,7 +270,7 @@ function HQCommandPage() {
 
     const pollInterval = setInterval(() => {
       void loadInitialData(false)
-    }, 4000)
+    }, 6000)
 
     return () => {
       isMounted = false
@@ -324,20 +320,19 @@ function HQCommandPage() {
         setLogs((prev) => [line, ...prev.filter((p) => p !== line)].slice(0, 50))
       },
       onAgentUpdate: (updatedAgent) => {
-        if (updatedAgent.id) {
-          const derived = deriveRouteOverrideFromAgent(updatedAgent as Agent)
-          if (derived) {
-            setAgentRouteOverrides((prev) => ({
-              ...prev,
-              [updatedAgent.id!]: derived,
-            }))
-          }
-        }
+        // Never overwrite current_coord or sub_state from realtime while agent is walking in-memory
         setAgents((prev) =>
-          prev.map((a) => (a.id === updatedAgent.id ? { ...a, ...updatedAgent } : a))
-        )
-        setSelectedAgent((prev) =>
-          prev && prev.id === updatedAgent.id ? ({ ...prev, ...updatedAgent } as Agent) : prev
+          prev.map((a) => {
+            if (a.id !== updatedAgent.id) return a
+            if (a.sub_state === 'walking' || a.sub_state === 'standing_up') {
+              return a
+            }
+            return {
+              ...a,
+              current_task: updatedAgent.current_task ?? a.current_task,
+              progress_pct: updatedAgent.progress_pct ?? a.progress_pct,
+            }
+          })
         )
       },
       onApprovalUpdate: (approval) => {
@@ -451,7 +446,7 @@ function HQCommandPage() {
     }
   }
 
-  // Persist agent arrival coordinates and final seated/standing sub_state to Supabase & local state
+  // Persist agent arrival coordinates and final seated/standing sub_state to Supabase ONLY upon arrival
   const handleAgentArrive = (
     agentId: string,
     finalPos: [number, number, number],
@@ -463,12 +458,21 @@ function HQCommandPage() {
       effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
         ? 'seated'
         : 'standing'
+    const finalStatus: Agent['status'] =
+      effectiveMode === 'GYM'
+        ? 'at_gym'
+        : effectiveMode === 'PANTRY'
+        ? 'on_break'
+        : effectiveMode === 'ALL_HANDS'
+        ? 'in_meeting'
+        : 'working'
 
     setAgents((prev) =>
       prev.map((ag) =>
         ag.id === agentId
           ? {
               ...ag,
+              status: finalStatus,
               room: targetRoom,
               current_coord: { x: finalPos[0], y: finalPos[2] },
               sub_state: finalSubState,
@@ -478,13 +482,15 @@ function HQCommandPage() {
     )
 
     void officeSupabase.updateAgent(agentId, {
+      status: finalStatus,
       room: targetRoom,
       current_coord: { x: finalPos[0], y: finalPos[2] },
       sub_state: finalSubState,
     })
   }
 
-  // Global Mode Switcher (ALL_HANDS, PANTRY, GYM, FOCUS_WORK, OVERVIEW) with Supabase Persistence
+  // Global Mode Switcher (ALL_HANDS, PANTRY, GYM, FOCUS_WORK, OVERVIEW)
+  // Does NOT modify current_coord directly — agents unseat and walk via pathQueue!
   const handleGlobalModeChange = (newMode: DepartmentMode) => {
     setCurrentMode(newMode)
     setAgentRouteOverrides({})
@@ -507,28 +513,31 @@ function HQCommandPage() {
     setAgents((prev) =>
       prev.map((ag) => {
         const ws = AGENT_WORKSTATIONS_3D[ag.id]
+        const targetCoords = ws ? getAgentTargetPosition(ws, newMode) : [0, 0, 0]
         return {
           ...ag,
           status: modeStatus,
-          sub_state: 'walking',
+          sub_state: 'standing_up',
           room: modeToRoomName(newMode, ws?.room || ag.room),
+          target_coord: { x: targetCoords[0], y: targetCoords[2] },
         }
       })
     )
 
-    const logLine = `${formatPHTTime()} [ROUTE] Global mode switched to ${newMode.replace('_', ' ')} — 24 agents unseating & walking via A* pathfinding.`
+    const logLine = `${formatPHTTime()} [ROUTE] Global mode switched to ${newMode.replace('_', ' ')} — 24 agents unseating & walking via A* pathQueue.`
     setLogs((prev) => [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50))
 
     void officeSupabase.setOfficeMode(newMode)
     void officeSupabase.logActivity(
       'MODE_CHANGE',
-      `Global mode switched to ${newMode} — 24 agents walking via staggered A* pathfinding.`,
+      `Global mode switched to ${newMode} — 24 agents walking via staggered A* pathQueue.`,
       { id: 'josiah', name: 'Josiah' },
       'info'
     )
   }
 
-  // Individual Agent Direct Routing ("Send to Work Desk", "Pantry", "Gym", "Brain") with Supabase Persistence
+  // Individual Agent Direct Routing ("Send to Work Desk", "Pantry", "Gym", "Brain")
+  // Does NOT modify current_coord directly — only sets target_coord and triggers A* pathQueue!
   const handleRouteIndividualAgent = (
     agent: Agent,
     targetMode: DepartmentMode,
@@ -553,13 +562,13 @@ function HQCommandPage() {
       return next
     })
 
+    // IMPORTANT: Do NOT set current_coord here! current_coord is persisted only upon arrival.
     const updates: Partial<Agent> = {
       status: newStatus,
       room: targetRoom,
       current_task: taskDescription,
-      current_coord: { x: coords[0], y: coords[2] },
       target_coord: { x: coords[0], y: coords[2] },
-      sub_state: 'walking',
+      sub_state: 'standing_up',
     }
 
     setAgents((prev) =>
@@ -569,15 +578,8 @@ function HQCommandPage() {
       prev && prev.id === agent.id ? { ...prev, ...updates } : prev
     )
 
-    const logLine = `${formatPHTTime()} [ROUTE] ${agent.name} walking via A* pathfinding to ${targetRoom} (${coords[0]}, ${coords[2]}): ${taskDescription}`
+    const logLine = `${formatPHTTime()} [ROUTE] ${agent.name} standing up & walking via A* pathQueue to ${targetRoom} (${coords[0]}, ${coords[2]}): ${taskDescription}`
     setLogs((prev) => [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50))
-
-    void officeSupabase.updateAgent(agent.id, updates)
-    void fetch('/api/office/status', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agentId: agent.id, updates }),
-    }).catch(() => {})
 
     void officeSupabase.logActivity(
       'AGENT_ROUTE',

@@ -76,23 +76,33 @@ describe('2D == 3D Architectural, Pathfinding & Character Parity', () => {
       currentPos: [-19, 0, -19],
       targetPos: [-19, 0, -19],
       waypoints: [],
+      pathQueue: [],
       waypointIndex: 0,
       rotationY: 0,
       subState: 'seated',
       walkPhase: 0,
     }
 
-    // Phase 1: Trigger walk from seated -> enters 'standing_up' for 300ms
-    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.1, 6.0, 0)
+    // Phase 1: Trigger walk from seated -> enters 'standing_up' for 250ms
+    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.1, 3.6, 0, undefined, 0)
     expect(nav.subState).toBe('standing_up')
+    expect(nav.pathQueue.length).toBeGreaterThan(5)
 
-    // Phase 2: After 300ms stand-up completes -> enters 'walking' and moves smoothly along A* waypoints
-    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.25, 6.0, 0)
-    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.1, 6.0, 0)
+    // Phase 2: After 250ms stand-up completes -> enters 'walking' and moves smoothly along pathQueue
+    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.2, 3.6, 0, undefined, 0)
+    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.1, 3.6, 0, undefined, 0)
+    expect(nav.subState).toBe('walking')
+    expect(nav.isWalking).toBe(true)
+
+    // Step multiple times to pop the first waypoint and verify it NEVER snaps to final targetPos (13.2)
+    for (let i = 0; i < 6; i++) {
+      stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.1, 3.6, 0, undefined, 0)
+    }
     expect(nav.subState).toBe('walking')
     const distFromStart = Math.hypot(nav.currentPos[0] - -19, nav.currentPos[2] - -19)
-    expect(distFromStart).toBeGreaterThan(0.1)
-    expect(distFromStart).toBeLessThan(3.0)
+    expect(distFromStart).toBeGreaterThan(0.5)
+    expect(distFromStart).toBeLessThan(8.0)
+    expect(nav.currentPos[2]).toBeLessThan(0) // Still in north half of building, NOT snapped to z=13.2!
   })
 
   it('formats PHT timestamps accurately and preserves routing statuses in db-map', () => {

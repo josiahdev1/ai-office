@@ -968,27 +968,34 @@ export default function OfficeCanvas2D({
             currentPos: [spawnPos[0], spawnPos[1], spawnPos[2]],
             targetPos: [spawnPos[0], spawnPos[1], spawnPos[2]],
             waypoints: [],
+            pathQueue: [],
             waypointIndex: 0,
+            isWalking: false,
+            facingAngle: finalRot,
             rotationY: finalRot,
             subState: spawnAtDesk ? 'seated' : 'standing',
             walkPhase: 0,
+            walkCycle: 0,
             staggerRemainingSec: 0,
             standingUpRemainingSec: 0,
+            sittingDownRemainingSec: 0,
             hasNotifiedArrival: true,
           }
         }
         const nav = agentNavMapRef.current[agent.id]
+        const staggerIdx = routeOverride ? 0 : idx
         stepAgentNavigation(
           nav,
           desiredTarget,
           finalRot,
           isDeskMode,
           dt,
-          6.4,
+          3.6,
           idx,
           onArriveRef.current
             ? (finalPos) => onArriveRef.current?.(agent.id, finalPos, effectiveMode)
-            : undefined
+            : undefined,
+          staggerIdx
         )
 
         const ax = nav.currentPos[0]
