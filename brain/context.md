@@ -48,3 +48,8 @@
 - `ryan`: Ryan — MLOps & Fine-Tuning Specialist (Quantization, local inference pipelines, embeddings)
 - `keiru`: Keiru — Computer Vision & Multimodal Lead (Vision models, spatial perception, image intelligence)
 - `gabriel`: Gabriel — NLP & Prompt Systems Engineer (Prompt governance, agent system directives, skill schemas)
+
+## 100% 2D & 3D Architectural Parity (`src/config/officeLayout.ts`):
+- **Single Source of Truth**: Both `OfficeCanvas3D.tsx` (`/`) and `OfficeCanvas2D.tsx` (`/?v=2`) draw from `src/config/officeLayout.ts` (`ROOMS_3D`, `AGENT_WORKSTATIONS_3D`, `CAMERA_PRESETS`, `getAgentTargetPosition`, `projectIso3DTo2D`).
+- **Synchronized Department Modes**: `OVERVIEW`, `FOCUS_WORK`, `ALL_HANDS`, `PANTRY`, and `GYM` smoothly interpolate camera targets, zoom levels, and all 24 agent positions identically in both 3D and 2D viewports.
+

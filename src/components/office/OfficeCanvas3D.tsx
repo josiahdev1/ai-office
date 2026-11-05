@@ -5,7 +5,11 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrthographicCamera } from '@react-three/drei'
 import * as THREE from 'three'
 import { Agent } from '@/components/office/types'
-import { DepartmentMode, AGENT_WORKSTATIONS_3D } from './three/office3DData'
+import {
+  DepartmentMode,
+  AGENT_WORKSTATIONS_3D,
+  getAgentTargetPosition,
+} from '@/config/officeLayout'
 import { OfficeScene } from './three/OfficeScene'
 
 export interface OfficeCanvas3DProps {
@@ -19,7 +23,7 @@ export interface OfficeCanvas3DProps {
 
 /**
  * High-performance 3D-to-2D Screen Projector.
- * Projects 3D agent coordinates to 2D screen positions at 60fps
+ * Projects live 3D agent coordinates to 2D screen positions at 60fps
  * without creating nested React roots or causing cascading renders.
  */
 function ScreenProjector({
@@ -33,7 +37,7 @@ function ScreenProjector({
 }) {
   const tempVec = useMemo(() => new THREE.Vector3(), [])
 
-  useFrame(({ camera, size }) => {
+  useFrame(({ scene, camera, size }) => {
     const container = containerRef.current
     if (!container) return
 
@@ -42,13 +46,13 @@ function ScreenProjector({
       const ws = AGENT_WORKSTATIONS_3D[agent.id]
       if (!ws) continue
 
-      let pos = ws.deskPos
-      if (mode === 'ALL_HANDS') pos = ws.allHandsPos
-      else if (mode === 'PANTRY' && ws.pantryPos) pos = ws.pantryPos
-      else if (mode === 'GYM' && ws.gymPos) pos = ws.gymPos
-
-      // Point above character's head
-      tempVec.set(pos[0], pos[1] + 1.85, pos[2])
+      const obj = scene.getObjectByName(`Agent-${agent.id}`)
+      if (obj) {
+        tempVec.set(obj.position.x, obj.position.y + 1.85, obj.position.z)
+      } else {
+        const pos = getAgentTargetPosition(ws, mode)
+        tempVec.set(pos[0], pos[1] + 1.85, pos[2])
+      }
       tempVec.project(camera)
 
       const screenX = (tempVec.x * 0.5 + 0.5) * size.width
@@ -177,7 +181,7 @@ export default function OfficeCanvas3D({
           <button
             type="button"
             onClick={onResetCamera}
-            className="pointer-events-auto cursor-pointer rounded-lg border border-slate-800/80 bg-slate-900/90 px-3 py-1.5 font-mono text-[11px] font-medium text-slate-300 shadow-xl backdrop-blur-md transition-all hover:bg-slate-800 hover:text-white"
+            className="pointer-events-auto cursor-pointer rounded-lg border border-slate-800/80 bg-slate-900/90 px-3 py-1.5 font-mono text-[11px] font-medium text-slate-300 shadow-xl backdrop-blur-md transition-all hover:bg-slate-800 hover:text-white whitespace-nowrap"
           >
             Reset Camera ⟲
           </button>

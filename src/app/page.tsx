@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect, Suspense } from 'react'
 import dynamic from 'next/dynamic'
-import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Agent, Approval } from '@/components/office/types'
-import { DepartmentMode, AGENT_WORKSTATIONS_3D } from '@/components/office/three/office3DData'
-import { IsometricOffice } from '@/components/office/IsometricOffice'
+import { DepartmentMode, AGENT_WORKSTATIONS_3D } from '@/config/officeLayout'
+import OfficeCanvas2D from '@/components/office/OfficeCanvas2D'
 import { sfx } from '@/components/office/audio'
 import { officeBus } from '@/lib/office/bus'
 import {
@@ -49,14 +48,15 @@ const OfficeCanvas3D = dynamic(
 
 function HQCommandPage() {
   const searchParams = useSearchParams()
-  const is2DFallback = searchParams.get('v') === '2'
+  const router = useRouter()
+  const is2DView = searchParams.get('v') === '2'
 
   // Office state: initialized with full 24-agent roster
   const [agents, setAgents] = useState<Agent[]>(DEFAULT_AGENTS)
   const [approvals, setApprovals] = useState<Approval[]>([])
   const [logs, setLogs] = useState<string[]>([])
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(DEFAULT_AGENTS[0])
-  const [supabaseActive, setSupabaseActive] = useState<boolean>(false)
+  const [, setSupabaseActive] = useState<boolean>(false)
   const [currentMode, setCurrentMode] = useState<DepartmentMode>('OVERVIEW')
   const [directiveInput, setDirectiveInput] = useState<string>('')
   const [isDispatching, setIsDispatching] = useState<boolean>(false)
@@ -283,38 +283,6 @@ function HQCommandPage() {
     { mode: 'GYM', label: 'REC & GYM' },
   ]
 
-  // Render 2D Fallback if query parameter `?v=2` is present
-  if (is2DFallback) {
-    return (
-      <main className="h-screen w-screen overflow-hidden bg-[#080b12]">
-        <div className="absolute top-2 right-4 z-50">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 rounded-lg border border-cyan-500/50 bg-cyan-950/80 px-3 py-1 font-mono text-xs font-bold text-cyan-300 shadow-xl backdrop-blur-md hover:bg-cyan-900 transition-colors whitespace-nowrap"
-          >
-            Switch to 3D Isometric Engine ↗
-          </Link>
-        </div>
-        <IsometricOffice
-          agents={agents}
-          approvals={approvals}
-          onSelectAgent={(ag) => setSelectedAgent(ag)}
-          selectedAgentId={selectedAgent?.id}
-          onGoSignal={handleGoSignal}
-          onApproveAction={async (appId, act) => {
-            await handleGoSignal(appId, act === 'approve' ? 'approve' : 'reject')
-          }}
-          onCreateTask={async () => {}}
-          onDispatchDirective={async () => {}}
-          logs={logs}
-          doneToday={[]}
-          supabaseActive={supabaseActive}
-          onRefreshAgents={async () => {}}
-        />
-      </main>
-    )
-  }
-
   return (
     <main className="flex h-screen w-screen flex-col overflow-hidden bg-[#080b12] text-slate-100 font-sans select-none">
       {/* ========================================================================= */}
@@ -338,7 +306,7 @@ function HQCommandPage() {
           </div>
         </div>
 
-        {/* Center: Department Mode Pills (Smooth Camera Interpolation) */}
+        {/* Center: Department Mode Pills (Shared Across Both 3D & 2D Views) */}
         <div className="hidden lg:flex items-center gap-1.5 rounded-xl border border-slate-800/80 bg-slate-950/80 p-1 backdrop-blur-md">
           {modeButtons.map((btn) => {
             const isActive = currentMode === btn.mode
@@ -362,7 +330,7 @@ function HQCommandPage() {
           })}
         </div>
 
-        {/* Right: Real-time PHT Clock, Live Badge & 2D Fallback Link */}
+        {/* Right: Real-time PHT Clock, Live Badge & Instant 3D / 2D Viewport Switcher */}
         <div className="flex items-center gap-3">
           {/* Digital Clock (Asia/Manila) */}
           <div className="hidden sm:flex flex-col items-end">
@@ -382,31 +350,57 @@ function HQCommandPage() {
             </span>
           </div>
 
-          {/* Fallback to 2D view toggle */}
-          <Link
-            href="/?v=2"
-            title="Switch to 2D Canvas Fallback"
-            className="flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/80 px-2.5 py-1 font-mono text-[11px] text-slate-400 hover:text-cyan-300 hover:border-cyan-500/40 transition-colors whitespace-nowrap"
-          >
-            <span>2D</span>
-            <span className="text-[10px] text-slate-500">v2</span>
-          </Link>
+          {/* Segmented 3D / 2D Parity Viewport Switcher */}
+          <div className="flex items-center rounded-lg border border-slate-700/80 bg-slate-950/90 p-0.5 font-mono text-[11px]">
+            <button
+              type="button"
+              onClick={() => router.push('/')}
+              className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all whitespace-nowrap ${
+                !is2DView
+                  ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              3D View
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push('/?v=2')}
+              className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all whitespace-nowrap ${
+                is2DView
+                  ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              2D View
+            </button>
+          </div>
         </div>
       </header>
 
       {/* ========================================================================= */}
-      {/* 2. MAIN COCKPIT BODY (70% 3D Viewport + 30% Sidebar Console) */}
+      {/* 2. MAIN COCKPIT BODY (70% 3D/2D Viewport + 30% Sidebar Console)          */}
       {/* ========================================================================= */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left / Center: Three.js 3D Isometric Canvas (Pure Procedural WebGL) */}
+        {/* Left / Center: Synchronized 3D or 2D Isometric Viewport */}
         <section className="relative flex-1 h-full overflow-hidden">
-          <OfficeCanvas3D
-            agents={agents}
-            mode={currentMode}
-            selectedAgentId={selectedAgent?.id}
-            onSelectAgent={(ag) => setSelectedAgent(ag)}
-            onResetCamera={() => setCurrentMode('OVERVIEW')}
-          />
+          {is2DView ? (
+            <OfficeCanvas2D
+              agents={agents}
+              mode={currentMode}
+              selectedAgentId={selectedAgent?.id}
+              onSelectAgent={(ag) => setSelectedAgent(ag)}
+              onResetCamera={() => setCurrentMode('OVERVIEW')}
+            />
+          ) : (
+            <OfficeCanvas3D
+              agents={agents}
+              mode={currentMode}
+              selectedAgentId={selectedAgent?.id}
+              onSelectAgent={(ag) => setSelectedAgent(ag)}
+              onResetCamera={() => setCurrentMode('OVERVIEW')}
+            />
+          )}
         </section>
 
         {/* Right: 30% Width Sidebar Console */}
@@ -559,7 +553,7 @@ function HQCommandPage() {
               </div>
             ) : (
               <div className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-4 text-center font-mono text-xs text-slate-500">
-                Click any agent in the 3D office to inspect live runtime telemetry.
+                Click any agent in the office to inspect live runtime telemetry.
               </div>
             )}
           </div>
