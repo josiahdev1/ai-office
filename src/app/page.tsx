@@ -451,7 +451,7 @@ function HQCommandPage() {
     }
   }
 
-  // Persist agent arrival coordinates and final seated/standing sub_state to Supabase
+  // Persist agent arrival coordinates and final seated/standing sub_state to Supabase & local state
   const handleAgentArrive = (
     agentId: string,
     finalPos: [number, number, number],
@@ -463,6 +463,19 @@ function HQCommandPage() {
       effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
         ? 'seated'
         : 'standing'
+
+    setAgents((prev) =>
+      prev.map((ag) =>
+        ag.id === agentId
+          ? {
+              ...ag,
+              room: targetRoom,
+              current_coord: { x: finalPos[0], y: finalPos[2] },
+              sub_state: finalSubState,
+            }
+          : ag
+      )
+    )
 
     void officeSupabase.updateAgent(agentId, {
       room: targetRoom,
@@ -497,6 +510,7 @@ function HQCommandPage() {
         return {
           ...ag,
           status: modeStatus,
+          sub_state: 'walking',
           room: modeToRoomName(newMode, ws?.room || ag.room),
         }
       })
@@ -658,6 +672,74 @@ function HQCommandPage() {
   const selectedBadge = selectedAgent
     ? getAgentStatusBadge(selectedAgent.status, selectedEffectiveMode)
     : null
+
+  // Real-time Campus Live Counter metrics (Working, Eating, In The Gym, In Meeting, On Break, Arriving, Waiting On You, Open Tasks, Accessories)
+  const campusCounters = React.useMemo(() => {
+    let working = 0
+    let eating = 0
+    let inGym = 0
+    let inMeeting = 0
+    let onBreak = 0
+    let arriving = 0
+    let waitingOnYou = approvals.length
+    let accessories = 0
+
+    agents.forEach((ag, idx) => {
+      const style = getCharacterStyle(ag.id, ag.name)
+      if (
+        style.accessory === 'cap' ||
+        style.accessory === 'beanie' ||
+        style.accessory === 'headphones'
+      ) {
+        accessories++
+      }
+
+      if (ag.status === 'awaiting_approval') {
+        waitingOnYou++
+      }
+
+      if (ag.sub_state === 'walking' || ag.sub_state === 'standing_up') {
+        arriving++
+      }
+
+      const effMode = agentRouteOverrides[ag.id] || currentMode
+      const taskLower = (ag.current_task || '').toLowerCase()
+
+      if (effMode === 'GYM' || ag.status === 'at_gym' || ag.status === 'gym') {
+        inGym++
+      } else if (effMode === 'ALL_HANDS' || ag.status === 'in_meeting') {
+        inMeeting++
+      } else if (effMode === 'PANTRY' || ag.status === 'on_break') {
+        if (
+          taskLower.includes('eat') ||
+          taskLower.includes('canteen') ||
+          taskLower.includes('meal') ||
+          taskLower.includes('lunch') ||
+          (currentMode === 'PANTRY' && idx % 2 === 0)
+        ) {
+          eating++
+        } else {
+          onBreak++
+        }
+      } else {
+        working++
+      }
+    })
+
+    const openTasks = Math.max(8, Math.round(working * 0.35) + approvals.length)
+
+    return {
+      working,
+      eating,
+      inGym,
+      inMeeting,
+      onBreak,
+      arriving,
+      waitingOnYou,
+      openTasks,
+      accessories,
+    }
+  }, [agents, agentRouteOverrides, currentMode, approvals.length])
 
   return (
     <main className="flex h-screen w-screen flex-col overflow-hidden bg-[#080b12] text-slate-100 font-sans select-none">
@@ -1005,7 +1087,149 @@ function HQCommandPage() {
         )}
 
         {/* Right: 30% Width Sidebar Console */}
-        <aside className="w-full md:w-[390px] lg:w-[430px] shrink-0 border-l border-slate-800/80 bg-[#0d111c] flex flex-col overflow-hidden shadow-2xl z-20">
+        <aside className="w-full md:w-[390px] lg:w-[430px] shrink-0 border-l border-slate-800/80 bg-[#0d111c] flex flex-col overflow-y-auto shadow-2xl z-20">
+          {/* Section 0: CAMPUS LIVE COUNTER (Real-Time Activity & Telemetry Breakdown) */}
+          <div className="border-b border-slate-800/80 p-3.5 shrink-0 bg-slate-950/50">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800/70">
+              <span className="font-mono text-[11px] font-black tracking-widest text-slate-300 uppercase">
+                CAMPUS LIVE COUNTER
+              </span>
+              <span className="font-mono text-[10px] font-bold text-emerald-400">
+                {agents.length} ONLINE
+              </span>
+            </div>
+
+            <div className="mt-2.5 flex flex-col gap-1.5 font-mono text-xs">
+              <button
+                type="button"
+                onClick={() => handleGlobalModeChange('FOCUS_WORK')}
+                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
+              >
+                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: '#10b981', boxShadow: '0 0 8px #10b981' }}
+                  />
+                  WORKING
+                </span>
+                <span className="font-black" style={{ color: '#10b981' }}>
+                  {campusCounters.working}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleGlobalModeChange('PANTRY')}
+                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
+              >
+                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: '#f97316', boxShadow: '0 0 8px #f97316' }}
+                  />
+                  EATING
+                </span>
+                <span className="font-black" style={{ color: '#f97316' }}>
+                  {campusCounters.eating}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleGlobalModeChange('GYM')}
+                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
+              >
+                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: '#06b6d4', boxShadow: '0 0 8px #06b6d4' }}
+                  />
+                  IN THE GYM
+                </span>
+                <span className="font-black" style={{ color: '#06b6d4' }}>
+                  {campusCounters.inGym}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleGlobalModeChange('ALL_HANDS')}
+                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
+              >
+                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: '#d946ef', boxShadow: '0 0 8px #d946ef' }}
+                  />
+                  IN MEETING
+                </span>
+                <span className="font-black" style={{ color: '#d946ef' }}>
+                  {campusCounters.inMeeting}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleGlobalModeChange('PANTRY')}
+                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
+              >
+                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: '#eab308', boxShadow: '0 0 8px #eab308' }}
+                  />
+                  ON BREAK
+                </span>
+                <span className="font-black" style={{ color: '#eab308' }}>
+                  {campusCounters.onBreak}
+                </span>
+              </button>
+
+              <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
+                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: '#0ea5e9', boxShadow: '0 0 8px #0ea5e9' }}
+                  />
+                  ARRIVING
+                </span>
+                <span className="font-black" style={{ color: '#0ea5e9' }}>
+                  {campusCounters.arriving}
+                </span>
+              </div>
+
+              <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
+                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: '#ef4444', boxShadow: '0 0 8px #ef4444' }}
+                  />
+                  WAITING ON YOU
+                </span>
+                <span className="font-black" style={{ color: '#ef4444' }}>
+                  {campusCounters.waitingOnYou}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-2.5 pt-2.5 border-t border-slate-800/70 flex flex-col gap-1.5 font-mono text-xs">
+              <div className="flex items-center justify-between px-2">
+                <span className="text-slate-400 font-semibold tracking-wide whitespace-nowrap">
+                  OPEN TASKS
+                </span>
+                <span className="font-black text-slate-100">{campusCounters.openTasks}</span>
+              </div>
+              <div className="flex items-center justify-between px-2">
+                <span className="text-slate-400 font-semibold tracking-wide whitespace-nowrap">
+                  ACCESSORIES
+                </span>
+                <span className="font-black" style={{ color: '#10b981' }}>
+                  {campusCounters.accessories}
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Section A: The Boss Desk (Approvals Gate) */}
           <div className="border-b border-slate-800/80 p-3 shrink-0">
             <div className="flex items-center justify-between pb-2">
