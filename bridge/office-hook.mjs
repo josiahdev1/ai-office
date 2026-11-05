@@ -19,14 +19,16 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // Always guarantee exit 0
-process.on('uncaughtException', () => process.exit(0))
-process.on('unhandledRejection', () => process.exit(0))
+if (process.env.NODE_ENV !== 'test') {
+  process.on('uncaughtException', () => process.exit(0))
+  process.on('unhandledRejection', () => process.exit(0))
 
-// Hard watchdog timer: force exit 0 after 280ms
-const watchdog = setTimeout(() => {
-  process.exit(0)
-}, 280)
-if (watchdog.unref) watchdog.unref()
+  // Hard watchdog timer: force exit 0 after 280ms
+  const watchdog = setTimeout(() => {
+    process.exit(0)
+  }, 280)
+  if (watchdog.unref) watchdog.unref()
+}
 
 // Load local bridge config if present
 function loadBridgeConfig() {

@@ -33,6 +33,7 @@ export interface Agent {
   avatar?: string
   role: string
   room: string
+  department?: string
   tag?: string
   status: AgentStatus
   sub_state?: AgentSubState
