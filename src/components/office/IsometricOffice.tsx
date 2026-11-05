@@ -37,6 +37,7 @@ import { computeAgentActivities, AgentDirectedActivity } from '@/lib/office/acti
 import { officeBus } from '@/lib/office/bus'
 import { dialogueEngine, generateAllHandsScript } from '@/lib/office/dialogueEngine'
 import { officeSupabase } from '@/lib/supabase/officeService'
+import { resolveNameTagPositions, AgentTagInput } from '@/lib/office/antiOverlap'
 
 export interface IsometricOfficeProps {
   agents: Agent[]
@@ -875,6 +876,28 @@ export function IsometricOffice({
       return posA - posB
     })
   }, [agents, renderPositions])
+
+  // Anti-overlap solver for name tags (Phase 5 & Quick Fix)
+  const resolvedTagOffsets = useMemo(() => {
+    const tagInputs: AgentTagInput[] = agents.map((agent) => {
+      const pos = renderPositions[agent.id] || {
+        x: DESK_CONFIGS[agent.id]?.x || 540,
+        y: DESK_CONFIGS[agent.id]?.y || 340,
+      }
+      const isSelected = selectedAgentId === agent.id
+      const hasSpeech = Boolean(activeSpeech[agent.id])
+      const isAwaiting = agent.status === 'awaiting_approval'
+      const priority = isSelected ? 10 : hasSpeech ? 6 : isAwaiting ? 4 : 1
+      return {
+        id: agent.id,
+        name: agent.name,
+        x: Number.isFinite(pos.x) ? pos.x : 540,
+        y: Number.isFinite(pos.y) ? pos.y : 340,
+        priority,
+      }
+    })
+    return resolveNameTagPositions(tagInputs, { zoom })
+  }, [agents, renderPositions, selectedAgentId, activeSpeech, zoom])
 
   return (
     <div
@@ -2120,7 +2143,7 @@ export function IsometricOffice({
           })}
 
           {/* ==================== DYNAMIC AGENTS LAYER (DEPTH SORTED) ==================== */}
-          {sortedAgents.map((agent, idx) => {
+          {sortedAgents.map((agent) => {
             const sim = renderPositions[agent.id] || {
               x: DESK_CONFIGS[agent.id]?.x || 540,
               y: DESK_CONFIGS[agent.id]?.y || 340,
@@ -2161,8 +2184,12 @@ export function IsometricOffice({
                           ? 'bg-sky-400 animate-pulse'
                           : 'bg-slate-400'
 
-            // Smart de-cluttering offset: alternate top spacing so adjacent agents don't overlap
-            const nameTagTopClass = idx % 2 === 0 ? '-top-5' : '-top-7'
+            // Anti-overlap resolved offset for this agent tag
+            const tagOffset = resolvedTagOffsets.get(agent.id) || {
+              offsetX: 0,
+              offsetY: -22,
+              isCollapsed: false,
+            }
 
             // Cosmetic accessories for this agent
             const agentAccessories: string[] = Array.isArray(agent.accessories)
@@ -2197,17 +2224,18 @@ export function IsometricOffice({
                   <div className="pointer-events-none absolute -inset-2 animate-pulse rounded-full border-2 border-cyan-400 bg-cyan-400/20" />
                 )}
 
-                {/* Floating Clean White Pill Name Tag with Status Dot */}
+                {/* Floating Clean White Pill Name Tag with Status Dot (Name Only, Anti-Overlap) */}
                 <div
-                  className={`pointer-events-none absolute ${nameTagTopClass} left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-slate-200/90 bg-white/95 px-2 py-0.5 whitespace-nowrap shadow-md backdrop-blur-sm transition-opacity duration-150`}
+                  className="pointer-events-none absolute left-1/2 flex items-center gap-1.5 rounded-full border border-slate-200/90 bg-white/95 px-2 py-0.5 whitespace-nowrap shadow-md backdrop-blur-sm transition-all duration-150"
+                  style={{
+                    top: `${tagOffset.offsetY}px`,
+                    transform: `translateX(calc(-50% + ${tagOffset.offsetX}px))`,
+                  }}
                 >
-                  <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
-                  <span className="font-mono text-[9px] font-bold tracking-tight text-slate-800">
-                    {agent.name}
-                  </span>
-                  {zoom >= 0.72 && (
-                    <span className="font-mono text-[8px] font-medium text-slate-500">
-                      • {agent.role}
+                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
+                  {!tagOffset.isCollapsed && (
+                    <span className="font-mono text-[9px] font-bold tracking-tight text-slate-800">
+                      {agent.name}
                     </span>
                   )}
                 </div>

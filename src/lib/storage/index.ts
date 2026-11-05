@@ -39,7 +39,17 @@ export const TriggerRequestSchema = z.object({
 
 export const AgentUpdateSchema = z.object({
   status: z
-    .enum(['active', 'working', 'idle', 'awaiting_approval', 'done'])
+    .enum([
+      'active',
+      'working',
+      'idle',
+      'awaiting_approval',
+      'done',
+      'on_break',
+      'in_meeting',
+      'gym',
+      'at_gym',
+    ])
     .optional(),
   sub_state: z.string().optional(),
   current_task: z.string().optional(),
@@ -49,6 +59,12 @@ export const AgentUpdateSchema = z.object({
   last_action: z.string().optional(),
   room: z.string().optional(),
   color: z.string().optional(),
+  current_coord: z
+    .object({ x: z.number(), y: z.number() })
+    .optional(),
+  target_coord: z
+    .object({ x: z.number(), y: z.number() })
+    .optional(),
 })
 
 // =============================================================================
@@ -116,6 +132,7 @@ export const ROOM_DESK_SLOTS: Record<string, { id: string; room: string; x: numb
     { id: 'eng-4', room: 'Engineering Core', x: 4, y: 10 },
     { id: 'eng-5', room: 'Engineering Core', x: 4, y: 11 },
     { id: 'eng-6', room: 'Engineering Core', x: 4, y: 12 },
+    { id: 'eng-7', room: 'Engineering Core', x: 4, y: 13 },
   ],
   'QA & SecOps NOC': [
     { id: 'qa-1', room: 'QA & SecOps NOC', x: 2, y: 14 },

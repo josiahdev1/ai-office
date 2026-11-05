@@ -21,6 +21,8 @@ export interface OfficeAgentRow {
   desk_y: number
   current_x: number
   current_y: number
+  target_x?: number | null
+  target_y?: number | null
   status: string
   current_task: string | null
   current_room: string | null
@@ -180,7 +182,10 @@ export function roomToDepartment(room: string): string {
 export function mapDbStatusToAgentStatus(dbStatus: string): AgentStatus {
   const s = (dbStatus || '').toLowerCase()
   if (s === 'coding' || s === 'working' || s === 'busy') return 'working'
-  if (s === 'active' || s === 'meeting' || s === 'in_meeting') return 'active'
+  if (s === 'in_meeting' || s === 'meeting') return 'in_meeting'
+  if (s === 'on_break' || s === 'break' || s === 'pantry') return 'on_break'
+  if (s === 'at_gym' || s === 'gym' || s === 'rec') return 'at_gym'
+  if (s === 'active') return 'active'
   if (s === 'awaiting_approval' || s === 'blocked') return 'awaiting_approval'
   if (s === 'done' || s === 'completed') return 'done'
   return 'idle'
@@ -190,6 +195,13 @@ export function mapAgentStatusToDbStatus(status: AgentStatus): string {
   switch (status) {
     case 'working':
       return 'coding'
+    case 'in_meeting':
+      return 'in_meeting'
+    case 'on_break':
+      return 'on_break'
+    case 'gym':
+    case 'at_gym':
+      return 'at_gym'
     case 'active':
       return 'active'
     case 'awaiting_approval':
@@ -219,6 +231,7 @@ export function dbRowToAgent(row: OfficeAgentRow): Agent {
     avatar: row.avatar || undefined,
     role: row.role,
     room,
+    department: row.department,
     tag: row.department,
     status,
     sub_state: (row.sub_state as AgentSubState) || (status === 'working' ? 'typing' : 'seated'),
@@ -226,6 +239,14 @@ export function dbRowToAgent(row: OfficeAgentRow): Agent {
     progress_pct: row.progress ?? (status === 'working' ? 65 : 0),
     desk_id: row.seat_id || `desk-${row.id}`,
     desk_coord: { x: row.desk_x, y: row.desk_y },
+    current_coord:
+      typeof row.current_x === 'number' && typeof row.current_y === 'number'
+        ? { x: row.current_x, y: row.current_y }
+        : undefined,
+    target_coord:
+      typeof row.target_x === 'number' && typeof row.target_y === 'number'
+        ? { x: row.target_x, y: row.target_y }
+        : undefined,
     color: row.color || '#3b82f6',
     updated_at: row.updated_at || new Date().toISOString(),
     kind: (row.kind as 'resident' | 'external') || 'resident',
@@ -318,12 +339,23 @@ export function agentToDbRow(agent: Partial<Agent>): Partial<OfficeAgentRow> {
   if (agent.role !== undefined) row.role = agent.role
   if (agent.room !== undefined) {
     row.current_room = agent.room
-    row.department = roomToDepartment(agent.room)
+    const r = agent.room.toLowerCase()
+    if (!r.includes('gym') && !r.includes('pantry') && !r.includes('canteen') && !r.includes('brain')) {
+      row.department = roomToDepartment(agent.room)
+    }
   }
   if (agent.tag !== undefined) row.department = agent.tag
   if (agent.desk_coord !== undefined) {
-    row.desk_x = agent.desk_coord.x
-    row.desk_y = agent.desk_coord.y
+    row.desk_x = Math.round(agent.desk_coord.x)
+    row.desk_y = Math.round(agent.desk_coord.y)
+  }
+  if (agent.current_coord !== undefined) {
+    row.current_x = Math.round(agent.current_coord.x)
+    row.current_y = Math.round(agent.current_coord.y)
+  }
+  if (agent.target_coord !== undefined) {
+    row.target_x = agent.target_coord.x
+    row.target_y = agent.target_coord.y
   }
   if (agent.status !== undefined) {
     row.status = mapAgentStatusToDbStatus(agent.status)
@@ -385,10 +417,25 @@ export function approvalToDbRow(approval: Partial<Approval> & { impact_level?: s
 }
 
 /**
+ * Formats a Date into Philippine Standard Time (`09:xx:xx PM PHT`)
+ */
+export function formatPHTTime(date: Date = new Date()): string {
+  const formatted = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Manila',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  }).format(date)
+  return `${formatted} PHT`
+}
+
+/**
  * Transforms an office_logs database row into a formatted string log line
  */
 export function dbRowToLogString(row: OfficeLogRow): string {
-  const timestamp = new Date(row.created_at).toLocaleTimeString()
+  const parsed = row.created_at ? new Date(row.created_at) : new Date()
+  const timestamp = Number.isNaN(parsed.getTime()) ? formatPHTTime() : formatPHTTime(parsed)
   const levelTag = row.level ? `[${row.level.toUpperCase()}]` : '[INFO]'
   const catTag = `[${row.category.toUpperCase()}]`
   const actor = row.agent_name ? `${row.agent_name}: ` : ''

@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
-import { getOfficeState } from '@/lib/storage'
+import { NextRequest, NextResponse } from 'next/server'
+import { getOfficeState, updateAgent } from '@/lib/storage'
 
 export async function GET() {
   try {
@@ -19,3 +19,24 @@ export async function GET() {
     )
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { agentId, updates } = body || {}
+    if (!agentId || !updates) {
+      return NextResponse.json(
+        { ok: false, error: 'agentId and updates are required' },
+        { status: 400 }
+      )
+    }
+    const data = await updateAgent(agentId, updates)
+    return NextResponse.json({ ok: true, data })
+  } catch (err: unknown) {
+    return NextResponse.json(
+      { ok: false, error: (err as Error).message },
+      { status: 500 }
+    )
+  }
+}
+
