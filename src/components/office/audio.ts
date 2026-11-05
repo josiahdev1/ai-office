@@ -159,6 +159,29 @@ class SoundFX {
   playSelect = () => {
     this.playBlip(580, 0.05)
   }
+
+  private lastKeyClickTime = 0
+  playKeyboardClick = () => {
+    if (!this.enabled) return
+    const now = Date.now()
+    if (now - this.lastKeyClickTime < 180) return // Throttled to max ~5 clicks/sec
+    this.lastKeyClickTime = now
+    try {
+      const ctx = this.initCtx()
+      if (!ctx) return
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      const clickFreq = 1600 + Math.random() * 600
+      osc.frequency.setValueAtTime(clickFreq, ctx.currentTime)
+      gain.gain.setValueAtTime(0.015, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.025)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      osc.stop(ctx.currentTime + 0.025)
+    } catch {}
+  }
 }
 
 export const sfx = new SoundFX()

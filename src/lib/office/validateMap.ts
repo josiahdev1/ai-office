@@ -13,10 +13,12 @@ import {
   PANTRY_ACTIVITY_SPOTS,
   GYM_ACTIVITY_SPOTS,
   buildCollisionGrid,
+  getFacingToward,
   Zone,
   FurnitureItem,
   ActivitySpot,
   GridCoord,
+  DeskSlot,
 } from './map'
 
 export interface ValidationReport {
@@ -200,6 +202,40 @@ export function validateConnectivity(
 }
 
 /**
+ * Validates that every desk chair has an explicit valid facing ('SE' | 'SW' | 'NE' | 'NW')
+ * and the monitor/desk is strictly in the direction of the chair's facing.
+ */
+export function validateChairFacings(desks: DeskSlot[]): string[] {
+  const errors: string[] = []
+  const validFacings = new Set(['SE', 'SW', 'NE', 'NW'])
+
+  desks.forEach((desk) => {
+    // 1. Every chair has an explicit valid facing
+    if (!desk.facing || !validFacings.has(desk.facing)) {
+      errors.push(
+        `Desk "${desk.id}" (${desk.name}) has missing or invalid facing "${desk.facing}". Must be 'SE' | 'SW' | 'NE' | 'NW'.`
+      )
+      return
+    }
+
+    // 2. The monitor/desk is strictly in the direction of the chair's facing
+    const expectedFacing = getFacingToward(
+      desk.chairGx,
+      desk.chairGy,
+      desk.deskGx,
+      desk.deskGy
+    )
+    if (desk.facing !== expectedFacing) {
+      errors.push(
+        `Desk "${desk.id}" (${desk.name}) facing mismatch: chair is at (${desk.chairGx}, ${desk.chairGy}) and desk/monitor is at (${desk.deskGx}, ${desk.deskGy}). Expected facing toward monitor is "${expectedFacing}", but found "${desk.facing}".`
+      )
+    }
+  })
+
+  return errors
+}
+
+/**
  * Master validation suite running all checks
  */
 export function validateOfficeMap(): ValidationReport {
@@ -216,6 +252,9 @@ export function validateOfficeMap(): ValidationReport {
 
   // 3. Furniture collision
   errors.push(...validateFurnitureNoOverlaps(OFFICE_FURNITURE))
+
+  // 4. Desk chair facing alignment towards monitor
+  errors.push(...validateChairFacings(ASSIGNED_DESKS))
 
   // Collect all activity spots
   const allSpots: ActivitySpot[] = [
@@ -235,10 +274,10 @@ export function validateOfficeMap(): ValidationReport {
     ...GYM_ACTIVITY_SPOTS,
   ]
 
-  // 4. Spot walkability
+  // 5. Spot walkability
   errors.push(...validateSpotsWalkable(allSpots, grid))
 
-  // 5. Connectivity from central crossroad (gx=9, gy=8)
+  // 6. Connectivity from central crossroad (gx=9, gy=8)
   const startCoord: GridCoord = { gx: 9, gy: 8 }
   errors.push(...validateConnectivity(grid, startCoord, allSpots))
 

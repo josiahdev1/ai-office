@@ -4,6 +4,8 @@
  * Single contiguous warm beige floor, tall charcoal back walls, non-overlapping zones.
  */
 
+import { FacingDirection } from '@/components/office/types'
+
 export interface GridCoord {
   gx: number
   gy: number
@@ -47,6 +49,65 @@ export interface FurnitureItem {
   interactiveSpot?: GridCoord
 }
 
+export type FloorNumber = 0 | 1 | 2 | 3
+
+export interface ElevatorConfig {
+  shaftGx: number
+  shaftGy: number
+  doorGx: number
+  doorGy: number
+  width: number
+  height: number
+}
+
+export const ELEVATOR_CONFIG: ElevatorConfig = {
+  shaftGx: 8,
+  shaftGy: 1,
+  doorGx: 8,
+  doorGy: 2,
+  width: 1,
+  height: 1,
+}
+
+export interface OfficeFloorMeta {
+  id: FloorNumber
+  code: 'GF' | '1F' | '2F' | '3F'
+  name: string
+  subtitle: string
+  color: string
+}
+
+export const OFFICE_FLOORS: OfficeFloorMeta[] = [
+  {
+    id: 0,
+    code: 'GF',
+    name: 'Ground Floor',
+    subtitle: 'Lobby, Canteen & Fitness',
+    color: '#10b981',
+  },
+  {
+    id: 1,
+    code: '1F',
+    name: 'Floor 1',
+    subtitle: 'Engineering Core, QA & Operations',
+    color: '#6366f1',
+  },
+  {
+    id: 2,
+    code: '2F',
+    name: 'Floor 2',
+    subtitle: 'Growth Lab, Intelligence & Command',
+    color: '#06b6d4',
+  },
+  {
+    id: 3,
+    code: '3F',
+    name: 'Top Floor',
+    subtitle: 'The Brain Meeting Core & Sky Lounge',
+    color: '#a855f7',
+  },
+]
+
 export interface DeskSlot {
   id: string
   agentId: string
@@ -56,8 +117,9 @@ export interface DeskSlot {
   deskGy: number
   chairGx: number
   chairGy: number
-  facing: 'SE' | 'SW' | 'NE' | 'NW'
+  facing: FacingDirection
   monitors: number
+  floor?: FloorNumber
 }
 
 export interface ActivitySpot {
@@ -66,7 +128,7 @@ export interface ActivitySpot {
   gx: number
   gy: number
   activity: string
-  facing: 'SE' | 'SW' | 'NE' | 'NW'
+  facing: FacingDirection
 }
 
 export const MAP_CONFIG = {
@@ -109,6 +171,82 @@ export function screenToGrid(
   const gx = Math.round((dx / halfW + dy / halfH) / 2)
   const gy = Math.round((dy / halfH - dx / halfW) / 2)
   return { gx, gy }
+}
+
+/**
+ * Calculates isometric facing direction ('SE' | 'SW' | 'NE' | 'NW') from movement delta in screen pixels.
+ * Uses hysteresis to prevent flickering along diagonal transitions.
+ */
+export function calculateWalkingFacing(
+  dx: number,
+  dy: number,
+  currentFacing: FacingDirection = 'SE'
+): FacingDirection {
+  const dist = Math.hypot(dx, dy)
+  if (dist < 0.5) return currentFacing
+
+  // Convert screen delta (2:1 isometric) to grid delta
+  // screenX = (gx - gy) * 32, screenY = (gx + gy) * 16
+  const dgx = (dx / 32 + dy / 16) / 2
+  const dgy = (dy / 16 - dx / 32) / 2
+
+  const absGpx = Math.abs(dgx)
+  const absGpy = Math.abs(dgy)
+
+  // Hysteresis threshold to prevent jitter when moving along diagonals
+  const hysteresis = 0.15
+  if (Math.abs(absGpx - absGpy) < hysteresis) {
+    if (dgx > 0 && currentFacing === 'SE') return 'SE'
+    if (dgx < 0 && currentFacing === 'NW') return 'NW'
+    if (dgy > 0 && currentFacing === 'SW') return 'SW'
+    if (dgy < 0 && currentFacing === 'NE') return 'NE'
+  }
+
+  if (absGpx >= absGpy) {
+    return dgx >= 0 ? 'SE' : 'NW'
+  } else {
+    return dgy >= 0 ? 'SW' : 'NE'
+  }
+}
+
+/**
+ * Calculates facing from a source grid coordinate toward a target grid coordinate.
+ */
+export function getFacingToward(
+  fromGx: number,
+  fromGy: number,
+  toGx: number,
+  toGy: number
+): FacingDirection {
+  const dgx = toGx - fromGx
+  const dgy = toGy - fromGy
+
+  if (Math.abs(dgx) >= Math.abs(dgy)) {
+    return dgx >= 0 ? 'SE' : 'NW'
+  } else {
+    return dgy >= 0 ? 'SW' : 'NE'
+  }
+}
+
+/**
+ * Calculates facing from a source screen position toward a target screen position.
+ */
+export function calculateFacingBetweenPoints(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number
+): FacingDirection {
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const dgx = (dx / 32 + dy / 16) / 2
+  const dgy = (dy / 16 - dx / 32) / 2
+
+  if (Math.abs(dgx) >= Math.abs(dgy)) {
+    return dgx >= 0 ? 'SE' : 'NW'
+  } else {
+    return dgy >= 0 ? 'SW' : 'NE'
+  }
 }
 
 /**
@@ -192,7 +330,7 @@ export const OFFICE_ZONES: Zone[] = [
  * Positioned in clean rows with clear 2-tile aisles
  */
 export const ASSIGNED_DESKS: DeskSlot[] = [
-  // 1. Josiah - Executive Triple Monitor Desk (Engineering Core Head)
+  // 1. Josiah - Executive Triple Monitor Desk (Engineering Core Head) - Faces NW towards triple monitors
   {
     id: 'eng-1',
     agentId: 'josiah',
@@ -202,10 +340,11 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     deskGy: 10,
     chairGx: 3,
     chairGy: 10,
-    facing: 'SE',
+    facing: 'NW',
     monitors: 3,
+    floor: 1,
   },
-  // Engineering Core Rows
+  // Engineering Core Rows (Facing NW - workers seen from behind facing monitors)
   {
     id: 'eng-2',
     agentId: 'arwin',
@@ -215,8 +354,9 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     deskGy: 11,
     chairGx: 3,
     chairGy: 11,
-    facing: 'SE',
+    facing: 'NW',
     monitors: 2,
+    floor: 1,
   },
   {
     id: 'eng-3',
@@ -227,8 +367,9 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     deskGy: 12,
     chairGx: 3,
     chairGy: 12,
-    facing: 'SE',
+    facing: 'NW',
     monitors: 2,
+    floor: 1,
   },
   {
     id: 'eng-4',
@@ -239,8 +380,9 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     deskGy: 10,
     chairGx: 5,
     chairGy: 10,
-    facing: 'SE',
+    facing: 'NW',
     monitors: 2,
+    floor: 1,
   },
   {
     id: 'eng-5',
@@ -251,8 +393,9 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     deskGy: 11,
     chairGx: 5,
     chairGy: 11,
-    facing: 'SE',
+    facing: 'NW',
     monitors: 2,
+    floor: 1,
   },
   {
     id: 'eng-6',
@@ -263,11 +406,12 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     deskGy: 12,
     chairGx: 5,
     chairGy: 12,
-    facing: 'SE',
+    facing: 'NW',
     monitors: 2,
+    floor: 1,
   },
 
-  // 2. QA & SecOps NOC (3 Desks)
+  // 2. QA & SecOps NOC (3 Desks) - Facing NE towards monitors
   {
     id: 'qa-1',
     agentId: 'khent',
@@ -275,22 +419,24 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     room: 'QA & SecOps NOC',
     deskGx: 2,
     deskGy: 14,
-    chairGx: 3,
-    chairGy: 14,
-    facing: 'SE',
+    chairGx: 2,
+    chairGy: 15,
+    facing: 'NE',
     monitors: 2,
+    floor: 1,
   },
   {
     id: 'qa-2',
     agentId: 'john_arvy',
     name: 'John Arvy',
     room: 'QA & SecOps NOC',
-    deskGx: 2,
-    deskGy: 15,
+    deskGx: 3,
+    deskGy: 14,
     chairGx: 3,
     chairGy: 15,
-    facing: 'SE',
+    facing: 'NE',
     monitors: 2,
+    floor: 1,
   },
   {
     id: 'qa-3',
@@ -299,13 +445,14 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     room: 'QA & SecOps NOC',
     deskGx: 4,
     deskGy: 14,
-    chairGx: 5,
-    chairGy: 14,
-    facing: 'SE',
+    chairGx: 4,
+    chairGy: 15,
+    facing: 'NE',
     monitors: 2,
+    floor: 1,
   },
 
-  // 3. Intelligence Lab (4 Desks)
+  // 3. Intelligence Lab (4 Desks) - Back-to-Back Pairs (gx 14 facing NW, gx 15 facing SE)
   {
     id: 'intel-1',
     agentId: 'roy_jhan',
@@ -315,8 +462,9 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     deskGy: 5,
     chairGx: 14,
     chairGy: 5,
-    facing: 'SE',
+    facing: 'NW',
     monitors: 2,
+    floor: 2,
   },
   {
     id: 'intel-2',
@@ -327,35 +475,38 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     deskGy: 6,
     chairGx: 14,
     chairGy: 6,
-    facing: 'SE',
+    facing: 'NW',
     monitors: 2,
+    floor: 2,
   },
   {
     id: 'intel-3',
     agentId: 'keiru',
     name: 'Keiru',
     room: 'Intelligence Lab',
-    deskGx: 15,
+    deskGx: 16,
     deskGy: 5,
-    chairGx: 16,
+    chairGx: 15,
     chairGy: 5,
     facing: 'SE',
     monitors: 2,
+    floor: 2,
   },
   {
     id: 'intel-4',
     agentId: 'ryan',
     name: 'Ryan',
     room: 'Intelligence Lab',
-    deskGx: 15,
+    deskGx: 16,
     deskGy: 6,
-    chairGx: 16,
+    chairGx: 15,
     chairGy: 6,
     facing: 'SE',
     monitors: 2,
+    floor: 2,
   },
 
-  // 4. Growth Lab (3 Desks)
+  // 4. Growth Lab (3 Desks) - Varied NW and NE
   {
     id: 'growth-1',
     agentId: 'jo_vincent',
@@ -365,8 +516,9 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     deskGy: 9,
     chairGx: 14,
     chairGy: 9,
-    facing: 'SE',
+    facing: 'NW',
     monitors: 2,
+    floor: 2,
   },
   {
     id: 'growth-2',
@@ -377,8 +529,9 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     deskGy: 10,
     chairGx: 14,
     chairGy: 10,
-    facing: 'SE',
+    facing: 'NW',
     monitors: 2,
+    floor: 2,
   },
   {
     id: 'growth-3',
@@ -387,36 +540,39 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     room: 'Growth Lab',
     deskGx: 15,
     deskGy: 9,
-    chairGx: 16,
-    chairGy: 9,
-    facing: 'SE',
+    chairGx: 15,
+    chairGy: 10,
+    facing: 'NE',
     monitors: 2,
+    floor: 2,
   },
 
-  // 5. Operations Hub (4 Desks)
+  // 5. Operations Hub (4 Desks) - Manager (SE) + Tech rows (NW)
   {
     id: 'ops-1',
     agentId: 'mary_grace',
     name: 'Mary Grace',
     room: 'Operations Hub',
-    deskGx: 13,
+    deskGx: 14,
     deskGy: 12,
-    chairGx: 14,
+    chairGx: 13,
     chairGy: 12,
     facing: 'SE',
     monitors: 2,
+    floor: 1,
   },
   {
     id: 'ops-2',
     agentId: 'anthony',
     name: 'Anthony',
     room: 'Operations Hub',
-    deskGx: 13,
-    deskGy: 13,
-    chairGx: 14,
-    chairGy: 13,
-    facing: 'SE',
+    deskGx: 15,
+    deskGy: 12,
+    chairGx: 16,
+    chairGy: 12,
+    facing: 'NW',
     monitors: 2,
+    floor: 1,
   },
   {
     id: 'ops-3',
@@ -424,37 +580,40 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     name: 'Blaze',
     room: 'Operations Hub',
     deskGx: 15,
-    deskGy: 12,
+    deskGy: 13,
     chairGx: 16,
-    chairGy: 12,
-    facing: 'SE',
+    chairGy: 13,
+    facing: 'NW',
     monitors: 2,
+    floor: 1,
   },
   {
     id: 'ops-4',
     agentId: 'ferwin',
     name: 'Ferwin',
     room: 'Operations Hub',
-    deskGx: 15,
+    deskGx: 13,
     deskGy: 13,
-    chairGx: 16,
+    chairGx: 14,
     chairGy: 13,
-    facing: 'SE',
+    facing: 'NW',
     monitors: 2,
+    floor: 1,
   },
 
-  // 6. Command Center (3 Desks)
+  // 6. Command Center (3 Desks) - Executive desks facing camera (SE) + Architect (NW)
   {
     id: 'cmd-1',
     agentId: 'gloria',
     name: 'Gloria',
     room: 'Command Center',
-    deskGx: 13,
+    deskGx: 14,
     deskGy: 15,
-    chairGx: 14,
+    chairGx: 13,
     chairGy: 15,
     facing: 'SE',
     monitors: 2,
+    floor: 2,
   },
   {
     id: 'cmd-2',
@@ -465,8 +624,9 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     deskGy: 15,
     chairGx: 16,
     chairGy: 15,
-    facing: 'SE',
+    facing: 'NW',
     monitors: 2,
+    floor: 2,
   },
   {
     id: 'cmd-3',
@@ -475,10 +635,11 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
     room: 'Command Center',
     deskGx: 14,
     deskGy: 16,
-    chairGx: 14,
-    chairGy: 15,
+    chairGx: 13,
+    chairGy: 16,
     facing: 'SE',
     monitors: 2,
+    floor: 2,
   },
 ]
 
@@ -543,8 +704,8 @@ export const PANTRY_ACTIVITY_SPOTS: ActivitySpot[] = [
   { id: 'pantry-11', zone: 'pantry', gx: 17, gy: 3, activity: 'vending_machine', facing: 'NE' },
   { id: 'pantry-12', zone: 'pantry', gx: 17, gy: 4, activity: 'snack_counter', facing: 'NE' },
   { id: 'pantry-13', zone: 'pantry', gx: 14, gy: 5, activity: 'break_chat', facing: 'SW' },
-  { id: 'pantry-14', zone: 'pantry', gx: 15, gy: 7, activity: 'break_chat', facing: 'SW' },
-  { id: 'pantry-15', zone: 'pantry', gx: 16, gy: 5, activity: 'break_chat', facing: 'SW' },
+  { id: 'pantry-14', zone: 'pantry', gx: 14, gy: 1, activity: 'break_chat', facing: 'SE' },
+  { id: 'pantry-15', zone: 'pantry', gx: 17, gy: 1, activity: 'break_chat', facing: 'SW' },
   { id: 'pantry-16', zone: 'pantry', gx: 17, gy: 5, activity: 'break_chat', facing: 'SW' },
 
   // 3. Purple Velvet Lounge Sofas & Coffee Tables (16 spots)
@@ -670,6 +831,18 @@ export const OFFICE_FURNITURE: FurnitureItem[] = [
     solid: true,
     label: 'FIDDLE-LEAF FIG',
   },
+  // 7. Express Elevator Bank (gx 8, gy 1) on the central back wall
+  {
+    id: 'elevator_shaft_main',
+    type: 'glass_partition',
+    gx: 8,
+    gy: 1,
+    w: 1,
+    h: 1,
+    solid: true,
+    label: 'EXPRESS ELEVATOR',
+    interactiveSpot: { gx: 8, gy: 2 },
+  },
 ]
 
 // Add the 23 assigned desks as solid furniture items
@@ -720,4 +893,77 @@ export function buildCollisionGrid(): boolean[][] {
   })
 
   return grid
+}
+
+/**
+ * 4 GUEST HOT DESKS FOR LIVE BRIDGE SESSIONS
+ */
+export const GUEST_DESKS: DeskSlot[] = [
+  {
+    id: "guest-1",
+    agentId: "guest_1",
+    name: "Guest Workstation 1",
+    room: "Engineering Core",
+    deskGx: 6,
+    deskGy: 10,
+    chairGx: 7,
+    chairGy: 10,
+    facing: "NW",
+    monitors: 2,
+    floor: 1,
+  },
+  {
+    id: "guest-2",
+    agentId: "guest_2",
+    name: "Guest Workstation 2",
+    room: "Engineering Core",
+    deskGx: 6,
+    deskGy: 11,
+    chairGx: 7,
+    chairGy: 11,
+    facing: "NW",
+    monitors: 2,
+    floor: 1,
+  },
+  {
+    id: "guest-3",
+    agentId: "guest_3",
+    name: "Guest Workstation 3",
+    room: "Growth Lab",
+    deskGx: 13,
+    deskGy: 8,
+    chairGx: 14,
+    chairGy: 8,
+    facing: "NW",
+    monitors: 2,
+    floor: 2,
+  },
+  {
+    id: "guest-4",
+    agentId: "guest_4",
+    name: "Guest Workstation 4",
+    room: "Growth Lab",
+    deskGx: 15,
+    deskGy: 8,
+    chairGx: 16,
+    chairGy: 8,
+    facing: "NW",
+    monitors: 2,
+    floor: 2,
+  },
+]
+
+export function getAgentAssignedFloor(agentId: string): FloorNumber {
+  const desk = ASSIGNED_DESKS.find((d) => d.agentId === agentId)
+  if (desk && desk.floor !== undefined) return desk.floor
+  const guest = GUEST_DESKS.find((d) => d.agentId === agentId)
+  if (guest && guest.floor !== undefined) return guest.floor
+  return 1
+}
+
+export function getFloorDesks(floor: FloorNumber): DeskSlot[] {
+  return [
+    ...ASSIGNED_DESKS.filter((d) => d.floor === floor),
+    ...GUEST_DESKS.filter((d) => d.floor === floor),
+  ]
 }

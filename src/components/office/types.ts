@@ -1,5 +1,21 @@
+export type FacingDirection = 'SE' | 'SW' | 'NE' | 'NW'
+
+export type AgentPose =
+  | 'stand'
+  | 'walk'
+  | 'sit'
+  | 'type'
+  | 'drink_coffee'
+  | 'eat'
+  | 'gym'
+  | 'gesture'
+
 export type AgentStatus =
-  'active' | 'working' | 'idle' | 'awaiting_approval' | 'done'
+  | 'active'
+  | 'working'
+  | 'idle'
+  | 'awaiting_approval'
+  | 'done'
 
 export type AgentSubState =
   | 'typing'
@@ -31,6 +47,14 @@ export interface Agent {
   skin?: string
   desk_id?: string
   desk_coord?: { x: number; y: number }
+  kind?: 'resident' | 'external'
+  cli?: 'claude-code' | 'antigravity' | 'codex' | 'opencode' | 'cursor' | 'other'
+  session_id?: string
+  cwd_hash?: string
+  current_tool?: string
+  tokens_used?: number
+  tool_call_count?: number
+  session_started_at?: string
 }
 
 export interface Approval {

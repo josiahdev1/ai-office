@@ -7,7 +7,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react'
-import { Agent, Approval } from './types'
+import { Agent, Approval, FacingDirection } from './types'
 import { PixelSprite } from './pixel-sprites'
 import { sfx } from './audio'
 import {
@@ -21,6 +21,8 @@ import {
   ASSIGNED_DESKS,
   OFFICE_ZONES,
   gridToScreen,
+  calculateWalkingFacing,
+  calculateFacingBetweenPoints,
   DeskSlot,
 } from '@/lib/office/map'
 import { officeBus } from '@/lib/office/bus'
@@ -56,7 +58,8 @@ interface AgentSimState {
   targetY: number
   isWalking: boolean
   walkFrame: number
-  facing: 'left' | 'right'
+  typeFrame: number
+  facing: FacingDirection
   hasCoffee: boolean
   isSeated: boolean
   activity: string
@@ -64,14 +67,17 @@ interface AgentSimState {
 }
 
 // Convert ASSIGNED_DESKS to quick lookup
-export const DESK_CONFIGS: Record<string, DeskSlot & { x: number; y: number; facingDirection: 'left' | 'right' }> = {}
+export const DESK_CONFIGS: Record<
+  string,
+  DeskSlot & { x: number; y: number; facingDirection: FacingDirection }
+> = {}
 ASSIGNED_DESKS.forEach((d) => {
   const screenPos = gridToScreen(d.chairGx, d.chairGy)
   DESK_CONFIGS[d.agentId] = {
     ...d,
     x: screenPos.x,
     y: screenPos.y,
-    facingDirection: d.facing === 'SW' || d.facing === 'NW' ? 'left' : 'right',
+    facingDirection: d.facing,
   }
 })
 
@@ -99,6 +105,10 @@ export function IsometricOffice({
   const [currentMode, setCurrentMode] = useState<OfficeMode>('FOCUS_WORK')
   const currentModeRef = useRef<OfficeMode>('FOCUS_WORK')
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const soundEnabledRef = useRef(soundEnabled)
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled
+  }, [soundEnabled])
 
   // Philippine Standard Time (PHT - UTC+8) Real-Time Clock
   const [phtTimeString, setPhtTimeString] = useState('')
@@ -153,7 +163,20 @@ export function IsometricOffice({
 
   // Simulation positions state
   const [renderPositions, setRenderPositions] = useState<
-    Record<string, { x: number; y: number; isWalking: boolean; walkFrame: number; facing: 'left' | 'right'; hasCoffee: boolean; isSeated: boolean; activity: string }>
+    Record<
+      string,
+      {
+        x: number
+        y: number
+        isWalking: boolean
+        walkFrame: number
+        typeFrame: number
+        facing: FacingDirection
+        hasCoffee: boolean
+        isSeated: boolean
+        activity: string
+      }
+    >
   >({})
 
   // Physics simulation state ref
@@ -173,7 +196,8 @@ export function IsometricOffice({
           targetY: fallback.y,
           isWalking: false,
           walkFrame: 0,
-          facing: desk?.facingDirection || 'right',
+          typeFrame: 0,
+          facing: desk?.facingDirection || 'NW',
           hasCoffee: false,
           isSeated: true,
           activity: 'typing',
@@ -240,6 +264,20 @@ export function IsometricOffice({
 
       setActiveSpeech((prev) => ({ ...prev, [dialogue.from]: dialogue.text }))
       if (senderSim && recipientSim) {
+        // Conversation facing: both participants turn to face each other
+        senderSim.facing = calculateFacingBetweenPoints(
+          senderSim.x,
+          senderSim.y,
+          recipientSim.x,
+          recipientSim.y
+        )
+        recipientSim.facing = calculateFacingBetweenPoints(
+          recipientSim.x,
+          recipientSim.y,
+          senderSim.x,
+          senderSim.y
+        )
+
         setActiveLaserLink({
           from: { x: senderSim.x, y: senderSim.y },
           to: { x: recipientSim.x, y: recipientSim.y },
@@ -368,6 +406,25 @@ export function IsometricOffice({
 
             setActiveSpeech((prev) => ({ ...prev, [line.speakerId]: line.text }))
 
+            // Listeners turn to face the speaker during All Hands
+            const currentSims = simStateRef.current
+            const speakerSim = currentSims[line.speakerId]
+            if (speakerSim) {
+              agentsRef.current.forEach((a) => {
+                if (a.id !== line.speakerId) {
+                  const listener = currentSims[a.id]
+                  if (listener && !listener.isWalking) {
+                    listener.facing = calculateFacingBetweenPoints(
+                      listener.x,
+                      listener.y,
+                      speakerSim.x,
+                      speakerSim.y
+                    )
+                  }
+                }
+              })
+            }
+
             const timeStr = new Date().toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
@@ -405,6 +462,14 @@ export function IsometricOffice({
                 const next = { ...prev }
                 delete next[line.speakerId]
                 return next
+              })
+              // Listeners turn back toward table center
+              const simsAfter = simStateRef.current
+              agentsRef.current.forEach((a) => {
+                const s = simsAfter[a.id]
+                if (s && !s.isWalking) {
+                  s.facing = calculateFacingBetweenPoints(s.x, s.y, 700, 408)
+                }
               })
             }, Math.max(2500, line.delayMs - 500))
             meetingTimeoutsRef.current.push(clearTid)
@@ -498,8 +563,8 @@ export function IsometricOffice({
           state.x = stepResult.next.x
           state.y = stepResult.next.y
 
-          if (stepResult.dx !== 0) {
-            state.facing = stepResult.dx > 0 ? 'right' : 'left'
+          if (stepResult.dx !== 0 || stepResult.dy !== 0) {
+            state.facing = calculateWalkingFacing(stepResult.dx, stepResult.dy, state.facing)
           }
 
           if (frameTick % 6 === 0) {
@@ -519,21 +584,43 @@ export function IsometricOffice({
                 state.isSeated = true
                 state.hasCoffee = false
                 state.activity = 'typing'
+                const desk = DESK_CONFIGS[agentId]
+                if (desk) {
+                  state.facing = desk.facing
+                }
               } else if (activeMode === 'ALL_HANDS') {
                 state.isSeated = true
                 state.hasCoffee = false
                 state.activity = 'seated_meeting'
+                state.facing = calculateFacingBetweenPoints(state.x, state.y, 700, 408)
               } else if (activeMode === 'COFFEE_BREAK') {
                 state.isSeated = true
                 state.hasCoffee = true
                 state.activity = 'eating_canteen'
+                state.facing = state.x > 700 ? 'SW' : 'SE'
               } else if (activeMode === 'RECREATION') {
                 state.isSeated = false
                 state.activity = 'working_out'
+                state.facing = state.y > 450 ? 'SE' : 'NW'
               }
             }
           }
           hasStateChanged = true
+        }
+
+        // 2. Dynamic Typing Animation & Keyboard Sound
+        if (!state.isWalking && state.isSeated && state.activity === 'typing') {
+          const currentAgent = agentsRef.current.find((a) => a.id === agentId)
+          const isWorking = currentAgent?.status === 'working' || currentAgent?.status === 'active'
+          const typeInterval = isWorking ? 7 : 22
+
+          if (frameTick % typeInterval === 0) {
+            state.typeFrame = (state.typeFrame + 1) % 3
+            if (isWorking && soundEnabledRef.current && Math.random() < 0.28) {
+              sfx.playKeyboardClick()
+            }
+            hasStateChanged = true
+          }
         }
       })
 
@@ -545,7 +632,8 @@ export function IsometricOffice({
             y: number
             isWalking: boolean
             walkFrame: number
-            facing: 'left' | 'right'
+            typeFrame: number
+            facing: FacingDirection
             hasCoffee: boolean
             isSeated: boolean
             activity: string
@@ -558,6 +646,7 @@ export function IsometricOffice({
             y: s.y,
             isWalking: s.isWalking,
             walkFrame: s.walkFrame,
+            typeFrame: s.typeFrame,
             facing: s.facing,
             hasCoffee: s.hasCoffee,
             isSeated: s.isSeated,
@@ -1324,6 +1413,9 @@ export function IsometricOffice({
           {/* ==================== WORKSTATION ERGONOMIC SWIVEL CHAIRS ==================== */}
           {ASSIGNED_DESKS.map((d) => {
             const chairScreen = gridToScreen(d.chairGx, d.chairGy)
+            const facing = d.facing
+            const isBackFacing = facing === 'NW' || facing === 'NE'
+
             return (
               <div
                 key={`chair-${d.id}`}
@@ -1354,26 +1446,56 @@ export function IsometricOffice({
                   <circle cx="16" cy="27" r="1.3" fill="#0f172a" />
                   {/* Chrome Hydraulic Post */}
                   <line x1="16" y1="23" x2="16" y2="17" stroke="#475569" strokeWidth="2.2" />
-                  {/* Padded Dark Seat Cushion */}
-                  <polygon
-                    points="8,17 16,13 24,17 16,21"
-                    fill="#181e2b"
-                    stroke="#2e384d"
-                    strokeWidth="1"
-                  />
-                  {/* High Ergonomic Mesh Backrest */}
-                  <polygon
-                    points="9,6 23,6 24,15 8,15"
-                    fill="#0f172a"
-                    stroke="#3b4861"
-                    strokeWidth="1.2"
-                  />
-                  {/* Lumbar Support Ribs */}
-                  <line x1="10" y1="9" x2="22" y2="9" stroke="#1e293b" strokeWidth="1" />
-                  <line x1="9.5" y1="12" x2="22.5" y2="12" stroke="#1e293b" strokeWidth="1" />
-                  {/* Left & Right Armrests */}
-                  <path d="M 7,13 L 7,16 L 9,17" stroke="#475569" strokeWidth="1.2" fill="none" />
-                  <path d="M 25,13 L 25,16 L 23,17" stroke="#475569" strokeWidth="1.2" fill="none" />
+
+                  {isBackFacing ? (
+                    // Chair facing away from camera towards NW / NE desk
+                    <>
+                      {/* Padded Dark Seat Cushion */}
+                      <polygon
+                        points="8,15 16,11 24,15 16,19"
+                        fill="#181e2b"
+                        stroke="#2e384d"
+                        strokeWidth="1"
+                      />
+                      {/* High Ergonomic Mesh Backrest Behind (SE/SW side) */}
+                      <polygon
+                        points="9,17 23,17 24,25 8,25"
+                        fill="#0f172a"
+                        stroke="#3b4861"
+                        strokeWidth="1.2"
+                      />
+                      {/* Lumbar Support Ribs */}
+                      <line x1="10" y1="20" x2="22" y2="20" stroke="#1e293b" strokeWidth="1" />
+                      <line x1="9.5" y1="23" x2="22.5" y2="23" stroke="#1e293b" strokeWidth="1" />
+                      {/* Armrests */}
+                      <path d="M 7,14 L 7,17 L 9,18" stroke="#475569" strokeWidth="1.2" fill="none" />
+                      <path d="M 25,14 L 25,17 L 23,18" stroke="#475569" strokeWidth="1.2" fill="none" />
+                    </>
+                  ) : (
+                    // Chair facing camera towards SE / SW desk
+                    <>
+                      {/* High Ergonomic Mesh Backrest Behind */}
+                      <polygon
+                        points="9,6 23,6 24,15 8,15"
+                        fill="#0f172a"
+                        stroke="#3b4861"
+                        strokeWidth="1.2"
+                      />
+                      {/* Lumbar Support Ribs */}
+                      <line x1="10" y1="9" x2="22" y2="9" stroke="#1e293b" strokeWidth="1" />
+                      <line x1="9.5" y1="12" x2="22.5" y2="12" stroke="#1e293b" strokeWidth="1" />
+                      {/* Padded Dark Seat Cushion */}
+                      <polygon
+                        points="8,17 16,13 24,17 16,21"
+                        fill="#181e2b"
+                        stroke="#2e384d"
+                        strokeWidth="1"
+                      />
+                      {/* Armrests */}
+                      <path d="M 7,13 L 7,16 L 9,17" stroke="#475569" strokeWidth="1.2" fill="none" />
+                      <path d="M 25,13 L 25,16 L 23,17" stroke="#475569" strokeWidth="1.2" fill="none" />
+                    </>
+                  )}
                 </svg>
               </div>
             )
@@ -1383,6 +1505,21 @@ export function IsometricOffice({
           {ASSIGNED_DESKS.map((d) => {
             const deskScreen = gridToScreen(d.deskGx, d.deskGy)
             const isFounder = d.agentId === 'josiah'
+            const agent = agents.find((a) => a.id === d.agentId)
+            const sim = renderPositions[d.agentId]
+            const isTyping = sim?.isSeated && sim?.activity === 'typing' && !sim?.isWalking
+            const typeFrame = sim?.typeFrame ?? 0
+            const tool = (agent?.current_tool || agent?.current_task || '').toLowerCase()
+
+            // Syntax colors: Blue for edit, orange for shell, cyan for read, green for test pass
+            const codeColor =
+              tool.includes('edit') || tool.includes('code') || tool.includes('write') || tool.includes('refactor')
+                ? '#38bdf8'
+                : tool.includes('sh') || tool.includes('bash') || tool.includes('run') || tool.includes('test')
+                ? '#f97316'
+                : '#06b6d4'
+
+            const facing = d.facing
 
             return (
               <div
@@ -1391,7 +1528,7 @@ export function IsometricOffice({
                 style={{
                   left: `${deskScreen.x - (isFounder ? 32 : 24)}px`,
                   top: `${deskScreen.y - 16}px`,
-                  zIndex: Math.max(1, Math.round(deskScreen.y)),
+                  zIndex: Math.max(1, Math.round(deskScreen.y) + (facing === 'SE' ? 14 : 6)),
                 }}
               >
                 <svg
@@ -1421,15 +1558,33 @@ export function IsometricOffice({
                       />
                       <polygon points="0,14 32,28 32,35 0,21" fill="#241710" />
                       <polygon points="32,28 64,14 64,21 32,35" fill="#4d3326" />
-                      {/* Left Angled Screen */}
-                      <polygon points="8,4 18,0 18,10 8,14" fill="#0284c7" stroke="#38bdf8" strokeWidth="0.8" />
-                      {/* Center Main Screen */}
-                      <polygon points="22,2 42,2 42,12 22,12" fill="#2563eb" stroke="#60a5fa" strokeWidth="0.8" />
-                      {/* Right Angled Screen */}
-                      <polygon points="46,0 56,4 56,14 46,10" fill="#0284c7" stroke="#38bdf8" strokeWidth="0.8" />
+
+                      {/* Left Angled Screen (Cyan telemetry) */}
+                      <polygon points="8,4 18,0 18,10 8,14" fill="#041226" stroke="#38bdf8" strokeWidth="0.8" />
+                      <line x1="10" y1="4.5" x2="16" y2="2" stroke="#38bdf8" strokeWidth="1" strokeDasharray="3 1" strokeDashoffset={isTyping ? typeFrame * 2 : 0} />
+                      <line x1="10" y1="7.5" x2="16" y2="5" stroke="#22d3ee" strokeWidth="1" strokeDasharray="2 1" />
+
+                      {/* Center Main Ultrawide Screen (Syntax Colored Code) */}
+                      <polygon points="22,2 42,2 42,12 22,12" fill="#061022" stroke="#60a5fa" strokeWidth="0.9" />
+                      <line x1="24" y1="4.5" x2="40" y2="4.5" stroke={codeColor} strokeWidth="1.2" strokeDasharray="4 1.5" strokeDashoffset={isTyping ? typeFrame * 2.5 : 0} />
+                      <line x1="24" y1="7" x2="38" y2="7" stroke="#22c55e" strokeWidth="1" strokeDasharray="3 1" />
+                      <line x1="24" y1="9.5" x2="36" y2="9.5" stroke="#f59e0b" strokeWidth="1" strokeDasharray="2 1" />
+
+                      {/* Right Angled Screen (Orange shell / build log) */}
+                      <polygon points="46,0 56,4 56,14 46,10" fill="#140a04" stroke="#f97316" strokeWidth="0.8" />
+                      <line x1="48" y1="2" x2="54" y2="4.5" stroke="#f97316" strokeWidth="1" strokeDasharray="3 1" strokeDashoffset={isTyping ? typeFrame * 2 : 0} />
+                      <line x1="48" y1="5" x2="54" y2="7.5" stroke="#fb923c" strokeWidth="1" strokeDasharray="2 1" />
+
+                      {/* Mechanical Keyboard with dynamic flickering RGB keycaps */}
+                      <rect x="25" y="16" width="14" height="6" rx="1" fill="#090d16" stroke="#334155" strokeWidth="0.7" />
+                      <rect x="26" y="17" width="2" height="1.5" fill={isTyping && typeFrame === 0 ? '#38bdf8' : '#64748b'} />
+                      <rect x="29" y="17" width="2" height="1.5" fill={isTyping && typeFrame === 1 ? '#38bdf8' : '#64748b'} />
+                      <rect x="32" y="17" width="2" height="1.5" fill={isTyping && typeFrame === 2 ? '#38bdf8' : '#64748b'} />
+                      <rect x="35" y="17" width="2" height="1.5" fill={isTyping ? '#22c55e' : '#64748b'} />
+                      <rect x="27.5" y="19.5" width="9" height="1.2" fill={isTyping ? '#38bdf8' : '#475569'} />
                     </>
-                  ) : (
-                    // Standard Studio Workstation (Dual Monitors)
+                  ) : facing === 'NW' ? (
+                    // Workstation facing NW (Workers sit SE facing NW; monitors face SE towards viewer)
                     <>
                       <polygon
                         points="0,12 24,0 48,12 24,24"
@@ -1439,10 +1594,78 @@ export function IsometricOffice({
                       />
                       <polygon points="0,12 24,24 24,30 0,18" fill="#241710" />
                       <polygon points="24,24 48,12 48,18 24,30" fill="#4d3326" />
-                      {/* Left Monitor */}
-                      <polygon points="8,4 18,0 18,8 8,12" fill="#0f172a" stroke="#38bdf8" strokeWidth="0.8" />
-                      {/* Right Monitor */}
-                      <polygon points="26,0 36,5 36,13 26,8" fill="#0f172a" stroke="#22c55e" strokeWidth="0.8" />
+
+                      {/* Left Monitor (Syntax code scrolling in sync with typing) */}
+                      <polygon points="8,4 18,0 18,8 8,12" fill="#040e1e" stroke="#38bdf8" strokeWidth="0.8" />
+                      <line x1="10" y1="4.5" x2="16" y2="2" stroke={codeColor} strokeWidth="1" strokeDasharray="3 1" strokeDashoffset={isTyping ? typeFrame * 2 : 0} />
+                      <line x1="10" y1="7" x2="16" y2="4.5" stroke="#22c55e" strokeWidth="1" strokeDasharray="2 1" />
+                      <line x1="10" y1="9.5" x2="16" y2="7" stroke="#f59e0b" strokeWidth="1" strokeDasharray="3 1" />
+
+                      {/* Right Monitor (Terminal / Telemetry) */}
+                      <polygon points="26,0 36,5 36,13 26,8" fill="#040e1e" stroke="#22c55e" strokeWidth="0.8" />
+                      <line x1="28" y1="2" x2="34" y2="5" stroke="#22c55e" strokeWidth="1" strokeDasharray="3 1" strokeDashoffset={isTyping ? typeFrame * 2 : 0} />
+                      <line x1="28" y1="4.5" x2="34" y2="7.5" stroke={codeColor} strokeWidth="1" strokeDasharray="2 1" />
+                      <line x1="28" y1="7" x2="34" y2="10" stroke="#a855f7" strokeWidth="1" strokeDasharray="3 1" />
+
+                      {/* Keyboard with keycaps flickering in sync with typing */}
+                      <rect x="18" y="14" width="12" height="5" rx="0.8" fill="#090d16" stroke="#334155" strokeWidth="0.6" />
+                      <rect x="19" y="15" width="2" height="1.2" fill={isTyping && typeFrame === 0 ? '#38bdf8' : '#64748b'} />
+                      <rect x="22" y="15" width="2" height="1.2" fill={isTyping && typeFrame === 1 ? '#38bdf8' : '#64748b'} />
+                      <rect x="25" y="15" width="2" height="1.2" fill={isTyping && typeFrame === 2 ? '#38bdf8' : '#64748b'} />
+                      <rect x="20" y="17" width="8" height="1" fill={isTyping ? '#38bdf8' : '#475569'} />
+                    </>
+                  ) : facing === 'NE' ? (
+                    // Workstation facing NE (QA / Growth rows)
+                    <>
+                      <polygon
+                        points="0,12 24,0 48,12 24,24"
+                        fill="#3e291e"
+                        stroke="#60402e"
+                        strokeWidth="1"
+                      />
+                      <polygon points="0,12 24,24 24,30 0,18" fill="#241710" />
+                      <polygon points="24,24 48,12 48,18 24,30" fill="#4d3326" />
+
+                      {/* Monitor on NE rim angled towards SW */}
+                      <polygon points="18,1 36,7 36,15 18,9" fill="#061224" stroke="#10b981" strokeWidth="0.8" />
+                      <line x1="21" y1="4" x2="33" y2="8" stroke={codeColor} strokeWidth="1" strokeDasharray="3 1" strokeDashoffset={isTyping ? typeFrame * 2 : 0} />
+                      <line x1="21" y1="6.5" x2="33" y2="10.5" stroke="#10b981" strokeWidth="1" strokeDasharray="2 1" />
+                      <line x1="21" y1="9" x2="33" y2="13" stroke="#f59e0b" strokeWidth="1" strokeDasharray="3 1" />
+
+                      {/* Keyboard on SW rim */}
+                      <rect x="10" y="11" width="11" height="5" rx="0.8" fill="#090d16" stroke="#334155" strokeWidth="0.6" />
+                      <rect x="11" y="12" width="2" height="1.2" fill={isTyping && typeFrame === 0 ? '#10b981' : '#64748b'} />
+                      <rect x="14" y="12" width="2" height="1.2" fill={isTyping && typeFrame === 1 ? '#10b981' : '#64748b'} />
+                      <rect x="17" y="12" width="2" height="1.2" fill={isTyping && typeFrame === 2 ? '#10b981' : '#64748b'} />
+                      <rect x="12" y="14" width="7" height="1" fill={isTyping ? '#10b981' : '#475569'} />
+                    </>
+                  ) : (
+                    // Workstation facing SE (Executive / Manager desk facing camera)
+                    <>
+                      <polygon
+                        points="0,12 24,0 48,12 24,24"
+                        fill="#3e291e"
+                        stroke="#60402e"
+                        strokeWidth="1"
+                      />
+                      <polygon points="0,12 24,24 24,30 0,18" fill="#241710" />
+                      <polygon points="24,24 48,12 48,18 24,30" fill="#4d3326" />
+
+                      {/* Monitors on SE rim facing NW towards manager; we see slim dark casing back */}
+                      <polygon points="10,13 20,8 20,16 10,21" fill="#0b1320" stroke="#1e293b" strokeWidth="0.8" />
+                      <line x1="15" y1="17" x2="15" y2="21" stroke="#64748b" strokeWidth="1.2" />
+                      <circle cx="15" cy="11.5" r="0.8" fill="#38bdf8" />
+
+                      <polygon points="26,8 36,13 36,21 26,16" fill="#0b1320" stroke="#1e293b" strokeWidth="0.8" />
+                      <line x1="31" y1="17" x2="31" y2="21" stroke="#64748b" strokeWidth="1.2" />
+                      <circle cx="31" cy="11.5" r="0.8" fill="#22c55e" />
+
+                      {/* Keyboard on NW desk surface */}
+                      <rect x="18" y="5" width="12" height="5" rx="0.8" fill="#090d16" stroke="#334155" strokeWidth="0.6" />
+                      <rect x="19" y="6" width="2" height="1.2" fill={isTyping && typeFrame === 0 ? '#38bdf8' : '#64748b'} />
+                      <rect x="22" y="6" width="2" height="1.2" fill={isTyping && typeFrame === 1 ? '#38bdf8' : '#64748b'} />
+                      <rect x="25" y="6" width="2" height="1.2" fill={isTyping && typeFrame === 2 ? '#38bdf8' : '#64748b'} />
+                      <rect x="20" y="8" width="8" height="1" fill={isTyping ? '#38bdf8' : '#475569'} />
                     </>
                   )}
                 </svg>
@@ -1457,7 +1680,8 @@ export function IsometricOffice({
               y: DESK_CONFIGS[agent.id]?.y || 340,
               isWalking: false,
               walkFrame: 0,
-              facing: DESK_CONFIGS[agent.id]?.facingDirection || 'right',
+              typeFrame: 0,
+              facing: DESK_CONFIGS[agent.id]?.facingDirection || 'NW',
               hasCoffee: false,
               isSeated: true,
               activity: 'typing',
@@ -1467,7 +1691,7 @@ export function IsometricOffice({
             const speechText = activeSpeech[agent.id]
             const safeX = Number.isFinite(sim.x) ? sim.x : 540
             const safeY = Number.isFinite(sim.y) ? sim.y : 340
-            const zIndexVal = Math.max(10, Math.round(safeY) + 30)
+            const zIndexVal = Math.max(10, Math.round(safeY) + (sim.isSeated ? 10 : 25))
 
             return (
               <div
@@ -1523,9 +1747,11 @@ export function IsometricOffice({
                   isWalking={sim.isWalking}
                   walkFrame={sim.walkFrame}
                   isTyping={sim.activity === 'typing' && !sim.isWalking}
+                  typeFrame={sim.typeFrame}
                   facing={sim.facing}
                   hasCoffee={sim.hasCoffee}
                   isSeated={sim.isSeated}
+                  activity={sim.activity}
                 />
               </div>
             )
