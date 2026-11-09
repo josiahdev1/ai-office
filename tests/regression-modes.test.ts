@@ -4,10 +4,7 @@ import {
   calculateCorridorPath,
   findGridPath,
 } from '../src/lib/office/pathfinding'
-import {
-  ASSIGNED_DESKS,
-  gridToScreen,
-} from '../src/lib/office/map'
+import { ASSIGNED_DESKS, gridToScreen } from '../src/lib/office/map'
 
 describe('Office Modes Regression Suite (Bugs 1 & 2 Verification)', () => {
   it('Bug 1: ALL_HANDS dispatches all 23 agents to unique spots around The Brain table', () => {

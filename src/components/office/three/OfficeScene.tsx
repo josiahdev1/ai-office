@@ -2,10 +2,7 @@
 
 import React, { useMemo } from 'react'
 import { Agent } from '@/components/office/types'
-import {
-  DepartmentMode,
-  AGENT_WORKSTATIONS_3D,
-} from './office3DData'
+import { DepartmentMode, AGENT_WORKSTATIONS_3D } from './office3DData'
 import { BuildingArchitecture } from './BuildingArchitecture'
 import { BrainCore } from './BrainCore'
 import { OfficeFurniture } from './OfficeFurniture'
@@ -89,7 +86,10 @@ export function OfficeScene({
   return (
     <group name="Office3DWorld">
       {/* 1. Real PHT Dynamic Environmental Lighting */}
-      <ambientLight color={lighting.ambientColor} intensity={lighting.ambientIntensity} />
+      <ambientLight
+        color={lighting.ambientColor}
+        intensity={lighting.ambientIntensity}
+      />
       <directionalLight
         position={lighting.sunPosition}
         intensity={lighting.sunIntensity}
@@ -104,11 +104,7 @@ export function OfficeScene({
         shadow-camera-bottom={-44}
         shadow-bias={-0.0005}
       />
-      <hemisphereLight
-        color="#38bdf8"
-        groundColor="#0f172a"
-        intensity={0.38}
-      />
+      <hemisphereLight color="#38bdf8" groundColor="#0f172a" intensity={0.38} />
 
       {/* 2. Interactive Camera Controller with Mode Lerping */}
       <CameraController mode={mode} />

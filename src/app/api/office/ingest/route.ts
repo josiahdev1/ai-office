@@ -15,7 +15,9 @@ const requestLog = new Map<string, number[]>()
 
 function checkRateLimit(key: string): boolean {
   const now = Date.now()
-  const timestamps = (requestLog.get(key) || []).filter((t) => now - t < rateLimitWindowMs)
+  const timestamps = (requestLog.get(key) || []).filter(
+    (t) => now - t < rateLimitWindowMs
+  )
   if (timestamps.length >= maxRequestsPerWindow) {
     return false
   }
@@ -34,13 +36,17 @@ export async function POST(req: NextRequest) {
     const match = authHeader.match(/^Bearer\s+(.+)$/i)
     if (!match) {
       return NextResponse.json(
-        { ok: false, error: 'Unauthorized: Missing or invalid Authorization header' },
+        {
+          ok: false,
+          error: 'Unauthorized: Missing or invalid Authorization header',
+        },
         { status: 401 }
       )
     }
 
     const providedToken = match[1]
-    const serverToken = process.env.OFFICE_INGEST_TOKEN || 'easyup_bridge_dev_secret_2026'
+    const serverToken =
+      process.env.OFFICE_INGEST_TOKEN || 'easyup_bridge_dev_secret_2026'
 
     if (!constantTimeCompare(providedToken, serverToken)) {
       return NextResponse.json(
@@ -53,7 +59,10 @@ export async function POST(req: NextRequest) {
     const ip = req.headers.get('x-forwarded-for') || '127.0.0.1'
     if (!checkRateLimit(ip)) {
       return NextResponse.json(
-        { ok: false, error: 'Too Many Requests: Rate limit exceeded (max 120/min)' },
+        {
+          ok: false,
+          error: 'Too Many Requests: Rate limit exceeded (max 120/min)',
+        },
         { status: 429 }
       )
     }

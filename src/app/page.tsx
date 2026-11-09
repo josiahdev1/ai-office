@@ -41,13 +41,24 @@ function modeToRoomName(mode: DepartmentMode, defaultRoom: string): string {
   }
 }
 
-function deriveRouteOverrideFromAgent(agent: Agent): DepartmentMode | undefined {
+function deriveRouteOverrideFromAgent(
+  agent: Agent
+): DepartmentMode | undefined {
   const room = (agent.room || '').toLowerCase()
   const status = (agent.status || '').toLowerCase()
-  if (status === 'at_gym' || status === 'gym' || room.includes('gym') || room.includes('rec')) {
+  if (
+    status === 'at_gym' ||
+    status === 'gym' ||
+    room.includes('gym') ||
+    room.includes('rec')
+  ) {
     return 'GYM'
   }
-  if (status === 'on_break' || room.includes('pantry') || room.includes('canteen')) {
+  if (
+    status === 'on_break' ||
+    room.includes('pantry') ||
+    room.includes('canteen')
+  ) {
     return 'PANTRY'
   }
   if (status === 'in_meeting' || room.includes('brain')) {
@@ -57,18 +68,20 @@ function deriveRouteOverrideFromAgent(agent: Agent): DepartmentMode | undefined 
 }
 
 // Default baseline of all registered database agents for instant zero-latency mount
-const DEFAULT_AGENTS: Agent[] = Object.values(AGENT_WORKSTATIONS_3D).map((ws) => ({
-  id: ws.agentId,
-  name: ws.name,
-  role: ws.department,
-  room: ws.room,
-  department: ws.department,
-  status: 'working',
-  current_task: 'Architecting High-Throughput Pipelines',
-  current_file: 'src/components/office/OfficeCanvas3D.tsx',
-  progress_pct: 82,
-  updated_at: new Date().toISOString(),
-}))
+const DEFAULT_AGENTS: Agent[] = Object.values(AGENT_WORKSTATIONS_3D).map(
+  (ws) => ({
+    id: ws.agentId,
+    name: ws.name,
+    role: ws.department,
+    room: ws.room,
+    department: ws.department,
+    status: 'working',
+    current_task: 'Architecting High-Throughput Pipelines',
+    current_file: 'src/components/office/OfficeCanvas3D.tsx',
+    progress_pct: 82,
+    updated_at: new Date().toISOString(),
+  })
+)
 
 // Contextual non-looping engineering & operational milestones
 const CONTEXTUAL_EVENTS: {
@@ -156,7 +169,9 @@ function HQCommandPage() {
   const [agents, setAgents] = useState<Agent[]>(DEFAULT_AGENTS)
   const [approvals, setApprovals] = useState<Approval[]>([])
   const [logs, setLogs] = useState<string[]>([])
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(DEFAULT_AGENTS[0])
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(
+    DEFAULT_AGENTS[0]
+  )
   const [, setSupabaseActive] = useState<boolean>(false)
   const [currentMode, setCurrentMode] = useState<DepartmentMode>('OVERVIEW')
   const [agentRouteOverrides, setAgentRouteOverrides] = useState<
@@ -200,9 +215,14 @@ function HQCommandPage() {
           ) {
             setCurrentMode(savedMode)
           }
-          const savedOverridesRaw = window.localStorage.getItem(STORAGE_OVERRIDES_KEY)
+          const savedOverridesRaw = window.localStorage.getItem(
+            STORAGE_OVERRIDES_KEY
+          )
           if (savedOverridesRaw) {
-            const parsed = JSON.parse(savedOverridesRaw) as Record<string, DepartmentMode>
+            const parsed = JSON.parse(savedOverridesRaw) as Record<
+              string,
+              DepartmentMode
+            >
             setAgentRouteOverrides((prev) => ({ ...parsed, ...prev }))
           }
         } catch {
@@ -257,7 +277,10 @@ function HQCommandPage() {
               ? json.data.logs
               : []
             setLogs((prev) =>
-              Array.from(new Set([bootLog, ...prev, ...remoteLogs])).slice(0, 45)
+              Array.from(new Set([bootLog, ...prev, ...remoteLogs])).slice(
+                0,
+                45
+              )
             )
           }
         }
@@ -298,10 +321,14 @@ function HQCommandPage() {
         const remoteMsgs = await officeSupabase.getMessages(15)
         if (isSubscribed && remoteMsgs.length > 0) {
           const formatted = remoteMsgs.map((m) => {
-            const ts = m.created_at ? formatPHTTime(new Date(m.created_at)) : formatPHTTime()
+            const ts = m.created_at
+              ? formatPHTTime(new Date(m.created_at))
+              : formatPHTTime()
             return `${ts} [COMM] ${m.sender_name} -> ${m.receiver_name || 'All'}: "${m.content}"`
           })
-          setLogs((prev) => Array.from(new Set([...prev, ...formatted])).slice(0, 50))
+          setLogs((prev) =>
+            Array.from(new Set([...prev, ...formatted])).slice(0, 50)
+          )
         }
       }
     }
@@ -310,14 +337,22 @@ function HQCommandPage() {
 
     const unsubscribe = officeSupabase.subscribeToRealtime({
       onMessage: (msg: OfficeMessageRecord) => {
-        const ts = msg.created_at ? formatPHTTime(new Date(msg.created_at)) : formatPHTTime()
+        const ts = msg.created_at
+          ? formatPHTTime(new Date(msg.created_at))
+          : formatPHTTime()
         const line = `${ts} [COMM] ${msg.sender_name} -> ${msg.receiver_name || 'All'}: "${msg.content}"`
-        setLogs((prev) => [line, ...prev.filter((p) => p !== line)].slice(0, 50))
+        setLogs((prev) =>
+          [line, ...prev.filter((p) => p !== line)].slice(0, 50)
+        )
       },
       onLog: (log: OfficeLogRecord) => {
-        const ts = log.created_at ? formatPHTTime(new Date(log.created_at)) : formatPHTTime()
+        const ts = log.created_at
+          ? formatPHTTime(new Date(log.created_at))
+          : formatPHTTime()
         const line = `${ts} [${(log.category || 'INFO').toUpperCase()}] ${log.agent_name ? `${log.agent_name}: ` : ''}${log.message}`
-        setLogs((prev) => [line, ...prev.filter((p) => p !== line)].slice(0, 50))
+        setLogs((prev) =>
+          [line, ...prev.filter((p) => p !== line)].slice(0, 50)
+        )
       },
       onAgentUpdate: (updatedAgent) => {
         // Never overwrite current_coord or sub_state from realtime while agent is walking in-memory
@@ -408,7 +443,10 @@ function HQCommandPage() {
   }, [])
 
   // Handle Go-Signal Authorizations
-  const handleGoSignal = async (approvalId: string, action: 'approve' | 'reject') => {
+  const handleGoSignal = async (
+    approvalId: string,
+    action: 'approve' | 'reject'
+  ) => {
     try {
       if (action === 'approve') {
         sfx?.playApproval?.()
@@ -423,7 +461,11 @@ function HQCommandPage() {
     const goLog = `${formatPHTTime()} [HUMAN_GO] Go-Signal ${action === 'approve' ? 'AUTHORIZED' : 'REJECTED'} by Josiah for ${item?.title || approvalId}`
     setLogs((prev) => [goLog, ...prev].slice(0, 50))
 
-    void officeSupabase.resolveApproval(approvalId, action, 'Josiah (Lead Architect)')
+    void officeSupabase.resolveApproval(
+      approvalId,
+      action,
+      'Josiah (Lead Architect)'
+    )
     void officeSupabase.logActivity(
       'HUMAN_GO',
       `Go-Signal ${action === 'approve' ? 'AUTHORIZED' : 'REJECTED'} by Josiah for ${item?.title || approvalId}`,
@@ -453,7 +495,10 @@ function HQCommandPage() {
     effectiveMode: DepartmentMode
   ) => {
     const ws = AGENT_WORKSTATIONS_3D[agentId]
-    const targetRoom = modeToRoomName(effectiveMode, ws?.room || 'Engineering Core')
+    const targetRoom = modeToRoomName(
+      effectiveMode,
+      ws?.room || 'Engineering Core'
+    )
     const finalSubState =
       effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
         ? 'seated'
@@ -462,10 +507,10 @@ function HQCommandPage() {
       effectiveMode === 'GYM'
         ? 'at_gym'
         : effectiveMode === 'PANTRY'
-        ? 'on_break'
-        : effectiveMode === 'ALL_HANDS'
-        ? 'in_meeting'
-        : 'working'
+          ? 'on_break'
+          : effectiveMode === 'ALL_HANDS'
+            ? 'in_meeting'
+            : 'working'
 
     setAgents((prev) =>
       prev.map((ag) =>
@@ -505,15 +550,17 @@ function HQCommandPage() {
       newMode === 'GYM'
         ? 'at_gym'
         : newMode === 'PANTRY'
-        ? 'on_break'
-        : newMode === 'ALL_HANDS'
-        ? 'in_meeting'
-        : 'working'
+          ? 'on_break'
+          : newMode === 'ALL_HANDS'
+            ? 'in_meeting'
+            : 'working'
 
     setAgents((prev) =>
       prev.map((ag) => {
         const ws = AGENT_WORKSTATIONS_3D[ag.id]
-        const targetCoords = ws ? getAgentTargetPosition(ws, newMode) : [0, 0, 0]
+        const targetCoords = ws
+          ? getAgentTargetPosition(ws, newMode)
+          : [0, 0, 0]
         return {
           ...ag,
           status: modeStatus,
@@ -525,7 +572,9 @@ function HQCommandPage() {
     )
 
     const logLine = `${formatPHTTime()} [ROUTE] Global mode switched to ${newMode.replace('_', ' ')} — 24 agents unseating & walking via A* pathQueue.`
-    setLogs((prev) => [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50))
+    setLogs((prev) =>
+      [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50)
+    )
 
     void officeSupabase.setOfficeMode(newMode)
     void officeSupabase.logActivity(
@@ -547,7 +596,9 @@ function HQCommandPage() {
     sfx?.playTrigger?.()
     const ws = AGENT_WORKSTATIONS_3D[agent.id]
     const targetRoom = modeToRoomName(targetMode, ws?.room || agent.room)
-    const coords = ws ? getAgentTargetPosition(ws, currentMode, targetMode) : [0, 0, 0]
+    const coords = ws
+      ? getAgentTargetPosition(ws, currentMode, targetMode)
+      : [0, 0, 0]
 
     setAgentRouteOverrides((prev) => {
       const next = {
@@ -556,7 +607,10 @@ function HQCommandPage() {
       }
       if (typeof window !== 'undefined') {
         try {
-          window.localStorage.setItem(STORAGE_OVERRIDES_KEY, JSON.stringify(next))
+          window.localStorage.setItem(
+            STORAGE_OVERRIDES_KEY,
+            JSON.stringify(next)
+          )
         } catch {}
       }
       return next
@@ -579,7 +633,9 @@ function HQCommandPage() {
     )
 
     const logLine = `${formatPHTTime()} [ROUTE] ${agent.name} standing up & walking via A* pathQueue to ${targetRoom} (${coords[0]}, ${coords[2]}): ${taskDescription}`
-    setLogs((prev) => [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50))
+    setLogs((prev) =>
+      [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50)
+    )
 
     void officeSupabase.logActivity(
       'AGENT_ROUTE',
@@ -608,7 +664,10 @@ function HQCommandPage() {
       }
       if (typeof window !== 'undefined') {
         try {
-          window.localStorage.setItem(STORAGE_OVERRIDES_KEY, JSON.stringify(next))
+          window.localStorage.setItem(
+            STORAGE_OVERRIDES_KEY,
+            JSON.stringify(next)
+          )
         } catch {}
       }
       return next
@@ -617,13 +676,23 @@ function HQCommandPage() {
     setAgents((prev) =>
       prev.map((a) =>
         a.id === selectedAgent.id
-          ? { ...a, status: 'working', room: homeRoom, current_task: promptText }
+          ? {
+              ...a,
+              status: 'working',
+              room: homeRoom,
+              current_task: promptText,
+            }
           : a
       )
     )
     setSelectedAgent((prev) =>
       prev
-        ? { ...prev, status: 'working', room: homeRoom, current_task: promptText }
+        ? {
+            ...prev,
+            status: 'working',
+            room: homeRoom,
+            current_task: promptText,
+          }
         : prev
     )
 
@@ -744,15 +813,15 @@ function HQCommandPage() {
   }, [agents, agentRouteOverrides, currentMode, approvals.length])
 
   return (
-    <main className="flex h-screen w-screen flex-col overflow-hidden bg-[#080b12] text-slate-100 font-sans select-none">
+    <main className="flex h-screen w-screen flex-col overflow-hidden bg-[#080b12] font-sans text-slate-100 select-none">
       {/* ========================================================================= */}
       {/* 1. EXECUTIVE COMMAND HEADER (bg-[#0a0d14]) */}
       {/* ========================================================================= */}
-      <header className="flex h-14 w-full shrink-0 items-center justify-between border-b border-slate-800/80 bg-[#0a0d14] px-4 shadow-2xl z-30">
+      <header className="z-30 flex h-14 w-full shrink-0 items-center justify-between border-b border-slate-800/80 bg-[#0a0d14] px-4 shadow-2xl">
         {/* Left: Branding & Status */}
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 border border-cyan-500/30">
-            <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00e5ff]" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-500/30 bg-cyan-500/10">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_10px_#00e5ff]" />
           </div>
           <div>
             <div className="font-mono text-xs font-black tracking-widest text-slate-100 uppercase">
@@ -761,13 +830,15 @@ function HQCommandPage() {
             <div className="flex items-center gap-2 font-mono text-[10px] text-slate-400">
               <span>ILOILO CITY</span>
               <span>•</span>
-              <span className="text-cyan-400 font-medium">BRANCH: office-v3</span>
+              <span className="font-medium text-cyan-400">
+                BRANCH: office-v3
+              </span>
             </div>
           </div>
         </div>
 
         {/* Center: Department Mode Pills (Shared Across Both 3D & 2D Views) */}
-        <div className="hidden lg:flex items-center gap-1.5 rounded-xl border border-slate-800/80 bg-slate-950/80 p-1 backdrop-blur-md">
+        <div className="hidden items-center gap-1.5 rounded-xl border border-slate-800/80 bg-slate-950/80 p-1 backdrop-blur-md lg:flex">
           {modeButtons.map((btn) => {
             const isActive = currentMode === btn.mode
             return (
@@ -775,7 +846,7 @@ function HQCommandPage() {
                 key={btn.mode}
                 type="button"
                 onClick={() => handleGlobalModeChange(btn.mode)}
-                className={`cursor-pointer rounded-lg px-3 py-1 font-mono text-[11px] font-bold tracking-tight transition-all whitespace-nowrap ${
+                className={`cursor-pointer rounded-lg px-3 py-1 font-mono text-[11px] font-bold tracking-tight whitespace-nowrap transition-all ${
                   isActive
                     ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
                     : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
@@ -790,11 +861,11 @@ function HQCommandPage() {
         {/* Right: Real-time PHT Clock, Live Badge & Instant 3D / 2D Viewport Switcher */}
         <div className="flex items-center gap-3">
           {/* Digital Clock (Asia/Manila) */}
-          <div className="hidden sm:flex flex-col items-end">
-            <span className="font-mono text-xs font-bold text-slate-200 tracking-wider">
+          <div className="hidden flex-col items-end sm:flex">
+            <span className="font-mono text-xs font-bold tracking-wider text-slate-200">
               {phtTime || '00:00:00 AM PHT'}
             </span>
-            <span className="font-mono text-[9px] text-slate-500 font-semibold tracking-wider">
+            <span className="font-mono text-[9px] font-semibold tracking-wider text-slate-500">
               1X REAL-TIME WORK PACE
             </span>
           </div>
@@ -803,19 +874,22 @@ function HQCommandPage() {
           <button
             type="button"
             onClick={() => setIsRosterOpen((prev) => !prev)}
-            className={`cursor-pointer flex items-center gap-2 rounded-lg border px-3 py-1 font-mono text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1 font-mono text-xs font-bold whitespace-nowrap transition-all ${
               isRosterOpen
                 ? 'border-cyan-400 bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                : 'border-emerald-500/40 bg-emerald-950/50 text-emerald-400 hover:bg-emerald-900/60 hover:border-emerald-400'
+                : 'border-emerald-500/40 bg-emerald-950/50 text-emerald-400 hover:border-emerald-400 hover:bg-emerald-900/60'
             }`}
           >
             <span
               className={`h-2 w-2 rounded-full ${
-                isRosterOpen ? 'bg-slate-950' : 'bg-emerald-400 animate-ping'
+                isRosterOpen ? 'bg-slate-950' : 'animate-ping bg-emerald-400'
               }`}
             />
             <span className="whitespace-nowrap">
-              {agents.length > 0 ? `${agents.length} AGENTS ROSTER` : '24 AGENTS ROSTER'} ▾
+              {agents.length > 0
+                ? `${agents.length} AGENTS ROSTER`
+                : '24 AGENTS ROSTER'}{' '}
+              ▾
             </span>
           </button>
 
@@ -824,7 +898,7 @@ function HQCommandPage() {
             <button
               type="button"
               onClick={() => router.push('/')}
-              className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all whitespace-nowrap ${
+              className={`cursor-pointer rounded-md px-2.5 py-1 font-bold whitespace-nowrap transition-all ${
                 !is2DView
                   ? 'bg-cyan-500 text-slate-950 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
@@ -835,7 +909,7 @@ function HQCommandPage() {
             <button
               type="button"
               onClick={() => router.push('/?v=2')}
-              className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all whitespace-nowrap ${
+              className={`cursor-pointer rounded-md px-2.5 py-1 font-bold whitespace-nowrap transition-all ${
                 is2DView
                   ? 'bg-cyan-500 text-slate-950 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
@@ -852,7 +926,7 @@ function HQCommandPage() {
       {/* ========================================================================= */}
       <div className="relative flex flex-1 overflow-hidden">
         {/* Left / Center: Synchronized 3D or 2D Isometric Viewport */}
-        <section className="relative flex-1 h-full overflow-hidden">
+        <section className="relative h-full flex-1 overflow-hidden">
           {is2DView ? (
             <OfficeCanvas2D
               agents={agents}
@@ -880,10 +954,10 @@ function HQCommandPage() {
         {/* SLIDE-OVER FULL AI AGENT ROSTER DRAWER (Search, Filter & Quick Route) */}
         {/* ===================================================================== */}
         {isRosterOpen && (
-          <div className="absolute inset-y-0 right-0 md:right-[390px] lg:right-[430px] w-full max-w-md bg-[#0a0e17]/95 backdrop-blur-xl border-l border-slate-800 shadow-2xl z-40 flex flex-col">
+          <div className="absolute inset-y-0 right-0 z-40 flex w-full max-w-md flex-col border-l border-slate-800 bg-[#0a0e17]/95 shadow-2xl backdrop-blur-xl md:right-[390px] lg:right-[430px]">
             <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400" />
                 <span className="font-mono text-xs font-black tracking-wider text-slate-100 uppercase">
                   AI AGENT ROSTER ({agents.length} ONLINE)
                 </span>
@@ -891,14 +965,14 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => setIsRosterOpen(false)}
-                className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-[11px] font-bold text-slate-300 hover:bg-slate-800 hover:text-white whitespace-nowrap"
+                className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-[11px] font-bold whitespace-nowrap text-slate-300 hover:bg-slate-800 hover:text-white"
               >
                 Close ✕
               </button>
             </div>
 
             {/* Search & Department Filter Bar */}
-            <div className="border-b border-slate-800/80 p-3 space-y-2 bg-slate-950/60">
+            <div className="space-y-2 border-b border-slate-800/80 bg-slate-950/60 p-3">
               <input
                 type="text"
                 value={rosterSearch}
@@ -907,27 +981,33 @@ function HQCommandPage() {
                 className="w-full rounded-lg border border-slate-800 bg-slate-900/90 px-3 py-1.5 font-mono text-xs text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
               />
               <div className="flex items-center gap-1 overflow-x-auto pb-1">
-                {['ALL', 'ENGINEERING', 'QA', 'GROWTH', 'INTELLIGENCE', 'OPERATIONS', 'COMMAND'].map(
-                  (dept) => (
-                    <button
-                      key={dept}
-                      type="button"
-                      onClick={() => setRosterDeptFilter(dept)}
-                      className={`cursor-pointer rounded-md px-2 py-0.5 font-mono text-[10px] font-bold transition-colors whitespace-nowrap ${
-                        rosterDeptFilter === dept
-                          ? 'bg-cyan-500 text-slate-950'
-                          : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                      }`}
-                    >
-                      {dept}
-                    </button>
-                  )
-                )}
+                {[
+                  'ALL',
+                  'ENGINEERING',
+                  'QA',
+                  'GROWTH',
+                  'INTELLIGENCE',
+                  'OPERATIONS',
+                  'COMMAND',
+                ].map((dept) => (
+                  <button
+                    key={dept}
+                    type="button"
+                    onClick={() => setRosterDeptFilter(dept)}
+                    className={`cursor-pointer rounded-md px-2 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap transition-colors ${
+                      rosterDeptFilter === dept
+                        ? 'bg-cyan-500 text-slate-950'
+                        : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    {dept}
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* Scrollable List of All 24 Agents */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            <div className="flex-1 space-y-2 overflow-y-auto p-3">
               {agents
                 .filter((ag) => {
                   const q = rosterSearch.trim().toLowerCase()
@@ -937,9 +1017,11 @@ function HQCommandPage() {
                     (ag.role || '').toLowerCase().includes(q) ||
                     (ag.room || '').toLowerCase().includes(q) ||
                     (ag.department || '').toLowerCase().includes(q)
-                  const deptStr = `${ag.department || ''} ${ag.room || ''} ${ag.role || ''}`.toUpperCase()
+                  const deptStr =
+                    `${ag.department || ''} ${ag.room || ''} ${ag.role || ''}`.toUpperCase()
                   const matchesDept =
-                    rosterDeptFilter === 'ALL' || deptStr.includes(rosterDeptFilter)
+                    rosterDeptFilter === 'ALL' ||
+                    deptStr.includes(rosterDeptFilter)
                   return matchesSearch && matchesDept
                 })
                 .map((ag) => {
@@ -958,9 +1040,9 @@ function HQCommandPage() {
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex min-w-0 items-center gap-2.5">
                           <div
-                            className="relative flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-lg border border-slate-700/80 overflow-hidden"
+                            className="relative flex h-8 w-8 shrink-0 flex-col items-center justify-center overflow-hidden rounded-lg border border-slate-700/80"
                             style={{ backgroundColor: '#0f172a' }}
                           >
                             <div
@@ -978,22 +1060,25 @@ function HQCommandPage() {
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-mono text-xs font-bold text-slate-100 truncate">
+                              <span className="truncate font-mono text-xs font-bold text-slate-100">
                                 {ag.name}
                               </span>
-                              <span className="rounded bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-400 uppercase whitespace-nowrap">
+                              <span className="rounded bg-slate-800 px-1 py-0.5 font-mono text-[9px] whitespace-nowrap text-slate-400 uppercase">
                                 {stStyle.gender === 'female' ? '♀' : '♂'}
                               </span>
                             </div>
-                            <div className="font-mono text-[10px] text-slate-400 truncate">
-                              {ag.role} • <span className="text-cyan-400">{ag.room}</span>
+                            <div className="truncate font-mono text-[10px] text-slate-400">
+                              {ag.role} •{' '}
+                              <span className="text-cyan-400">{ag.room}</span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 rounded-full bg-slate-950 px-2 py-0.5 border border-slate-800 shrink-0">
-                          <span className={`h-2 w-2 rounded-full ${stBadge.dotTailwind}`} />
-                          <span className="font-mono text-[9px] font-semibold text-slate-200 whitespace-nowrap">
+                        <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-2 py-0.5">
+                          <span
+                            className={`h-2 w-2 rounded-full ${stBadge.dotTailwind}`}
+                          />
+                          <span className="font-mono text-[9px] font-semibold whitespace-nowrap text-slate-200">
                             {stBadge.label}
                           </span>
                         </div>
@@ -1015,7 +1100,7 @@ function HQCommandPage() {
                               `Executing sprint tasks at ${ag.room || 'Workstation'}`
                             )
                           }}
-                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
+                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold whitespace-nowrap transition-colors ${
                             effMode === 'FOCUS_WORK' || effMode === 'OVERVIEW'
                               ? 'border-emerald-500/60 bg-emerald-950/60 text-emerald-300'
                               : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
@@ -1034,7 +1119,7 @@ function HQCommandPage() {
                               'Recharging at Espresso Bar & Pantry Lounge'
                             )
                           }}
-                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
+                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold whitespace-nowrap transition-colors ${
                             effMode === 'PANTRY'
                               ? 'border-yellow-500/60 bg-yellow-950/60 text-yellow-300'
                               : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
@@ -1053,7 +1138,7 @@ function HQCommandPage() {
                               'Active recovery workout in Rec & Gym'
                             )
                           }}
-                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
+                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold whitespace-nowrap transition-colors ${
                             effMode === 'GYM'
                               ? 'border-pink-500/60 bg-pink-950/60 text-pink-300'
                               : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
@@ -1072,7 +1157,7 @@ function HQCommandPage() {
                               'Joining Architecture Standup at The Brain'
                             )
                           }}
-                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
+                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold whitespace-nowrap transition-colors ${
                             effMode === 'ALL_HANDS'
                               ? 'border-blue-500/60 bg-blue-950/60 text-blue-300'
                               : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
@@ -1089,10 +1174,10 @@ function HQCommandPage() {
         )}
 
         {/* Right: 30% Width Sidebar Console */}
-        <aside className="w-full md:w-[390px] lg:w-[430px] shrink-0 border-l border-slate-800/80 bg-[#0d111c] flex flex-col overflow-y-auto shadow-2xl z-20">
+        <aside className="z-20 flex w-full shrink-0 flex-col overflow-y-auto border-l border-slate-800/80 bg-[#0d111c] shadow-2xl md:w-[390px] lg:w-[430px]">
           {/* Section 0: CAMPUS LIVE COUNTER (Real-Time Activity & Telemetry Breakdown) */}
-          <div className="border-b border-slate-800/80 p-3.5 shrink-0 bg-slate-950/50">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800/70">
+          <div className="shrink-0 border-b border-slate-800/80 bg-slate-950/50 p-3.5">
+            <div className="flex items-center justify-between border-b border-slate-800/70 pb-2">
               <span className="font-mono text-[11px] font-black tracking-widest text-slate-300 uppercase">
                 CAMPUS LIVE COUNTER
               </span>
@@ -1105,12 +1190,15 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => handleGlobalModeChange('FOCUS_WORK')}
-                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
+                className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 transition-colors hover:bg-slate-800/60"
               >
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
                   <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#10b981', boxShadow: '0 0 8px #10b981' }}
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{
+                      backgroundColor: '#10b981',
+                      boxShadow: '0 0 8px #10b981',
+                    }}
                   />
                   WORKING
                 </span>
@@ -1122,12 +1210,15 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => handleGlobalModeChange('PANTRY')}
-                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
+                className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 transition-colors hover:bg-slate-800/60"
               >
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
                   <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#f97316', boxShadow: '0 0 8px #f97316' }}
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{
+                      backgroundColor: '#f97316',
+                      boxShadow: '0 0 8px #f97316',
+                    }}
                   />
                   EATING
                 </span>
@@ -1139,12 +1230,15 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => handleGlobalModeChange('GYM')}
-                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
+                className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 transition-colors hover:bg-slate-800/60"
               >
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
                   <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#06b6d4', boxShadow: '0 0 8px #06b6d4' }}
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{
+                      backgroundColor: '#06b6d4',
+                      boxShadow: '0 0 8px #06b6d4',
+                    }}
                   />
                   IN THE GYM
                 </span>
@@ -1156,12 +1250,15 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => handleGlobalModeChange('ALL_HANDS')}
-                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
+                className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 transition-colors hover:bg-slate-800/60"
               >
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
                   <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#d946ef', boxShadow: '0 0 8px #d946ef' }}
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{
+                      backgroundColor: '#d946ef',
+                      boxShadow: '0 0 8px #d946ef',
+                    }}
                   />
                   IN MEETING
                 </span>
@@ -1173,12 +1270,15 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => handleGlobalModeChange('PANTRY')}
-                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
+                className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 transition-colors hover:bg-slate-800/60"
               >
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
                   <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#eab308', boxShadow: '0 0 8px #eab308' }}
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{
+                      backgroundColor: '#eab308',
+                      boxShadow: '0 0 8px #eab308',
+                    }}
                   />
                   ON BREAK
                 </span>
@@ -1188,10 +1288,13 @@ function HQCommandPage() {
               </button>
 
               <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
                   <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#0ea5e9', boxShadow: '0 0 8px #0ea5e9' }}
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{
+                      backgroundColor: '#0ea5e9',
+                      boxShadow: '0 0 8px #0ea5e9',
+                    }}
                   />
                   ARRIVING
                 </span>
@@ -1201,10 +1304,13 @@ function HQCommandPage() {
               </div>
 
               <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
                   <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#ef4444', boxShadow: '0 0 8px #ef4444' }}
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{
+                      backgroundColor: '#ef4444',
+                      boxShadow: '0 0 8px #ef4444',
+                    }}
                   />
                   WAITING ON YOU
                 </span>
@@ -1214,15 +1320,17 @@ function HQCommandPage() {
               </div>
             </div>
 
-            <div className="mt-2.5 pt-2.5 border-t border-slate-800/70 flex flex-col gap-1.5 font-mono text-xs">
+            <div className="mt-2.5 flex flex-col gap-1.5 border-t border-slate-800/70 pt-2.5 font-mono text-xs">
               <div className="flex items-center justify-between px-2">
-                <span className="text-slate-400 font-semibold tracking-wide whitespace-nowrap">
+                <span className="font-semibold tracking-wide whitespace-nowrap text-slate-400">
                   OPEN TASKS
                 </span>
-                <span className="font-black text-slate-100">{campusCounters.openTasks}</span>
+                <span className="font-black text-slate-100">
+                  {campusCounters.openTasks}
+                </span>
               </div>
               <div className="flex items-center justify-between px-2">
-                <span className="text-slate-400 font-semibold tracking-wide whitespace-nowrap">
+                <span className="font-semibold tracking-wide whitespace-nowrap text-slate-400">
                   ACCESSORIES
                 </span>
                 <span className="font-black" style={{ color: '#10b981' }}>
@@ -1233,20 +1341,20 @@ function HQCommandPage() {
           </div>
 
           {/* Section A: The Boss Desk (Approvals Gate) */}
-          <div className="border-b border-slate-800/80 p-3 shrink-0">
+          <div className="shrink-0 border-b border-slate-800/80 p-3">
             <div className="flex items-center justify-between pb-2">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
                 <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
                   THE BOSS DESK // APPROVALS
                 </span>
               </div>
-              <span className="rounded-full bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-400 border border-amber-500/20">
+              <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-400">
                 {approvals.length} PENDING
               </span>
             </div>
 
-            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+            <div className="max-h-36 space-y-2 overflow-y-auto pr-1">
               {approvals.length === 0 ? (
                 <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-2.5 text-center">
                   <span className="font-mono text-[11px] text-slate-500">
@@ -1267,24 +1375,24 @@ function HQCommandPage() {
                         {item.type}
                       </span>
                     </div>
-                    <p className="mt-1 font-mono text-xs font-semibold text-slate-200 line-clamp-1">
+                    <p className="mt-1 line-clamp-1 font-mono text-xs font-semibold text-slate-200">
                       {item.title}
                     </p>
-                    <p className="font-mono text-[11px] text-slate-400 line-clamp-2 mt-0.5">
+                    <p className="mt-0.5 line-clamp-2 font-mono text-[11px] text-slate-400">
                       {item.summary}
                     </p>
                     <div className="mt-2 flex items-center justify-end gap-2">
                       <button
                         type="button"
                         onClick={() => handleGoSignal(item.id, 'reject')}
-                        className="cursor-pointer rounded bg-rose-950/60 border border-rose-600/40 px-2.5 py-1 font-mono text-[10px] font-bold text-rose-300 hover:bg-rose-900 transition-colors whitespace-nowrap"
+                        className="cursor-pointer rounded border border-rose-600/40 bg-rose-950/60 px-2.5 py-1 font-mono text-[10px] font-bold whitespace-nowrap text-rose-300 transition-colors hover:bg-rose-900"
                       >
                         Reject ✕
                       </button>
                       <button
                         type="button"
                         onClick={() => handleGoSignal(item.id, 'approve')}
-                        className="cursor-pointer rounded bg-emerald-500 px-3 py-1 font-mono text-[10px] font-bold text-slate-950 hover:bg-emerald-400 transition-colors shadow-sm shadow-emerald-500/30 whitespace-nowrap"
+                        className="cursor-pointer rounded bg-emerald-500 px-3 py-1 font-mono text-[10px] font-bold whitespace-nowrap text-slate-950 shadow-sm shadow-emerald-500/30 transition-colors hover:bg-emerald-400"
                       >
                         Grant Go-Signal ✓
                       </button>
@@ -1296,7 +1404,7 @@ function HQCommandPage() {
           </div>
 
           {/* Section B: Interactive Individual Agent Dispatch Drawer */}
-          <div className="border-b border-slate-800/80 p-3 shrink-0 bg-slate-900/30">
+          <div className="shrink-0 border-b border-slate-800/80 bg-slate-900/30 p-3">
             <div className="flex items-center justify-between pb-2">
               <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
                 AGENT INSPECTOR & ROUTING
@@ -1304,14 +1412,16 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => setIsRosterOpen((prev) => !prev)}
-                className="cursor-pointer rounded-md border border-cyan-500/40 bg-cyan-950/40 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-300 hover:bg-cyan-900/60 transition-colors whitespace-nowrap"
+                className="cursor-pointer rounded-md border border-cyan-500/40 bg-cyan-950/40 px-2 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap text-cyan-300 transition-colors hover:bg-cyan-900/60"
               >
-                {isRosterOpen ? 'Hide Roster ✕' : `All Agents (${agents.length}) ☰`}
+                {isRosterOpen
+                  ? 'Hide Roster ✕'
+                  : `All Agents (${agents.length}) ☰`}
               </button>
             </div>
 
             {/* Quick Horizontal Agent Switcher Strip */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-2 mb-2 border-b border-slate-800/60">
+            <div className="mb-2 flex items-center gap-1 overflow-x-auto border-b border-slate-800/60 pb-2">
               {agents.map((ag) => {
                 const eff = agentRouteOverrides[ag.id] || currentMode
                 const bdg = getAgentStatusBadge(ag.status, eff)
@@ -1321,13 +1431,15 @@ function HQCommandPage() {
                     key={ag.id}
                     type="button"
                     onClick={() => setSelectedAgent(ag)}
-                    className={`cursor-pointer flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap shrink-0 ${
+                    className={`flex shrink-0 cursor-pointer items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap transition-all ${
                       active
                         ? 'border-cyan-400 bg-cyan-500/20 text-cyan-200'
                         : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                     }`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full ${bdg.dotTailwind}`} />
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${bdg.dotTailwind}`}
+                    />
                     <span>{ag.name}</span>
                   </button>
                 )
@@ -1337,11 +1449,11 @@ function HQCommandPage() {
             {selectedAgent && selectedStyle && selectedBadge ? (
               <div className="space-y-2.5">
                 {/* Profile Card with Distinct Gender/Outfit Avatar Preview */}
-                <div className="flex items-center justify-between rounded-lg bg-slate-950/70 p-2.5 border border-slate-800/70">
+                <div className="flex items-center justify-between rounded-lg border border-slate-800/70 bg-slate-950/70 p-2.5">
                   <div className="flex items-center gap-2.5">
                     {/* Distinct Styled Pixel-Agent Avatar Swatch */}
                     <div
-                      className="relative flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-lg border border-slate-700/80 shadow-inner overflow-hidden"
+                      className="relative flex h-9 w-9 shrink-0 flex-col items-center justify-center overflow-hidden rounded-lg border border-slate-700/80 shadow-inner"
                       style={{ backgroundColor: '#0f172a' }}
                     >
                       {/* Hair */}
@@ -1375,9 +1487,11 @@ function HQCommandPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 rounded-full bg-slate-900 px-2.5 py-1 border border-slate-800">
-                    <span className={`h-2 w-2 rounded-full ${selectedBadge.dotTailwind}`} />
-                    <span className="font-mono text-[10px] font-semibold text-slate-200 whitespace-nowrap">
+                  <div className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900 px-2.5 py-1">
+                    <span
+                      className={`h-2 w-2 rounded-full ${selectedBadge.dotTailwind}`}
+                    />
+                    <span className="font-mono text-[10px] font-semibold whitespace-nowrap text-slate-200">
                       {selectedBadge.label}
                     </span>
                   </div>
@@ -1385,7 +1499,7 @@ function HQCommandPage() {
 
                 {/* Individual Action Buttons (Direct A* Pathfinding Routing) */}
                 <div>
-                  <div className="font-mono text-[9px] font-bold tracking-wider text-slate-400 uppercase pb-1">
+                  <div className="pb-1 font-mono text-[9px] font-bold tracking-wider text-slate-400 uppercase">
                     DIRECT INDIVIDUAL ROUTING (A* WALKING):
                   </div>
                   <div className="grid grid-cols-2 gap-1.5">
@@ -1399,7 +1513,7 @@ function HQCommandPage() {
                           `Executing sprint tasks at ${selectedAgent.room || 'Workstation'}`
                         )
                       }
-                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap ${
+                      className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold whitespace-nowrap transition-all ${
                         selectedEffectiveMode === 'FOCUS_WORK' ||
                         selectedEffectiveMode === 'OVERVIEW'
                           ? 'border-emerald-500/60 bg-emerald-950/50 text-emerald-300'
@@ -1420,7 +1534,7 @@ function HQCommandPage() {
                           'Recharging at Espresso Bar & Pantry Lounge'
                         )
                       }
-                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap ${
+                      className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold whitespace-nowrap transition-all ${
                         selectedEffectiveMode === 'PANTRY'
                           ? 'border-yellow-500/60 bg-yellow-950/50 text-yellow-300'
                           : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
@@ -1440,7 +1554,7 @@ function HQCommandPage() {
                           'Active recovery workout in Rec & Gym'
                         )
                       }
-                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap ${
+                      className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold whitespace-nowrap transition-all ${
                         selectedEffectiveMode === 'GYM'
                           ? 'border-pink-500/60 bg-pink-950/50 text-pink-300'
                           : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
@@ -1460,7 +1574,7 @@ function HQCommandPage() {
                           'Joining Architecture Standup at The Brain'
                         )
                       }
-                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap ${
+                      className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold whitespace-nowrap transition-all ${
                         selectedEffectiveMode === 'ALL_HANDS'
                           ? 'border-blue-500/60 bg-blue-950/50 text-blue-300'
                           : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
@@ -1473,28 +1587,32 @@ function HQCommandPage() {
                 </div>
 
                 {/* Live Task & File */}
-                <div className="rounded-lg bg-slate-950/40 p-2 border border-slate-800/40 space-y-1">
+                <div className="space-y-1 rounded-lg border border-slate-800/40 bg-slate-950/40 p-2">
                   <div className="flex items-center justify-between font-mono text-[10px] text-slate-400">
                     <span>CURRENT TASK:</span>
-                    <span className="text-slate-200 truncate max-w-[210px]">
-                      {selectedAgent.current_task || 'Architecting High-Throughput Pipelines'}
+                    <span className="max-w-[210px] truncate text-slate-200">
+                      {selectedAgent.current_task ||
+                        'Architecting High-Throughput Pipelines'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between font-mono text-[10px] text-slate-400">
                     <span>ACTIVE FILE:</span>
-                    <span className="text-cyan-400 font-mono truncate max-w-[210px]">
-                      {selectedAgent.current_file || 'src/components/office/OfficeCanvas3D.tsx'}
+                    <span className="max-w-[210px] truncate font-mono text-cyan-400">
+                      {selectedAgent.current_file ||
+                        'src/components/office/OfficeCanvas3D.tsx'}
                     </span>
                   </div>
                   <div className="pt-1">
-                    <div className="flex justify-between font-mono text-[9px] text-slate-400 pb-0.5">
+                    <div className="flex justify-between pb-0.5 font-mono text-[9px] text-slate-400">
                       <span>PROGRESS</span>
                       <span>{selectedAgent.progress_pct || 78}%</span>
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
                       <div
-                        className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full transition-all duration-500"
-                        style={{ width: `${selectedAgent.progress_pct || 78}%` }}
+                        className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-500"
+                        style={{
+                          width: `${selectedAgent.progress_pct || 78}%`,
+                        }}
                       />
                     </div>
                   </div>
@@ -1506,7 +1624,9 @@ function HQCommandPage() {
                     type="text"
                     value={directiveInput}
                     onChange={(e) => setDirectiveInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && void handleDispatchDirective()}
+                    onKeyDown={(e) =>
+                      e.key === 'Enter' && void handleDispatchDirective()
+                    }
                     placeholder={`Directive for ${selectedAgent.name}...`}
                     disabled={isDispatching}
                     className="flex-1 rounded-lg border border-slate-800 bg-slate-950/80 px-2.5 py-1.5 font-mono text-xs text-slate-200 placeholder-slate-600 focus:border-cyan-500 focus:outline-none"
@@ -1515,7 +1635,7 @@ function HQCommandPage() {
                     type="button"
                     onClick={() => void handleDispatchDirective()}
                     disabled={isDispatching || !directiveInput.trim()}
-                    className="cursor-pointer rounded-lg bg-cyan-500 px-3 py-1.5 font-mono text-xs font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                    className="cursor-pointer rounded-lg bg-cyan-500 px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-slate-950 transition-all hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {isDispatching ? '...' : 'Dispatch Directive'}
                   </button>
@@ -1523,16 +1643,17 @@ function HQCommandPage() {
               </div>
             ) : (
               <div className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-4 text-center font-mono text-xs text-slate-500">
-                Click any agent in the office to inspect live runtime telemetry and route them.
+                Click any agent in the office to inspect live runtime telemetry
+                and route them.
               </div>
             )}
           </div>
 
           {/* Section C: Live Telemetry Stream (Monospaced Terminal Feed) */}
-          <div className="shrink-0 flex flex-col p-3 pb-6">
-            <div className="flex items-center justify-between pb-2 shrink-0">
+          <div className="flex shrink-0 flex-col p-3 pb-6">
+            <div className="flex shrink-0 items-center justify-between pb-2">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
                 <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
                   LIVE TELEMETRY STREAM
                 </span>
@@ -1542,30 +1663,32 @@ function HQCommandPage() {
               </span>
             </div>
 
-            <div className="h-64 overflow-y-auto rounded-lg border border-slate-800/80 bg-slate-950/90 p-2.5 font-mono text-[11px] space-y-1.5 shadow-inner">
+            <div className="h-64 space-y-1.5 overflow-y-auto rounded-lg border border-slate-800/80 bg-slate-950/90 p-2.5 font-mono text-[11px] shadow-inner">
               {logs.length === 0 ? (
-                <div className="text-slate-600 text-center py-4">
+                <div className="py-4 text-center text-slate-600">
                   Listening for inter-agent messages and system logs...
                 </div>
               ) : (
                 logs.map((line, idx) => {
-                  const isComm = line.includes('[COMM]') || line.includes('[DIRECTIVE]')
-                  const isRoute = line.includes('[ROUTE]') || line.includes('AGENT_ROUTE')
+                  const isComm =
+                    line.includes('[COMM]') || line.includes('[DIRECTIVE]')
+                  const isRoute =
+                    line.includes('[ROUTE]') || line.includes('AGENT_ROUTE')
                   const isGo = line.includes('HUMAN_GO')
                   const isErr = line.includes('ERROR') || line.includes('WARN')
                   return (
                     <div
                       key={`log-${idx}`}
-                      className={`break-words leading-relaxed border-b border-slate-900/80 pb-1 last:border-0 ${
+                      className={`border-b border-slate-900/80 pb-1 leading-relaxed break-words last:border-0 ${
                         isGo
-                          ? 'text-amber-400 font-semibold'
+                          ? 'font-semibold text-amber-400'
                           : isErr
-                          ? 'text-rose-400 font-semibold'
-                          : isRoute
-                          ? 'text-emerald-300 font-medium'
-                          : isComm
-                          ? 'text-cyan-300'
-                          : 'text-slate-300'
+                            ? 'font-semibold text-rose-400'
+                            : isRoute
+                              ? 'font-medium text-emerald-300'
+                              : isComm
+                                ? 'text-cyan-300'
+                                : 'text-slate-300'
                       }`}
                     >
                       {line}

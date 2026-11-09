@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { IngestEventSchema, constantTimeCompare } from '../src/lib/office/ingestSchema'
+import {
+  IngestEventSchema,
+  constantTimeCompare,
+} from '../src/lib/office/ingestSchema'
 import { mapPayloadToEvent } from '../bridge/office-hook.mjs'
-import { sessionRowToGuestAgent, OfficeSessionRow } from '../src/lib/office/db-map'
+import {
+  sessionRowToGuestAgent,
+  OfficeSessionRow,
+} from '../src/lib/office/db-map'
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
 
@@ -66,12 +72,16 @@ describe('Phase 12: Live Coding-Agent Bridge Test Suite', () => {
 
   describe('Constant-Time Bearer Token Verification', () => {
     it('returns true for matching tokens of equal length', () => {
-      expect(constantTimeCompare('secret_token_123', 'secret_token_123')).toBe(true)
+      expect(constantTimeCompare('secret_token_123', 'secret_token_123')).toBe(
+        true
+      )
     })
 
     it('returns false for mismatched tokens or unequal length without throwing', () => {
       expect(constantTimeCompare('secret_token_123', 'wrong_token')).toBe(false)
-      expect(constantTimeCompare('secret_token_123', 'secret_token_124')).toBe(false)
+      expect(constantTimeCompare('secret_token_123', 'secret_token_124')).toBe(
+        false
+      )
     })
   })
 
@@ -117,7 +127,9 @@ describe('Phase 12: Live Coding-Agent Bridge Test Suite', () => {
       expect(event.event).toBe('tool_start')
       expect(event.tool).toBe('edit_file')
       expect(event.session_id).toBe('sess_999')
-      expect((event as unknown as { file_path?: string }).file_path).toBeUndefined()
+      expect(
+        (event as unknown as { file_path?: string }).file_path
+      ).toBeUndefined()
       expect((event as unknown as { prompt?: string }).prompt).toBeUndefined()
     })
   })

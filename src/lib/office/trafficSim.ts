@@ -1,6 +1,6 @@
 /**
  * Traffic Simulation Engine & Vehicle Manager for EasyUp Software Solution HQ
- * 
+ *
  * Implements:
  * - Directed graph lane following across road network and parking circulation
  * - Safe following distance & smooth braking
@@ -12,11 +12,7 @@
  */
 
 import { CarStyle, VehicleState } from '@/components/office/types'
-import {
-  PARKING_BAYS,
-  ROAD_NODES,
-  ROAD_EDGES,
-} from './campusMap'
+import { PARKING_BAYS, ROAD_NODES, ROAD_EDGES } from './campusMap'
 
 export interface TrafficConfig {
   maxMovingCars: number
@@ -33,8 +29,16 @@ export const DEFAULT_TRAFFIC_CONFIG: TrafficConfig = {
 }
 
 const CAR_COLORS = [
-  '#38bdf8', '#818cf8', '#34d399', '#f87171', '#fbbf24',
-  '#a78bfa', '#f472b6', '#e2e8f0', '#94a3b8', '#64748b',
+  '#38bdf8',
+  '#818cf8',
+  '#34d399',
+  '#f87171',
+  '#fbbf24',
+  '#a78bfa',
+  '#f472b6',
+  '#e2e8f0',
+  '#94a3b8',
+  '#64748b',
 ]
 
 const CAR_STYLES: CarStyle[] = ['sedan', 'hatchback', 'suv', 'pickup', 'van']
@@ -62,8 +66,14 @@ export class TrafficSimulator {
         this.reservedBays.set(bay.id, carId)
         this.vehicles.push({
           id: carId,
-          style: bay.type === 'founder' ? 'suv' : CAR_STYLES[bay.bayNumber % CAR_STYLES.length],
-          color: bay.type === 'founder' ? '#0284c7' : CAR_COLORS[bay.bayNumber % CAR_COLORS.length],
+          style:
+            bay.type === 'founder'
+              ? 'suv'
+              : CAR_STYLES[bay.bayNumber % CAR_STYLES.length],
+          color:
+            bay.type === 'founder'
+              ? '#0284c7'
+              : CAR_COLORS[bay.bayNumber % CAR_COLORS.length],
           facing: bay.facing,
           x: bay.x,
           y: bay.y,
@@ -114,7 +124,12 @@ export class TrafficSimulator {
    */
   public spawnVehicle(
     direction: 'eastbound' | 'westbound' = 'eastbound',
-    options?: { style?: CarStyle; color?: string; targetBayId?: string; agentId?: string }
+    options?: {
+      style?: CarStyle
+      color?: string
+      targetBayId?: string
+      agentId?: string
+    }
   ): VehicleState | null {
     const movingCount = this.vehicles.filter((v) => !v.isParked).length
     if (movingCount >= this.config.maxMovingCars || !this.config.carsEnabled) {
@@ -131,8 +146,12 @@ export class TrafficSimulator {
     )
     if (hasNearbyCar) return null
 
-    const style = options?.style || CAR_STYLES[Math.floor(Math.random() * CAR_STYLES.length)]
-    const color = options?.color || CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)]
+    const style =
+      options?.style ||
+      CAR_STYLES[Math.floor(Math.random() * CAR_STYLES.length)]
+    const color =
+      options?.color ||
+      CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)]
     const nextNodeId = direction === 'eastbound' ? 'road_w1' : 'road_ret_e2'
 
     const newVehicle: VehicleState = {
@@ -167,7 +186,11 @@ export class TrafficSimulator {
     this.specialSpawnTick++
     // Spawn ambient cars periodically based on traffic density
     const spawnInterval =
-      this.config.trafficDensity === 'high' ? 140 : this.config.trafficDensity === 'low' ? 360 : 220
+      this.config.trafficDensity === 'high'
+        ? 140
+        : this.config.trafficDensity === 'low'
+          ? 360
+          : 220
     if (this.specialSpawnTick % spawnInterval === 0) {
       const dir = Math.random() < 0.5 ? 'eastbound' : 'westbound'
       this.spawnVehicle(dir)
@@ -305,7 +328,8 @@ export class TrafficSimulator {
           car.blinkerOn = true
         } else {
           car.blinkerOn = false
-          const nextEdge = outgoingEdges[Math.floor(Math.random() * outgoingEdges.length)]
+          const nextEdge =
+            outgoingEdges[Math.floor(Math.random() * outgoingEdges.length)]
           car.targetNodeId = nextEdge.to
         }
       }

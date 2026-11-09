@@ -6,6 +6,7 @@ description: Walkability, collision grid, pathfinding, and map validation system
 # Tilemap Walkability & Pathfinding System
 
 ## 1. Unified Floor Grid
+
 - Grid Dimensions: 28x28 tiles (or 30x30) in a single contiguous floor slab.
 - Tile Coordinate System:
   - Screen X: `(gridX - gridY) * (tileWidth / 2)`
@@ -13,6 +14,7 @@ description: Walkability, collision grid, pathfinding, and map validation system
   - Standard tile metrics: `tileWidth = 64`, `tileHeight = 32`.
 
 ## 2. A* Pathfinding Rules
+
 1. **Never Teleport**:
    - Whenever an office mode is activated (`ALL HANDS`, `FOCUS WORK`, `PANTRY`), agents must calculate an A* path from their current grid position to their target position.
    - Smooth interpolation along waypoints with walking animation frames.
@@ -22,6 +24,7 @@ description: Walkability, collision grid, pathfinding, and map validation system
    - Walkability check: `walkable(x, y) = inBounds(x, y) && !isSolid(x, y)`.
 
 ## 3. Dedicated Activity Spots
+
 - **The Brain Meeting Table**:
   - Must have at least 30 valid perimeter walking/seating target spots around the central round table.
   - When `ALL HANDS` is triggered, every agent receives a unique reservation index so they do not stack on top of each other.
@@ -33,7 +36,9 @@ description: Walkability, collision grid, pathfinding, and map validation system
   - When `FOCUS WORK` is triggered, agents navigate back to their assigned desk chair.
 
 ## 4. Map Validation (`validateMap.ts`)
+
 The map must pass strict automated validation in Vitest:
+
 1. No overlapping zones.
 2. All furniture within grid boundaries.
 3. No furniture overlapping another furniture item.

@@ -19,7 +19,11 @@ export async function POST(req: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { ok: false, error: 'Validation failed', details: parsed.error.format() },
+        {
+          ok: false,
+          error: 'Validation failed',
+          details: parsed.error.format(),
+        },
         { status: 400 }
       )
     }
@@ -36,7 +40,9 @@ export async function POST(req: Request) {
       ''
 
     if (url && key) {
-      const supabase = createClient(url, key, { auth: { persistSession: false } })
+      const supabase = createClient(url, key, {
+        auth: { persistSession: false },
+      })
 
       // Check if already exists
       const { data: existing } = await supabase

@@ -99,10 +99,34 @@ export function VehicleSprite({
       {/* 3. Main Vehicle Body Group with Horizontal Transform */}
       <g transform={isFlippedHorizontal ? 'scale(-1, 1)' : undefined}>
         {/* Wheels / Tires (Isometric Ellipses) */}
-        <ellipse cx={-bodyLength * 0.3} cy={bodyHeight * 0.38} rx="4.5" ry="3.2" fill={tireColor} />
-        <ellipse cx={-bodyLength * 0.3} cy={bodyHeight * 0.38} rx="2.5" ry="1.8" fill="#71717a" />
-        <ellipse cx={bodyLength * 0.3} cy={bodyHeight * 0.38} rx="4.5" ry="3.2" fill={tireColor} />
-        <ellipse cx={bodyLength * 0.3} cy={bodyHeight * 0.38} rx="2.5" ry="1.8" fill="#71717a" />
+        <ellipse
+          cx={-bodyLength * 0.3}
+          cy={bodyHeight * 0.38}
+          rx="4.5"
+          ry="3.2"
+          fill={tireColor}
+        />
+        <ellipse
+          cx={-bodyLength * 0.3}
+          cy={bodyHeight * 0.38}
+          rx="2.5"
+          ry="1.8"
+          fill="#71717a"
+        />
+        <ellipse
+          cx={bodyLength * 0.3}
+          cy={bodyHeight * 0.38}
+          rx="4.5"
+          ry="3.2"
+          fill={tireColor}
+        />
+        <ellipse
+          cx={bodyLength * 0.3}
+          cy={bodyHeight * 0.38}
+          rx="2.5"
+          ry="1.8"
+          fill="#71717a"
+        />
 
         {/* Lower Chassis / Bumper */}
         <polygon
@@ -241,7 +265,13 @@ export function VehicleSprite({
 
       {/* Headlight Gradient Definition in local SVG defs */}
       <defs>
-        <linearGradient id="headlightBeamGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient
+          id="headlightBeamGradient"
+          x1="0%"
+          y1="0%"
+          x2="100%"
+          y2="100%"
+        >
           <stop offset="0%" stopColor="#fef08a" stopOpacity="0.8" />
           <stop offset="60%" stopColor="#fef9c3" stopOpacity="0.25" />
           <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />

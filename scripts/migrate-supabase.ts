@@ -25,7 +25,10 @@ function loadEnvLocal() {
         const eqIdx = trimmed.indexOf('=')
         if (eqIdx > 0) {
           const key = trimmed.slice(0, eqIdx).trim()
-          const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '')
+          const val = trimmed
+            .slice(eqIdx + 1)
+            .trim()
+            .replace(/^["']|["']$/g, '')
           if (!process.env[key]) {
             process.env[key] = val
           }
@@ -111,7 +114,9 @@ export async function runAdditiveMigrations(): Promise<{
 
   // Attempt RPC exec_sql if exposed on this Supabase instance
   try {
-    const { error } = await supabase.rpc('exec_sql', { sql: ADDITIVE_MIGRATION_SQL })
+    const { error } = await supabase.rpc('exec_sql', {
+      sql: ADDITIVE_MIGRATION_SQL,
+    })
     if (error) {
       // Expected if exec_sql RPC is not exposed to client roles; proceed with table verification
     }
@@ -123,10 +128,19 @@ export async function runAdditiveMigrations(): Promise<{
   let agentsCount = 0
 
   const [agentsRes, logsRes, msgsRes, apprRes] = await Promise.all([
-    supabase.from('office_agents').select('id, name, current_room, status, current_x, current_y, sub_state', { count: 'exact' }),
+    supabase
+      .from('office_agents')
+      .select(
+        'id, name, current_room, status, current_x, current_y, sub_state',
+        { count: 'exact' }
+      ),
     supabase.from('office_logs').select('id', { count: 'exact', head: true }),
-    supabase.from('office_messages').select('id', { count: 'exact', head: true }),
-    supabase.from('office_approvals').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('office_messages')
+      .select('id', { count: 'exact', head: true }),
+    supabase
+      .from('office_approvals')
+      .select('id', { count: 'exact', head: true }),
   ])
 
   if (!agentsRes.error) {

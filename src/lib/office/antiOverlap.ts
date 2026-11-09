@@ -1,6 +1,6 @@
 /**
  * Anti-Overlap Screen-Space Solver for Agent Name Tags (Office V3 Phase 5 & Quick Fix)
- * 
+ *
  * Guarantees zero or strictly minimized overlap across dense agent clusters
  * by computing dynamic 2D collision offsets based on screen-space bounding boxes.
  */
@@ -82,8 +82,14 @@ function calculateOverlapArea(
   a: { left: number; top: number; right: number; bottom: number },
   b: { left: number; top: number; right: number; bottom: number }
 ): number {
-  const overlapX = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
-  const overlapY = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
+  const overlapX = Math.max(
+    0,
+    Math.min(a.right, b.right) - Math.max(a.left, b.left)
+  )
+  const overlapY = Math.max(
+    0,
+    Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
+  )
   return overlapX * overlapY
 }
 

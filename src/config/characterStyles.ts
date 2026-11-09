@@ -9,8 +9,10 @@
 import { DepartmentMode } from './officeLayout'
 
 export type CharacterGender = 'male' | 'female'
-export type HairStyle = 'short' | 'spiky' | 'parted' | 'ponytail' | 'long' | 'bob'
-export type CharacterAccessory = 'cap' | 'glasses' | 'headphones' | 'beanie' | 'none'
+export type HairStyle =
+  'short' | 'spiky' | 'parted' | 'ponytail' | 'long' | 'bob'
+export type CharacterAccessory =
+  'cap' | 'glasses' | 'headphones' | 'beanie' | 'none'
 
 export interface CharacterStyleConfig {
   agentId: string
@@ -470,7 +472,10 @@ const FALLBACK_PALETTES: Omit<CharacterStyleConfig, 'agentId'>[] = [
   },
 ]
 
-export function getCharacterStyle(agentId: string, agentName?: string): CharacterStyleConfig {
+export function getCharacterStyle(
+  agentId: string,
+  agentName?: string
+): CharacterStyleConfig {
   const normalizedId = (agentId || '').toLowerCase().replace(/\s+/g, '_')
   if (CHARACTER_STYLES[normalizedId]) {
     return CHARACTER_STYLES[normalizedId]
@@ -524,7 +529,12 @@ export function getAgentStatusBadge(
       label: 'Gym / Rec Break',
     }
   }
-  if (effectiveMode === 'PANTRY' || st === 'on_break' || st === 'pantry' || st === 'coffee') {
+  if (
+    effectiveMode === 'PANTRY' ||
+    st === 'on_break' ||
+    st === 'pantry' ||
+    st === 'coffee'
+  ) {
     return {
       dotHex: '#eab308',
       dotTailwind: 'bg-yellow-500',

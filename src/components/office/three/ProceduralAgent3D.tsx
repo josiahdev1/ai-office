@@ -13,10 +13,7 @@ import {
   getCharacterStyle,
   getAgentStatusBadge,
 } from '@/config/characterStyles'
-import {
-  AgentNavState,
-  stepAgentNavigation,
-} from '@/config/walkwayGrid'
+import { AgentNavState, stepAgentNavigation } from '@/config/walkwayGrid'
 
 export interface ProceduralAgent3DProps {
   agent: Agent
@@ -63,7 +60,8 @@ function createNameplateTexture(
   const ctx = canvas.getContext('2d')
   if (ctx) {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.font = 'bold 26px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+    ctx.font =
+      'bold 26px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
     const textMetrics = ctx.measureText(name)
     const pillW = Math.min(308, Math.max(120, textMetrics.width + 66))
     const pillH = 50
@@ -157,7 +155,8 @@ export function ProceduralAgent3D({
     return deskRotationY
   }, [effectiveMode, targetPos, deskRotationY])
 
-  const isDeskMode = effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
+  const isDeskMode =
+    effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
 
   // Determine initial spawn position on mount (accounting for persisted localStorage state on F5 reload)
   const initialSpawn = useMemo(() => {
@@ -165,11 +164,18 @@ export function ProceduralAgent3D({
     let initOverride = routeOverride
     if (typeof window !== 'undefined') {
       try {
-        const savedMode = window.localStorage.getItem('easyup_hq_mode_v3') as DepartmentMode | null
+        const savedMode = window.localStorage.getItem(
+          'easyup_hq_mode_v3'
+        ) as DepartmentMode | null
         if (savedMode) initMode = savedMode
-        const savedOverrides = window.localStorage.getItem('easyup_hq_overrides_v3')
+        const savedOverrides = window.localStorage.getItem(
+          'easyup_hq_overrides_v3'
+        )
         if (savedOverrides && !initOverride) {
-          const parsed = JSON.parse(savedOverrides) as Record<string, DepartmentMode>
+          const parsed = JSON.parse(savedOverrides) as Record<
+            string,
+            DepartmentMode
+          >
           if (parsed[agent.id]) initOverride = parsed[agent.id]
         }
       } catch {}
@@ -312,7 +318,11 @@ export function ProceduralAgent3D({
           </mesh>
           <mesh position={[0, 0.25, 0]} castShadow>
             <cylinderGeometry args={[0.04, 0.04, 0.25, 8]} />
-            <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
+            <meshStandardMaterial
+              color="#cbd5e1"
+              metalness={0.9}
+              roughness={0.2}
+            />
           </mesh>
           <mesh position={[0, 0.42, 0]} castShadow receiveShadow>
             <boxGeometry args={[0.55, 0.08, 0.55]} />
@@ -555,7 +565,11 @@ export function ProceduralAgent3D({
           )}
 
           {style.hairStyle === 'spiky' && (
-            <mesh position={[0, 0.91, 0.02]} rotation={[0.15, 0.4, 0]} castShadow>
+            <mesh
+              position={[0, 0.91, 0.02]}
+              rotation={[0.15, 0.4, 0]}
+              castShadow
+            >
               <boxGeometry args={[0.28, 0.12, 0.28]} />
               <meshStandardMaterial color={style.hairColor} />
             </mesh>
@@ -566,19 +580,30 @@ export function ProceduralAgent3D({
             <group>
               <mesh position={[0, 0.9, 0.02]} castShadow>
                 <cylinderGeometry args={[0.2, 0.22, 0.12, 16]} />
-                <meshStandardMaterial color={style.accessoryColor} roughness={0.5} />
+                <meshStandardMaterial
+                  color={style.accessoryColor}
+                  roughness={0.5}
+                />
               </mesh>
               <mesh position={[0, 0.86, 0.2]} rotation={[0.1, 0, 0]} castShadow>
                 <boxGeometry args={[0.3, 0.03, 0.18]} />
-                <meshStandardMaterial color={style.accessoryColor} roughness={0.5} />
+                <meshStandardMaterial
+                  color={style.accessoryColor}
+                  roughness={0.5}
+                />
               </mesh>
             </group>
           )}
 
           {style.accessory === 'beanie' && (
             <mesh position={[0, 0.9, 0.01]} castShadow>
-              <sphereGeometry args={[0.21, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.65]} />
-              <meshStandardMaterial color={style.accessoryColor} roughness={0.85} />
+              <sphereGeometry
+                args={[0.21, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.65]}
+              />
+              <meshStandardMaterial
+                color={style.accessoryColor}
+                roughness={0.85}
+              />
             </mesh>
           )}
 
@@ -613,11 +638,17 @@ export function ProceduralAgent3D({
             <group position={[0, 0.74, 0.19]}>
               <mesh position={[-0.08, 0, 0]}>
                 <boxGeometry args={[0.1, 0.06, 0.02]} />
-                <meshStandardMaterial color={style.accessoryColor} metalness={0.8} />
+                <meshStandardMaterial
+                  color={style.accessoryColor}
+                  metalness={0.8}
+                />
               </mesh>
               <mesh position={[0.08, 0, 0]}>
                 <boxGeometry args={[0.1, 0.06, 0.02]} />
-                <meshStandardMaterial color={style.accessoryColor} metalness={0.8} />
+                <meshStandardMaterial
+                  color={style.accessoryColor}
+                  metalness={0.8}
+                />
               </mesh>
             </group>
           )}

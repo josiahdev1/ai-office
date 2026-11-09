@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { resolveNameTagPositions, AgentTagInput } from '../src/lib/office/antiOverlap'
+import {
+  resolveNameTagPositions,
+  AgentTagInput,
+} from '../src/lib/office/antiOverlap'
 
 describe('Office V3 Agent Name Tag Anti-Overlap Solver (Phase 5 & Quick Fix)', () => {
   const sampleAgents: AgentTagInput[] = [
@@ -46,7 +49,10 @@ describe('Office V3 Agent Name Tag Anti-Overlap Solver (Phase 5 & Quick Fix)', (
   })
 
   it('collapses to compact dot representation when zoomed out below threshold', () => {
-    const result = resolveNameTagPositions(sampleAgents, { zoom: 0.35, collapseZoomThreshold: 0.45 })
+    const result = resolveNameTagPositions(sampleAgents, {
+      zoom: 0.35,
+      collapseZoomThreshold: 0.45,
+    })
     sampleAgents.forEach((ag) => {
       const offset = result.get(ag.id)
       expect(offset?.isCollapsed).toBe(true)

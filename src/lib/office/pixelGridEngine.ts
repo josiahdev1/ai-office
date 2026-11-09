@@ -1,6 +1,6 @@
 /**
  * Palette-Indexed Pixel Grid Engine for EasyUp Software Solution HQ (Office V3)
- * 
+ *
  * Provides crisp pixel-art sprite compilation from compact character grids:
  * - 1px dark hue outline
  * - 3 distinct shades per material (highlight, base, shadow)
@@ -37,7 +37,9 @@ export interface SvgColorPath {
  * Compiles a sprite grid into optimized SVG path data grouped by color.
  * Safe for SSR and client rendering with crispEdges.
  */
-export function compilePixelGridToSvgPaths(def: PixelSpriteDef): SvgColorPath[] {
+export function compilePixelGridToSvgPaths(
+  def: PixelSpriteDef
+): SvgColorPath[] {
   const colorMap = new Map<string, string[]>()
 
   for (let y = 0; y < def.grid.length; y++) {
@@ -85,7 +87,12 @@ export function drawPixelSpriteToCanvas(
       const color = def.palette[char]
       if (color) {
         ctx.fillStyle = color
-        ctx.fillRect(Math.round(dx + x * scale), Math.round(dy + y * scale), scale, scale)
+        ctx.fillRect(
+          Math.round(dx + x * scale),
+          Math.round(dy + y * scale),
+          scale,
+          scale
+        )
       }
     }
   }
@@ -143,12 +150,12 @@ export function compilePixelGridToDataUrl(
 export const COMMON_PALETTE: PixelPalette = {
   '.': 'transparent',
   ' ': 'transparent',
-  'X': '#090d16', // Deep outline
-  'S': 'rgba(0, 0, 0, 0.35)', // Soft contact shadow
-  'W': '#ffffff', // Crisp white
-  'G': '#94a3b8', // Slate gray
-  'K': '#475569', // Dark slate
-  'D': '#1e293b', // Deep charcoal
+  X: '#090d16', // Deep outline
+  S: 'rgba(0, 0, 0, 0.35)', // Soft contact shadow
+  W: '#ffffff', // Crisp white
+  G: '#94a3b8', // Slate gray
+  K: '#475569', // Dark slate
+  D: '#1e293b', // Deep charcoal
 }
 
 // ============================================================================
@@ -165,13 +172,13 @@ export const SPRITE_PLANT_MONSTERA: PixelSpriteDef = {
   height: 40,
   palette: {
     ...COMMON_PALETTE,
-    'p': '#78350f', // Pot rim shadow
-    'P': '#b45309', // Pot body
-    'l': '#d97706', // Pot highlight
-    'd': '#064e3b', // Leaf shadow
-    'm': '#059669', // Leaf midtone
-    'h': '#34d399', // Leaf highlight
-    's': '#15803d', // Stem
+    p: '#78350f', // Pot rim shadow
+    P: '#b45309', // Pot body
+    l: '#d97706', // Pot highlight
+    d: '#064e3b', // Leaf shadow
+    m: '#059669', // Leaf midtone
+    h: '#34d399', // Leaf highlight
+    s: '#15803d', // Stem
   },
   grid: [
     '.............hhhh...............',
@@ -227,17 +234,17 @@ export const SPRITE_ARCADE_CABINET: PixelSpriteDef = {
   height: 44,
   palette: {
     ...COMMON_PALETTE,
-    'm': '#831843', // Marquee magenta dark
-    'M': '#ec4899', // Marquee bright magenta
-    'w': '#fbcfe8', // Marquee glow white
-    's': '#0284c7', // Screen border blue
-    'S': '#38bdf8', // Screen cyan
-    'g': '#22c55e', // Game character green
-    'c': '#4c1d95', // Cabinet purple dark
-    'C': '#6d28d9', // Cabinet purple mid
-    'j': '#f59e0b', // Joystick gold
-    'r': '#ef4444', // Action buttons red
-    'y': '#eab308', // Action buttons yellow
+    m: '#831843', // Marquee magenta dark
+    M: '#ec4899', // Marquee bright magenta
+    w: '#fbcfe8', // Marquee glow white
+    s: '#0284c7', // Screen border blue
+    S: '#38bdf8', // Screen cyan
+    g: '#22c55e', // Game character green
+    c: '#4c1d95', // Cabinet purple dark
+    C: '#6d28d9', // Cabinet purple mid
+    j: '#f59e0b', // Joystick gold
+    r: '#ef4444', // Action buttons red
+    y: '#eab308', // Action buttons yellow
   },
   grid: [
     '........XXXXXXXXXXXXXX..........',
@@ -297,16 +304,16 @@ export const SPRITE_POOL_TABLE: PixelSpriteDef = {
   height: 32,
   palette: {
     ...COMMON_PALETTE,
-    'w': '#78350f', // Wood frame shadow
-    'W': '#b45309', // Wood frame mid
-    'h': '#d97706', // Wood frame highlight
-    'f': '#064e3b', // Felt shadow (green)
-    'F': '#059669', // Felt midtone
-    'l': '#10b981', // Felt highlight
-    'b': '#ffffff', // Cue ball white
-    'r': '#ef4444', // Red ball
-    'y': '#eab308', // Yellow ball
-    'p': '#0f172a', // Pocket black
+    w: '#78350f', // Wood frame shadow
+    W: '#b45309', // Wood frame mid
+    h: '#d97706', // Wood frame highlight
+    f: '#064e3b', // Felt shadow (green)
+    F: '#059669', // Felt midtone
+    l: '#10b981', // Felt highlight
+    b: '#ffffff', // Cue ball white
+    r: '#ef4444', // Red ball
+    y: '#eab308', // Yellow ball
+    p: '#0f172a', // Pocket black
   },
   grid: [
     '............XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX..................',
@@ -354,13 +361,13 @@ export const SPRITE_WATER_COOLER: PixelSpriteDef = {
   height: 36,
   palette: {
     ...COMMON_PALETTE,
-    'b': '#38bdf8', // Water cyan bright
-    'B': '#0284c7', // Water blue
-    't': '#bae6fd', // Transparent water bottle highlight
-    'w': '#f1f5f9', // Cooler body white
-    'g': '#cbd5e1', // Cooler body shadow
-    'r': '#ef4444', // Hot lever
-    'c': '#3b82f6', // Cold lever
+    b: '#38bdf8', // Water cyan bright
+    B: '#0284c7', // Water blue
+    t: '#bae6fd', // Transparent water bottle highlight
+    w: '#f1f5f9', // Cooler body white
+    g: '#cbd5e1', // Cooler body shadow
+    r: '#ef4444', // Hot lever
+    c: '#3b82f6', // Cold lever
   },
   grid: [
     '........XXXXXX..........',
@@ -412,12 +419,12 @@ export const SPRITE_WALL_CLOCK: PixelSpriteDef = {
   height: 24,
   palette: {
     ...COMMON_PALETTE,
-    'f': '#0f172a', // Rim dark
-    'F': '#334155', // Rim slate
-    'w': '#ffffff', // Dial face white
-    'm': '#e2e8f0', // Dial face soft shade
-    'h': '#0f172a', // Hour hand
-    'r': '#ef4444', // Second hand red
+    f: '#0f172a', // Rim dark
+    F: '#334155', // Rim slate
+    w: '#ffffff', // Dial face white
+    m: '#e2e8f0', // Dial face soft shade
+    h: '#0f172a', // Hour hand
+    r: '#ef4444', // Second hand red
   },
   grid: [
     '........XXXXXXXX........',
@@ -457,13 +464,13 @@ export const SPRITE_CITY_WINDOW: PixelSpriteDef = {
   height: 36,
   palette: {
     ...COMMON_PALETTE,
-    'f': '#cbd5e1', // Frame white/silver
-    'F': '#94a3b8', // Frame shadow
-    's': '#38bdf8', // Sky daylight
-    'S': '#0284c7', // Sky depth blue
-    'b': '#1e293b', // Skyscraper silhouette
-    'B': '#334155', // Building midtone
-    'l': '#fef08a', // City office window lights
+    f: '#cbd5e1', // Frame white/silver
+    F: '#94a3b8', // Frame shadow
+    s: '#38bdf8', // Sky daylight
+    S: '#0284c7', // Sky depth blue
+    b: '#1e293b', // Skyscraper silhouette
+    B: '#334155', // Building midtone
+    l: '#fef08a', // City office window lights
   },
   grid: [
     'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
@@ -515,15 +522,15 @@ export const SPRITE_LONG_TABLE: PixelSpriteDef = {
   height: 36,
   palette: {
     ...COMMON_PALETTE,
-    'w': '#78350f', // Warm wood shadow
-    'W': '#b45309', // Warm wood top
-    'l': '#d97706', // Wood highlight
-    'm': '#0f172a', // Monitor bezel
-    's': '#38bdf8', // Monitor screen cyan
-    'g': '#22c55e', // Code syntax green
-    'p': '#475569', // Keyboard
-    'c': '#f8fafc', // Coffee mug white
-    'e': '#94a3b8', // Steel legs
+    w: '#78350f', // Warm wood shadow
+    W: '#b45309', // Warm wood top
+    l: '#d97706', // Wood highlight
+    m: '#0f172a', // Monitor bezel
+    s: '#38bdf8', // Monitor screen cyan
+    g: '#22c55e', // Code syntax green
+    p: '#475569', // Keyboard
+    c: '#f8fafc', // Coffee mug white
+    e: '#94a3b8', // Steel legs
   },
   grid: [
     '................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX................',
@@ -575,15 +582,15 @@ export const SPRITE_JOSIAH_RIG: PixelSpriteDef = {
   height: 38,
   palette: {
     ...COMMON_PALETTE,
-    'w': '#451a03', // Walnut wood shadow
-    'W': '#78350f', // Walnut wood mid
-    'l': '#b45309', // Walnut wood highlight
-    'm': '#0f172a', // Monitor bezel
-    's': '#38bdf8', // Center monitor cyan
-    'g': '#22c55e', // Left monitor green
-    'p': '#ec4899', // Right monitor magenta
-    'k': '#334155', // Keyboard slate
-    'c': '#f59e0b', // Gold Founder Mug
+    w: '#451a03', // Walnut wood shadow
+    W: '#78350f', // Walnut wood mid
+    l: '#b45309', // Walnut wood highlight
+    m: '#0f172a', // Monitor bezel
+    s: '#38bdf8', // Center monitor cyan
+    g: '#22c55e', // Left monitor green
+    p: '#ec4899', // Right monitor magenta
+    k: '#334155', // Keyboard slate
+    c: '#f59e0b', // Gold Founder Mug
   },
   grid: [
     '............XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX..........',
@@ -637,16 +644,16 @@ export const SPRITE_THE_BRAIN_CORE: PixelSpriteDef = {
   height: 64,
   palette: {
     ...COMMON_PALETTE,
-    'c': '#0891b2', // Core deep cyan
-    'C': '#06b6d4', // Core mid cyan
-    'b': '#38bdf8', // Core bright cyan
-    'h': '#67e8f9', // Core glow highlight
-    'w': '#ffffff', // Pure white spark
-    'r': '#f59e0b', // Outer ring amber
-    'R': '#fbbf24', // Outer ring bright amber
-    'p': '#0f172a', // Platform dark base
-    'P': '#1e293b', // Platform slate
-    'l': '#334155', // Platform edge light
+    c: '#0891b2', // Core deep cyan
+    C: '#06b6d4', // Core mid cyan
+    b: '#38bdf8', // Core bright cyan
+    h: '#67e8f9', // Core glow highlight
+    w: '#ffffff', // Pure white spark
+    r: '#f59e0b', // Outer ring amber
+    R: '#fbbf24', // Outer ring bright amber
+    p: '#0f172a', // Platform dark base
+    P: '#1e293b', // Platform slate
+    l: '#334155', // Platform edge light
   },
   grid: [
     '................................................................',
@@ -732,4 +739,3 @@ export const V3_PIXEL_SPRITES: PixelSpriteDef[] = [
 ]
 
 export { ALL_V3_SPRITES, type SpriteCategory } from './spriteCatalog'
-

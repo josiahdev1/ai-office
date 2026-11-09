@@ -1,12 +1,17 @@
 /**
  * Single Adapter File: Database <-> Application Type Mapper
- * 
+ *
  * All mappings between live Supabase tables (`office_agents`, `office_approvals`,
  * `office_logs`, `office_messages`, `office_tasks`, `office_goals`, `office_settings`)
  * and application domain models pass strictly through this file.
  */
 
-import { Agent, AgentStatus, AgentSubState, Approval } from '@/components/office/types'
+import {
+  Agent,
+  AgentStatus,
+  AgentSubState,
+  Approval,
+} from '@/components/office/types'
 
 // =============================================================================
 // 1. Database Row Schemas (reflecting exact live Supabase tables)
@@ -167,11 +172,19 @@ export function departmentToRoom(dept: string): string {
 export function roomToDepartment(room: string): string {
   const normalized = (room || '').toLowerCase().trim()
   if (normalized.includes('eng')) return 'ENGINEERING'
-  if (normalized.includes('qa') || normalized.includes('secops') || normalized.includes('noc')) return 'QA & SECOPS'
+  if (
+    normalized.includes('qa') ||
+    normalized.includes('secops') ||
+    normalized.includes('noc')
+  )
+    return 'QA & SECOPS'
   if (normalized.includes('growth')) return 'GROWTH'
-  if (normalized.includes('intel') || normalized.includes('ai')) return 'INTELLIGENCE'
-  if (normalized.includes('ops') || normalized.includes('operat')) return 'OPERATIONS'
-  if (normalized.includes('command') || normalized.includes('exec')) return 'COMMAND'
+  if (normalized.includes('intel') || normalized.includes('ai'))
+    return 'INTELLIGENCE'
+  if (normalized.includes('ops') || normalized.includes('operat'))
+    return 'OPERATIONS'
+  if (normalized.includes('command') || normalized.includes('exec'))
+    return 'COMMAND'
   return 'ENGINEERING'
 }
 
@@ -224,7 +237,7 @@ export function mapAgentStatusToDbStatus(status: AgentStatus): string {
 export function dbRowToAgent(row: OfficeAgentRow): Agent {
   const room = row.current_room || departmentToRoom(row.department)
   const status = mapDbStatusToAgentStatus(row.status)
-  
+
   return {
     id: row.id,
     name: row.name,
@@ -234,7 +247,9 @@ export function dbRowToAgent(row: OfficeAgentRow): Agent {
     department: row.department,
     tag: row.department,
     status,
-    sub_state: (row.sub_state as AgentSubState) || (status === 'working' ? 'typing' : 'seated'),
+    sub_state:
+      (row.sub_state as AgentSubState) ||
+      (status === 'working' ? 'typing' : 'seated'),
     current_task: row.current_task || undefined,
     progress_pct: row.progress ?? (status === 'working' ? 65 : 0),
     desk_id: row.seat_id || `desk-${row.id}`,
@@ -268,7 +283,13 @@ export function dbRowToAgent(row: OfficeAgentRow): Agent {
  */
 export function sessionRowToGuestAgent(
   session: OfficeSessionRow,
-  assignedGuestDesk?: { deskGx: number; deskGy: number; chairGx: number; chairGy: number; id: string }
+  assignedGuestDesk?: {
+    deskGx: number
+    deskGy: number
+    chairGx: number
+    chairGy: number
+    id: string
+  }
 ): Agent {
   const cliName =
     session.cli === 'claude-code'
@@ -300,7 +321,10 @@ export function sessionRowToGuestAgent(
   let subState: AgentSubState = 'seated'
   if (session.status === 'working' || session.status === 'coding') {
     subState = 'typing'
-  } else if (session.status === 'waiting_approval' || session.status === 'awaiting_approval') {
+  } else if (
+    session.status === 'waiting_approval' ||
+    session.status === 'awaiting_approval'
+  ) {
     subState = 'reading_logs'
   }
 
@@ -312,10 +336,17 @@ export function sessionRowToGuestAgent(
     tag: cliBadge.toUpperCase(),
     status,
     sub_state: subState,
-    current_task: session.current_tool ? `Executing ${session.current_tool}` : 'Connected via Bridge',
+    current_task: session.current_tool
+      ? `Executing ${session.current_tool}`
+      : 'Connected via Bridge',
     desk_id: desk.id,
     desk_coord: { x: desk.deskGx, y: desk.deskGy },
-    color: session.cli === 'claude-code' ? '#f97316' : session.cli === 'antigravity' ? '#38bdf8' : '#10b981',
+    color:
+      session.cli === 'claude-code'
+        ? '#f97316'
+        : session.cli === 'antigravity'
+          ? '#38bdf8'
+          : '#10b981',
     updated_at: session.last_seen_at || session.started_at,
     kind: 'external',
     cli: session.cli,
@@ -340,7 +371,12 @@ export function agentToDbRow(agent: Partial<Agent>): Partial<OfficeAgentRow> {
   if (agent.room !== undefined) {
     row.current_room = agent.room
     const r = agent.room.toLowerCase()
-    if (!r.includes('gym') && !r.includes('pantry') && !r.includes('canteen') && !r.includes('brain')) {
+    if (
+      !r.includes('gym') &&
+      !r.includes('pantry') &&
+      !r.includes('canteen') &&
+      !r.includes('brain')
+    ) {
       row.department = roomToDepartment(agent.room)
     }
   }
@@ -372,12 +408,13 @@ export function agentToDbRow(agent: Partial<Agent>): Partial<OfficeAgentRow> {
   if (agent.cwd_hash !== undefined) row.cwd_hash = agent.cwd_hash
   if (agent.current_tool !== undefined) row.current_tool = agent.current_tool
   if (agent.tokens_used !== undefined) row.tokens_used = agent.tokens_used
-  if (agent.tool_call_count !== undefined) row.tool_call_count = agent.tool_call_count
+  if (agent.tool_call_count !== undefined)
+    row.tool_call_count = agent.tool_call_count
   if (agent.car_style !== undefined) row.car_style = agent.car_style
   if (agent.car_color !== undefined) row.car_color = agent.car_color
   if (agent.bay !== undefined) row.bay = agent.bay
   if (agent.accessories !== undefined) row.accessories = agent.accessories
-  
+
   row.updated_at = new Date().toISOString()
   return row
 }
@@ -402,7 +439,9 @@ export function dbRowToApproval(row: OfficeApprovalRow): Approval {
 /**
  * Transforms an application Approval into an office_approvals database row
  */
-export function approvalToDbRow(approval: Partial<Approval> & { impact_level?: string }): Partial<OfficeApprovalRow> {
+export function approvalToDbRow(
+  approval: Partial<Approval> & { impact_level?: string }
+): Partial<OfficeApprovalRow> {
   const row: Partial<OfficeApprovalRow> = {}
 
   if (approval.id !== undefined) row.id = approval.id
@@ -411,8 +450,9 @@ export function approvalToDbRow(approval: Partial<Approval> & { impact_level?: s
   if (approval.type !== undefined) row.category = approval.type
   if (approval.agent_name !== undefined) row.requested_by = approval.agent_name
   if (approval.status !== undefined) row.status = approval.status
-  if (approval.impact_level !== undefined) row.impact_level = approval.impact_level
-  
+  if (approval.impact_level !== undefined)
+    row.impact_level = approval.impact_level
+
   return row
 }
 
@@ -435,7 +475,9 @@ export function formatPHTTime(date: Date = new Date()): string {
  */
 export function dbRowToLogString(row: OfficeLogRow): string {
   const parsed = row.created_at ? new Date(row.created_at) : new Date()
-  const timestamp = Number.isNaN(parsed.getTime()) ? formatPHTTime() : formatPHTTime(parsed)
+  const timestamp = Number.isNaN(parsed.getTime())
+    ? formatPHTTime()
+    : formatPHTTime(parsed)
   const levelTag = row.level ? `[${row.level.toUpperCase()}]` : '[INFO]'
   const catTag = `[${row.category.toUpperCase()}]`
   const actor = row.agent_name ? `${row.agent_name}: ` : ''

@@ -47,9 +47,13 @@ describe('2D == 3D Architectural, Pathfinding & Character Parity', () => {
       expect(['SE', 'SW', 'NE', 'NW']).toContain(ag.facing)
 
       expect(getAgentTargetPosition(ag, 'OVERVIEW')).toEqual(ag.deskPos)
-      expect(getAgentTargetPosition(ag, 'OVERVIEW', 'PANTRY')).toEqual(ag.pantryPos)
+      expect(getAgentTargetPosition(ag, 'OVERVIEW', 'PANTRY')).toEqual(
+        ag.pantryPos
+      )
       expect(getAgentTargetPosition(ag, 'OVERVIEW', 'GYM')).toEqual(ag.gymPos)
-      expect(getAgentTargetPosition(ag, 'OVERVIEW', 'ALL_HANDS')).toEqual(ag.allHandsPos)
+      expect(getAgentTargetPosition(ag, 'OVERVIEW', 'ALL_HANDS')).toEqual(
+        ag.allHandsPos
+      )
     }
   })
 
@@ -84,22 +88,65 @@ describe('2D == 3D Architectural, Pathfinding & Character Parity', () => {
     }
 
     // Phase 1: Trigger walk from seated -> enters 'standing_up' for 250ms
-    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.1, 3.6, 0, undefined, 0)
+    stepAgentNavigation(
+      nav,
+      [-20, 0, 13.2],
+      0,
+      false,
+      0.1,
+      3.6,
+      0,
+      undefined,
+      0
+    )
     expect(nav.subState).toBe('standing_up')
     expect(nav.pathQueue.length).toBeGreaterThan(5)
 
     // Phase 2: After 250ms stand-up completes -> enters 'walking' and moves smoothly along pathQueue
-    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.2, 3.6, 0, undefined, 0)
-    stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.1, 3.6, 0, undefined, 0)
+    stepAgentNavigation(
+      nav,
+      [-20, 0, 13.2],
+      0,
+      false,
+      0.2,
+      3.6,
+      0,
+      undefined,
+      0
+    )
+    stepAgentNavigation(
+      nav,
+      [-20, 0, 13.2],
+      0,
+      false,
+      0.1,
+      3.6,
+      0,
+      undefined,
+      0
+    )
     expect(nav.subState).toBe('walking')
     expect(nav.isWalking).toBe(true)
 
     // Step multiple times to pop the first waypoint and verify it NEVER snaps to final targetPos (13.2)
     for (let i = 0; i < 6; i++) {
-      stepAgentNavigation(nav, [-20, 0, 13.2], 0, false, 0.1, 3.6, 0, undefined, 0)
+      stepAgentNavigation(
+        nav,
+        [-20, 0, 13.2],
+        0,
+        false,
+        0.1,
+        3.6,
+        0,
+        undefined,
+        0
+      )
     }
     expect(nav.subState).toBe('walking')
-    const distFromStart = Math.hypot(nav.currentPos[0] - -19, nav.currentPos[2] - -19)
+    const distFromStart = Math.hypot(
+      nav.currentPos[0] - -19,
+      nav.currentPos[2] - -19
+    )
     expect(distFromStart).toBeGreaterThan(0.5)
     expect(distFromStart).toBeLessThan(8.0)
     expect(nav.currentPos[2]).toBeLessThan(0) // Still in north half of building, NOT snapped to z=13.2!
@@ -130,7 +177,9 @@ describe('2D == 3D Architectural, Pathfinding & Character Parity', () => {
     expect(judith.gender).toBe('female')
 
     expect(getAgentStatusBadge('working', 'OVERVIEW').dotHex).toBe('#22c55e')
-    expect(getAgentStatusBadge('awaiting_approval', 'OVERVIEW').dotHex).toBe('#f97316')
+    expect(getAgentStatusBadge('awaiting_approval', 'OVERVIEW').dotHex).toBe(
+      '#f97316'
+    )
     expect(getAgentStatusBadge('working', 'ALL_HANDS').dotHex).toBe('#3b82f6')
     expect(getAgentStatusBadge('on_break', 'PANTRY').dotHex).toBe('#eab308')
     expect(getAgentStatusBadge('on_break', 'GYM').dotHex).toBe('#ec4899')

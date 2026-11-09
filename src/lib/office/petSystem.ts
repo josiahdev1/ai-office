@@ -148,11 +148,7 @@ export function createInitialPets(): Record<FloorNumber, OfficePet> {
   }
 }
 
-export function updatePetPhysics(
-  pet: OfficePet,
-  dt: number,
-  speed = 42
-): void {
+export function updatePetPhysics(pet: OfficePet, dt: number, speed = 42): void {
   // Update floating hearts
   if (pet.hearts.length > 0) {
     pet.hearts = pet.hearts

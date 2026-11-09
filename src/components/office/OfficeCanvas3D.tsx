@@ -33,7 +33,9 @@ export default function OfficeCanvas3D({
   className = '',
 }: OfficeCanvas3DProps) {
   return (
-    <div className={`relative h-full w-full select-none overflow-hidden bg-[#080b12] ${className}`}>
+    <div
+      className={`relative h-full w-full overflow-hidden bg-[#080b12] select-none ${className}`}
+    >
       {/* Three.js 3D Isometric Viewport (Native WebGL Sprite Nameplates = Zero Pan/Zoom Lag) */}
       <Canvas
         shadows
@@ -71,16 +73,20 @@ export default function OfficeCanvas3D({
       {/* Floating Viewport HUD Controls */}
       <div className="pointer-events-none absolute bottom-4 left-4 z-30 flex items-center gap-2">
         <div className="flex items-center gap-2 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[11px] text-slate-300 shadow-xl backdrop-blur-md">
-          <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="tracking-wide text-slate-400">VIEWPORT (3D WEBGL):</span>
-          <span className="font-bold text-cyan-300">{mode.replace('_', ' ')}</span>
+          <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
+          <span className="tracking-wide text-slate-400">
+            VIEWPORT (3D WEBGL):
+          </span>
+          <span className="font-bold text-cyan-300">
+            {mode.replace('_', ' ')}
+          </span>
         </div>
 
         {onResetCamera && (
           <button
             type="button"
             onClick={onResetCamera}
-            className="pointer-events-auto cursor-pointer rounded-lg border border-slate-800/80 bg-slate-900/90 px-3 py-1.5 font-mono text-[11px] font-medium text-slate-300 shadow-xl backdrop-blur-md transition-all hover:bg-slate-800 hover:text-white whitespace-nowrap"
+            className="pointer-events-auto cursor-pointer rounded-lg border border-slate-800/80 bg-slate-900/90 px-3 py-1.5 font-mono text-[11px] font-medium whitespace-nowrap text-slate-300 shadow-xl backdrop-blur-md transition-all hover:bg-slate-800 hover:text-white"
           >
             Reset Camera ⟲
           </button>
@@ -88,7 +94,7 @@ export default function OfficeCanvas3D({
       </div>
 
       {/* Help tooltip */}
-      <div className="pointer-events-none absolute bottom-4 right-4 z-30 hidden sm:flex items-center gap-1.5 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[10px] text-slate-400 shadow-xl backdrop-blur-md">
+      <div className="pointer-events-none absolute right-4 bottom-4 z-30 hidden items-center gap-1.5 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[10px] text-slate-400 shadow-xl backdrop-blur-md sm:flex">
         <span>Click Agent to Inspect & Route</span>
         <span>•</span>
         <span>Drag to Pan / Orbit</span>

@@ -41,7 +41,8 @@ export const ROOMS_3D: Record<string, Room3DConfig> = {
     floorColor: '#3730a3', // Indigo-800
     wallColor: '#1e1b4b',
     accentColor: '#6366f1',
-    description: 'Core microservices, Next.js frontend, and distributed cloud systems',
+    description:
+      'Core microservices, Next.js frontend, and distributed cloud systems',
   },
   OPERATIONS: {
     id: 'OPERATIONS',
@@ -51,7 +52,8 @@ export const ROOMS_3D: Record<string, Room3DConfig> = {
     floorColor: '#166534', // Green-800
     wallColor: '#052e16',
     accentColor: '#22c55e',
-    description: 'Logistics, client communications, incident coordination, and process automation',
+    description:
+      'Logistics, client communications, incident coordination, and process automation',
   },
   GROWTH: {
     id: 'GROWTH',
@@ -61,7 +63,8 @@ export const ROOMS_3D: Record<string, Room3DConfig> = {
     floorColor: '#1e40af', // Blue-800
     wallColor: '#172554',
     accentColor: '#3b82f6',
-    description: 'Marketing funnels, SEO intelligence, and client onboarding acquisition',
+    description:
+      'Marketing funnels, SEO intelligence, and client onboarding acquisition',
   },
   EXECUTIVE: {
     id: 'EXECUTIVE',
@@ -71,7 +74,8 @@ export const ROOMS_3D: Record<string, Room3DConfig> = {
     floorColor: '#581c87', // Purple-900
     wallColor: '#3b0764',
     accentColor: '#a855f7',
-    description: 'Strategic planning, financial modeling, and executive program roadmaps',
+    description:
+      'Strategic planning, financial modeling, and executive program roadmaps',
   },
   COMMAND: {
     id: 'COMMAND',
@@ -81,7 +85,8 @@ export const ROOMS_3D: Record<string, Room3DConfig> = {
     floorColor: '#090d16', // Dark Cybernetic Slab
     wallColor: '#020617',
     accentColor: '#00e5ff',
-    description: 'Holographic core, inter-agent orchestration, and Go-Signal gateway',
+    description:
+      'Holographic core, inter-agent orchestration, and Go-Signal gateway',
   },
   SECOPS: {
     id: 'SECOPS',
@@ -91,7 +96,8 @@ export const ROOMS_3D: Record<string, Room3DConfig> = {
     floorColor: '#86198f', // Magenta-800
     wallColor: '#4a044e',
     accentColor: '#ec4899',
-    description: '24/7 Security operations, pen-testing, automated vitest CI, and vulnerability radar',
+    description:
+      '24/7 Security operations, pen-testing, automated vitest CI, and vulnerability radar',
   },
   PANTRY: {
     id: 'PANTRY',
@@ -101,7 +107,8 @@ export const ROOMS_3D: Record<string, Room3DConfig> = {
     floorColor: '#b45309', // Warm amber / wood
     wallColor: '#451a03',
     accentColor: '#f59e0b',
-    description: 'Espresso bar, dining tables, fresh refreshments, and casual banter',
+    description:
+      'Espresso bar, dining tables, fresh refreshments, and casual banter',
   },
   GYM: {
     id: 'GYM',
@@ -111,7 +118,8 @@ export const ROOMS_3D: Record<string, Room3DConfig> = {
     floorColor: '#9d174d', // Pink-800
     wallColor: '#500724',
     accentColor: '#f43f5e',
-    description: 'Treadmills, weight benches, wellness mats, and off-duty fitness sessions',
+    description:
+      'Treadmills, weight benches, wellness mats, and off-duty fitness sessions',
   },
   INTELLIGENCE: {
     id: 'INTELLIGENCE',
@@ -121,7 +129,8 @@ export const ROOMS_3D: Record<string, Room3DConfig> = {
     floorColor: '#115e59', // Teal-800
     wallColor: '#042f2e',
     accentColor: '#14b8a6',
-    description: 'LLM fine-tuning, computer vision pipelines, and prompt governance',
+    description:
+      'LLM fine-tuning, computer vision pipelines, and prompt governance',
   },
 }
 
@@ -490,11 +499,7 @@ export const AGENT_WORKSTATIONS_3D: Record<string, AgentWorkstation3D> = {
 }
 
 export type DepartmentMode =
-  | 'OVERVIEW'
-  | 'FOCUS_WORK'
-  | 'ALL_HANDS'
-  | 'PANTRY'
-  | 'GYM'
+  'OVERVIEW' | 'FOCUS_WORK' | 'ALL_HANDS' | 'PANTRY' | 'GYM'
 
 export interface CameraPreset {
   target: [number, number, number]
@@ -533,12 +538,48 @@ export interface ParkedVehicleConfig {
 }
 
 export const PARKED_VEHICLES: ParkedVehicleConfig[] = [
-  { id: 'park-1', pos: [26.8, 0, -17], rotY: Math.PI / 2, color: '#ef4444', type: 'sedan' },
-  { id: 'park-2', pos: [26.8, 0, -12], rotY: Math.PI / 2, color: '#3b82f6', type: 'suv' },
-  { id: 'park-3', pos: [26.8, 0, -7], rotY: Math.PI / 2, color: '#10b981', type: 'sedan' },
-  { id: 'park-4', pos: [26.8, 0, -2], rotY: Math.PI / 2, color: '#f59e0b', type: 'scooter' },
-  { id: 'park-5', pos: [26.8, 0, 3], rotY: Math.PI / 2, color: '#8b5cf6', type: 'sedan' },
-  { id: 'park-6', pos: [26.8, 0, 8], rotY: Math.PI / 2, color: '#06b6d4', type: 'suv' },
+  {
+    id: 'park-1',
+    pos: [26.8, 0, -17],
+    rotY: Math.PI / 2,
+    color: '#ef4444',
+    type: 'sedan',
+  },
+  {
+    id: 'park-2',
+    pos: [26.8, 0, -12],
+    rotY: Math.PI / 2,
+    color: '#3b82f6',
+    type: 'suv',
+  },
+  {
+    id: 'park-3',
+    pos: [26.8, 0, -7],
+    rotY: Math.PI / 2,
+    color: '#10b981',
+    type: 'sedan',
+  },
+  {
+    id: 'park-4',
+    pos: [26.8, 0, -2],
+    rotY: Math.PI / 2,
+    color: '#f59e0b',
+    type: 'scooter',
+  },
+  {
+    id: 'park-5',
+    pos: [26.8, 0, 3],
+    rotY: Math.PI / 2,
+    color: '#8b5cf6',
+    type: 'sedan',
+  },
+  {
+    id: 'park-6',
+    pos: [26.8, 0, 8],
+    rotY: Math.PI / 2,
+    color: '#06b6d4',
+    type: 'suv',
+  },
 ]
 
 export interface HighwayCarConfig {
@@ -678,4 +719,3 @@ export function projectIso3DTo2D(
     depth: x + z + y * 0.5,
   }
 }
-

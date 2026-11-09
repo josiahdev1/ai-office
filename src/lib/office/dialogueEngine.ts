@@ -190,7 +190,15 @@ const CONVERSATION_TEMPLATES = [
     topic: 'engineering' as const,
     pair: ['arwin', 'neil_mar'],
     generate: (runIndex: number) => {
-      const tickets = ['PR #184', 'PR #205', 'PR #212', 'PR #229', 'PR #245', 'PR #258', 'PR #264']
+      const tickets = [
+        'PR #184',
+        'PR #205',
+        'PR #212',
+        'PR #229',
+        'PR #245',
+        'PR #258',
+        'PR #264',
+      ]
       const modules = [
         'TanStack Query cache',
         'canvas viewport matrix',
@@ -266,7 +274,12 @@ const CONVERSATION_TEMPLATES = [
     topic: 'engineering' as const,
     pair: ['bonnie', 'blaze'],
     generate: (runIndex: number) => {
-      const runners = ['github-runner-01', 'deploy-edge-sg', 'build-cluster-pht', 'k8s-worker-node']
+      const runners = [
+        'github-runner-01',
+        'deploy-edge-sg',
+        'build-cluster-pht',
+        'k8s-worker-node',
+      ]
       const runner = runners[runIndex % runners.length]
       return {
         text: `@Blaze Re-provisioned ${runner} with SSD swap and 10Gbps uplink.`,
@@ -316,7 +329,11 @@ const CONVERSATION_TEMPLATES = [
     topic: 'secops' as const,
     pair: ['gian', 'khent'],
     generate: (runIndex: number) => {
-      const tests = ['SQL injection fuzzing', 'rate limiter burst test', 'SSRF egress filter']
+      const tests = [
+        'SQL injection fuzzing',
+        'rate limiter burst test',
+        'SSRF egress filter',
+      ]
       const t = tests[runIndex % tests.length]
       return {
         text: `@Khent Automated ${t} in CI runner. 10,000 requests blocked as expected.`,
@@ -366,7 +383,11 @@ const CONVERSATION_TEMPLATES = [
     topic: 'ai' as const,
     pair: ['gabriel', 'nelmar'],
     generate: (runIndex: number) => {
-      const endpoints = ['/api/office/run streaming SSE', 'vector embeddings cache', 'prompt batching queue']
+      const endpoints = [
+        '/api/office/run streaming SSE',
+        'vector embeddings cache',
+        'prompt batching queue',
+      ]
       const ep = endpoints[runIndex % endpoints.length]
       return {
         text: `@Nelmar Connected ${ep} with backpressure throttling. Zero timeouts observed.`,
@@ -378,7 +399,12 @@ const CONVERSATION_TEMPLATES = [
     topic: 'ai' as const,
     pair: ['roy_jhan', 'josiah'],
     generate: (runIndex: number) => {
-      const agents = ['Engineering Core', 'Growth Lab', 'Intelligence Lab', 'SecOps NOC']
+      const agents = [
+        'Engineering Core',
+        'Growth Lab',
+        'Intelligence Lab',
+        'SecOps NOC',
+      ]
       const dept = agents[runIndex % agents.length]
       return {
         text: `@Josiah Agent cognitive memory architecture finalized for ${dept}.`,
@@ -426,7 +452,11 @@ const CONVERSATION_TEMPLATES = [
     topic: 'operations' as const,
     pair: ['anthony', 'bonnie'],
     generate: (runIndex: number) => {
-      const clouds = ['Singapore AWS ap-southeast-1', 'Tokyo edge point-of-presence', 'Manila local CDN cache']
+      const clouds = [
+        'Singapore AWS ap-southeast-1',
+        'Tokyo edge point-of-presence',
+        'Manila local CDN cache',
+      ]
       const c = clouds[runIndex % clouds.length]
       return {
         text: `@Bonnie Routing egress traffic through ${c} for regional low-latency access.`,
@@ -474,7 +504,11 @@ const CONVERSATION_TEMPLATES = [
     topic: 'growth' as const,
     pair: ['jesmond', 'neil_mar'],
     generate: (runIndex: number) => {
-      const widgets = ['interactive canvas HUD', 'fleet roster quick-filter', 'go-signal approval modal']
+      const widgets = [
+        'interactive canvas HUD',
+        'fleet roster quick-filter',
+        'go-signal approval modal',
+      ]
       const w = widgets[runIndex % widgets.length]
       return {
         text: `@Neil Mar User session recordings show high engagement on ${w}.`,
@@ -522,7 +556,11 @@ const CONVERSATION_TEMPLATES = [
     topic: 'command' as const,
     pair: ['jb', 'jo_vincent'],
     generate: (runIndex: number) => {
-      const features = ['Autonomous Go-Signal gateway', 'Multi-model LLM benchmarking', 'Real-time studio telemetry']
+      const features = [
+        'Autonomous Go-Signal gateway',
+        'Multi-model LLM benchmarking',
+        'Real-time studio telemetry',
+      ]
       const feat = features[runIndex % features.length]
       return {
         text: `@Jo Vincent Key feature highlight for enterprise clients: ${feat}.`,
@@ -534,7 +572,11 @@ const CONVERSATION_TEMPLATES = [
     topic: 'command' as const,
     pair: ['julian', 'gloria'],
     generate: (runIndex: number) => {
-      const sprints = ['Sprint 45 planning', 'cross-team retro', 'deliverable review']
+      const sprints = [
+        'Sprint 45 planning',
+        'cross-team retro',
+        'deliverable review',
+      ]
       const s = sprints[runIndex % sprints.length]
       return {
         text: `@Gloria Agenda prepared for ${s}. Engineering and SecOps alignments ready.`,
@@ -581,7 +623,11 @@ const CONVERSATION_TEMPLATES = [
     topic: 'casual' as const,
     pair: ['keiru', 'gian'],
     generate: (runIndex: number) => {
-      const activities = ['quick gym workout', 'hydration break at the pantry cooler', 'stretch break']
+      const activities = [
+        'quick gym workout',
+        'hydration break at the pantry cooler',
+        'stretch break',
+      ]
       const act = activities[runIndex % activities.length]
       return {
         text: `@Gian Heading over for a ${act}. Want to join?`,

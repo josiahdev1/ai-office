@@ -5,6 +5,7 @@ This document logs all assets, tilesets, icons, and audio resources used in Easy
 ---
 
 ## 1. Procedural Pixel Engine (Primary Asset Pipeline)
+
 - **Author**: EasyUp Software Solution Engineering Team / In-Code Procedural Engine
 - **License**: MIT (Internal Codebase)
 - **Scope**:
@@ -20,6 +21,7 @@ This document logs all assets, tilesets, icons, and audio resources used in Easy
 ---
 
 ## 2. Audio Effects (Web Audio API Synthesizer)
+
 - **Engine**: Procedural Web Audio API Sound Synthesizer (`src/components/office/audio.ts`)
 - **Author**: EasyUp Software Solution Engineering
 - **License**: MIT
@@ -28,5 +30,6 @@ This document logs all assets, tilesets, icons, and audio resources used in Easy
 ---
 
 ## 3. External Tilesets / CC0 Packs Policy
+
 - **Policy**: Per user instructions, paid or non-redistributable tilesets (such as Donarg's Office Interior Tileset) are **strictly excluded** from git tracking and public builds to ensure 100% license cleanliness.
 - Any imported CC0 tilesets from public repositories (e.g. OpenGameArt / Itch.io CC0) must have their exact source and license registered here prior to inclusion. Currently, 100% of the asset pipeline is procedurally generated in TypeScript/SVG/Canvas.

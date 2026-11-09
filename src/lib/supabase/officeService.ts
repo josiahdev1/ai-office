@@ -11,7 +11,10 @@
  */
 
 import { createClient as createBrowserSupabase } from '@/utils/supabase/client'
-import { createClient as createSupabaseJsClient, SupabaseClient } from '@supabase/supabase-js'
+import {
+  createClient as createSupabaseJsClient,
+  SupabaseClient,
+} from '@supabase/supabase-js'
 import { Agent, Approval } from '@/components/office/types'
 import {
   dbRowToAgent,
@@ -102,7 +105,10 @@ class SupabaseOfficeService {
         .from('office_agents')
         .select('id', { head: true, count: 'exact' })
 
-      if (error && (error.message.includes('not find the table') || error.code === '42P01')) {
+      if (
+        error &&
+        (error.message.includes('not find the table') || error.code === '42P01')
+      ) {
         this.isSupabaseReady = false
         return false
       }
@@ -123,11 +129,15 @@ class SupabaseOfficeService {
     return this.client
   }
 
-  public async upsertSession(sessionPayload: Record<string, unknown>): Promise<boolean> {
+  public async upsertSession(
+    sessionPayload: Record<string, unknown>
+  ): Promise<boolean> {
     try {
-      const { error } = await this.client.from('office_sessions').upsert(sessionPayload, {
-        onConflict: 'session_id',
-      })
+      const { error } = await this.client
+        .from('office_sessions')
+        .upsert(sessionPayload, {
+          onConflict: 'session_id',
+        })
       return !error
     } catch {
       return false
@@ -145,10 +155,18 @@ class SupabaseOfficeService {
   } | null> {
     try {
       const [agentsRes, apprRes, logsRes, msgRes] = await Promise.all([
-        this.client.from('office_agents').select('*', { count: 'exact', head: true }),
-        this.client.from('office_approvals').select('*', { count: 'exact', head: true }),
-        this.client.from('office_logs').select('*', { count: 'exact', head: true }),
-        this.client.from('office_messages').select('*', { count: 'exact', head: true }),
+        this.client
+          .from('office_agents')
+          .select('*', { count: 'exact', head: true }),
+        this.client
+          .from('office_approvals')
+          .select('*', { count: 'exact', head: true }),
+        this.client
+          .from('office_logs')
+          .select('*', { count: 'exact', head: true }),
+        this.client
+          .from('office_messages')
+          .select('*', { count: 'exact', head: true }),
       ])
 
       return {
@@ -183,7 +201,10 @@ class SupabaseOfficeService {
   /**
    * Update an agent's status or current task in office_agents.
    */
-  public async updateAgent(agentId: string, updates: Partial<Agent>): Promise<boolean> {
+  public async updateAgent(
+    agentId: string,
+    updates: Partial<Agent>
+  ): Promise<boolean> {
     try {
       const row = agentToDbRow({ ...updates, id: agentId })
       const { error } = await this.client
@@ -337,13 +358,11 @@ class SupabaseOfficeService {
    */
   public async setOfficeMode(mode: string): Promise<void> {
     try {
-      await this.client
-        .from('office_settings')
-        .upsert({
-          id: 'default',
-          mode,
-          updated_at: new Date().toISOString(),
-        })
+      await this.client.from('office_settings').upsert({
+        id: 'default',
+        mode,
+        updated_at: new Date().toISOString(),
+      })
     } catch {}
   }
 
@@ -383,7 +402,9 @@ class SupabaseOfficeService {
           { event: '*', schema: 'public', table: 'office_agents' },
           (payload) => {
             if (payload.new && callbacks.onAgentUpdate) {
-              callbacks.onAgentUpdate(dbRowToAgent(payload.new as OfficeAgentRow))
+              callbacks.onAgentUpdate(
+                dbRowToAgent(payload.new as OfficeAgentRow)
+              )
             }
           }
         )
@@ -392,7 +413,9 @@ class SupabaseOfficeService {
           { event: '*', schema: 'public', table: 'office_approvals' },
           (payload) => {
             if (payload.new && callbacks.onApprovalUpdate) {
-              callbacks.onApprovalUpdate(dbRowToApproval(payload.new as OfficeApprovalRow))
+              callbacks.onApprovalUpdate(
+                dbRowToApproval(payload.new as OfficeApprovalRow)
+              )
             }
           }
         )

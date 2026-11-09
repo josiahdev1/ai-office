@@ -16,11 +16,7 @@ export const GRID_MAX = 23
 export const GRID_SIZE = GRID_MAX - GRID_MIN + 1 // 47x47 1m tiles
 
 export type NavigationSubState =
-  | 'seated'
-  | 'standing_up'
-  | 'walking'
-  | 'sitting_down'
-  | 'standing'
+  'seated' | 'standing_up' | 'walking' | 'sitting_down' | 'standing'
 
 export interface WaypointNode {
   x: number
@@ -120,7 +116,8 @@ export function findPath(
     return [[targetX, 0, targetZ]]
   }
 
-  const key = (x: number, z: number) => (x - GRID_MIN) * GRID_SIZE + (z - GRID_MIN)
+  const key = (x: number, z: number) =>
+    (x - GRID_MIN) * GRID_SIZE + (z - GRID_MIN)
   const startKey = key(sx, sz)
   const targetKey = key(tx, tz)
 
@@ -129,7 +126,9 @@ export function findPath(
   const closed = new Set<number>()
   const cameFrom = new Map<number, number>()
   const gScore = new Map<number, number>([[startKey, 0]])
-  const fScore = new Map<number, number>([[startKey, Math.hypot(tx - sx, tz - sz)]])
+  const fScore = new Map<number, number>([
+    [startKey, Math.hypot(tx - sx, tz - sz)],
+  ])
 
   const dirs: [number, number, number][] = [
     [1, 0, 1],
@@ -180,13 +179,20 @@ export function findPath(
       const nKey = key(nx, nz)
       if (closed.has(nKey)) continue
 
-      if (nKey !== targetKey && nKey !== startKey && !isWorldTileWalkable(nx, nz)) {
+      if (
+        nKey !== targetKey &&
+        nKey !== startKey &&
+        !isWorldTileWalkable(nx, nz)
+      ) {
         continue
       }
 
       // Prevent diagonal corner-cutting across wall segments
       if (dx !== 0 && dz !== 0) {
-        if (!isWorldTileWalkable(cx + dx, cz) || !isWorldTileWalkable(cx, cz + dz)) {
+        if (
+          !isWorldTileWalkable(cx + dx, cz) ||
+          !isWorldTileWalkable(cx, cz + dz)
+        ) {
           continue
         }
       }
@@ -318,13 +324,19 @@ export function stepAgentNavigation(
 
   // 2. Staggered departure delay (agents wait at their chair before standing up)
   if ((nav.staggerRemainingSec ?? 0) > 0) {
-    nav.staggerRemainingSec = Math.max(0, (nav.staggerRemainingSec ?? 0) - safeDt)
+    nav.staggerRemainingSec = Math.max(
+      0,
+      (nav.staggerRemainingSec ?? 0) - safeDt
+    )
     return
   }
 
   // 3. Phase 1: Standing up from chair (250ms)
   if ((nav.standingUpRemainingSec ?? 0) > 0) {
-    nav.standingUpRemainingSec = Math.max(0, (nav.standingUpRemainingSec ?? 0) - safeDt)
+    nav.standingUpRemainingSec = Math.max(
+      0,
+      (nav.standingUpRemainingSec ?? 0) - safeDt
+    )
     nav.subState = 'standing_up'
     nav.isWalking = false
     // Gently push back from desk while standing up

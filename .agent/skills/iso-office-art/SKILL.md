@@ -6,6 +6,7 @@ description: Isometric Open-Plan Office Art System for EasyUp Software Solution 
 # Isometric Open-Plan Office Art System
 
 ## 1. Aesthetic Direction
+
 This skill governs the visual rendering and aesthetic guidelines for the EasyUp Software Solution HQ isometric office canvas, adhering to the clean open-plan design shown in `design-ref/ref-hq.png`.
 
 - **Viewpoint**: True 2:1 isometric projection (`tileWidth = 64`, `tileHeight = 32`).
@@ -15,7 +16,9 @@ This skill governs the visual rendering and aesthetic guidelines for the EasyUp 
 - **Lighting & Ambiance**: Soft directional overhead lighting, ambient occlusions under desks and furniture, subtle monitor glow, pulsing ring under The Brain round table, and blinking server LEDs.
 
 ## 2. Zone & Furniture Design (Procedural in Code)
+
 All environmental assets must be procedural Canvas/SVG primitives—never external pixel assets or rip-offs:
+
 1. **The Brain Meeting Core (Center)**:
    - Large round dark wooden conference table with seating for up to 30 people.
    - Soft pulsing cyan/emerald holographic ring beneath the table.
@@ -33,5 +36,6 @@ All environmental assets must be procedural Canvas/SVG primitives—never extern
    - Wooden floor inlay with treadmills, yoga mats, and dumbbells.
 
 ## 3. Offscreen Canvas Performance
+
 - Static geometry (floor slab, walls, rugs, base furniture) must be rendered to an offscreen cache canvas when camera scale or dimensions change.
 - The active rendering loop only draws the cached background, dynamic agents (depth-sorted by `gridX + gridY`), speech bubbles, particle effects, and dynamic LEDs at stable 60 FPS.

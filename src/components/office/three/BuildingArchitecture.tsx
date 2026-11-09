@@ -60,7 +60,11 @@ function LowPolyVehicle({
       {/* Tinted Windshield & Windows */}
       <mesh position={[0, 0.68, isSuv ? -0.1 : -0.15]}>
         <boxGeometry args={[1.3, 0.28, isSuv ? 1.65 : 1.35]} />
-        <meshStandardMaterial color="#0f172a" roughness={0.15} metalness={0.85} />
+        <meshStandardMaterial
+          color="#0f172a"
+          roughness={0.15}
+          metalness={0.85}
+        />
       </mesh>
       {/* 4 Wheels */}
       {[
@@ -69,7 +73,11 @@ function LowPolyVehicle({
         [-0.72, 0.18, -0.88],
         [0.72, 0.18, -0.88],
       ].map(([wx, wy, wz], idx) => (
-        <mesh key={`whl-${idx}`} position={[wx, wy, wz]} rotation={[0, 0, Math.PI / 2]}>
+        <mesh
+          key={`whl-${idx}`}
+          position={[wx, wy, wz]}
+          rotation={[0, 0, Math.PI / 2]}
+        >
           <cylinderGeometry args={[0.2, 0.2, 0.14, 12]} />
           <meshStandardMaterial color="#090d16" roughness={0.9} />
         </mesh>
@@ -109,7 +117,7 @@ export function BuildingArchitecture() {
       if (!grp) return
       const span = cfg.range[1] - cfg.range[0]
       const raw = cfg.initialOffset + t * cfg.speed * cfg.dir - cfg.range[0]
-      const wrapped = ((raw % span) + span) % span + cfg.range[0]
+      const wrapped = (((raw % span) + span) % span) + cfg.range[0]
 
       if (cfg.axis === 'x') {
         grp.position.set(wrapped, -0.05, cfg.laneCoord)
@@ -221,7 +229,10 @@ export function BuildingArchitecture() {
               carRefs.current[idx] = el
             }}
           >
-            <LowPolyVehicle color={cfg.color} type={idx % 2 === 0 ? 'sedan' : 'suv'} />
+            <LowPolyVehicle
+              color={cfg.color}
+              type={idx % 2 === 0 ? 'sedan' : 'suv'}
+            />
           </group>
         ))}
       </group>
@@ -281,7 +292,11 @@ export function BuildingArchitecture() {
               <group position={[0, 0.04, 0]}>
                 <mesh receiveShadow>
                   <cylinderGeometry args={[6.8, 6.8, 0.08, 48]} />
-                  <meshStandardMaterial color="#090d16" roughness={0.4} metalness={0.8} />
+                  <meshStandardMaterial
+                    color="#090d16"
+                    roughness={0.4}
+                    metalness={0.8}
+                  />
                 </mesh>
                 <mesh position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
                   <ringGeometry args={[6.7, 6.9, 48]} />
@@ -301,10 +316,15 @@ export function BuildingArchitecture() {
               <group position={[0, 0.03, 0]}>
                 <mesh receiveShadow>
                   <boxGeometry args={[room.size[0], 0.06, room.size[1]]} />
-                  <meshStandardMaterial color={room.floorColor} roughness={0.7} />
+                  <meshStandardMaterial
+                    color={room.floorColor}
+                    roughness={0.7}
+                  />
                 </mesh>
                 <mesh position={[0, 0.05, 0]}>
-                  <boxGeometry args={[room.size[0] + 0.1, 0.02, room.size[1] + 0.1]} />
+                  <boxGeometry
+                    args={[room.size[0] + 0.1, 0.02, room.size[1] + 0.1]}
+                  />
                   <meshStandardMaterial
                     color={room.accentColor}
                     roughness={0.5}
@@ -345,7 +365,11 @@ export function BuildingArchitecture() {
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
         {[-16, 0, 16].map((z) => (
-          <mesh key={`w-win-${z}`} position={[-23.15, 1.6, z]} rotation={[0, Math.PI / 2, 0]}>
+          <mesh
+            key={`w-win-${z}`}
+            position={[-23.15, 1.6, z]}
+            rotation={[0, Math.PI / 2, 0]}
+          >
             <planeGeometry args={[8, 1.6]} />
             <meshStandardMaterial
               color="#38bdf8"
@@ -378,11 +402,21 @@ export function BuildingArchitecture() {
         </mesh>
         <mesh position={[-12.5, 0.85, 23.2]}>
           <boxGeometry args={[21.8, 0.3, 0.1]} />
-          <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+          <meshStandardMaterial
+            color="#38bdf8"
+            transparent
+            opacity={0.4}
+            roughness={0.1}
+          />
         </mesh>
         <mesh position={[12.5, 0.85, 23.2]}>
           <boxGeometry args={[21.8, 0.3, 0.1]} />
-          <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+          <meshStandardMaterial
+            color="#38bdf8"
+            transparent
+            opacity={0.4}
+            roughness={0.1}
+          />
         </mesh>
 
         <mesh position={[23.2, 0.35, -12.5]} castShadow receiveShadow>
@@ -395,11 +429,21 @@ export function BuildingArchitecture() {
         </mesh>
         <mesh position={[23.2, 0.85, -12.5]}>
           <boxGeometry args={[0.1, 0.3, 21.8]} />
-          <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+          <meshStandardMaterial
+            color="#38bdf8"
+            transparent
+            opacity={0.4}
+            roughness={0.1}
+          />
         </mesh>
         <mesh position={[23.2, 0.85, 12.5]}>
           <boxGeometry args={[0.1, 0.3, 21.8]} />
-          <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+          <meshStandardMaterial
+            color="#38bdf8"
+            transparent
+            opacity={0.4}
+            roughness={0.1}
+          />
         </mesh>
       </group>
 

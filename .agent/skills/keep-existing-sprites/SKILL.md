@@ -6,12 +6,16 @@ description: Preservation rules and extension guidelines for existing employee p
 # Keep Existing Sprites Rule
 
 ## 1. Source of Truth
+
 The employee visual identity is strictly anchored in `src/components/office/pixel-sprites.tsx`.
+
 - **Character Design**: Chunky pixel-art human worker wearing a blue baseball cap, dark face silhouette, vivid blue shirt/hoodie, and dark work trousers/shoes.
 - **Strict Prohibition**: NEVER replace this pixel sprite with 3D models, smooth vector illustrations, generic emoji blobs, or unapproved sprite sheets.
 
 ## 2. Permitted Sprite Extensions
+
 The sprite rendering engine may only modify or augment the character through the following dimensions:
+
 1. **Isometric Orientations & Walk Cycles**:
    - 4-direction facing: South-East (SE), South-West (SW), North-East (NE), North-West (NW).
    - 2-frame walking cycle (leg sway and subtle head bob).

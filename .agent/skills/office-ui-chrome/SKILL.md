@@ -6,6 +6,7 @@ description: UI/UX Chrome, Header HUD, Bottom Toolbar, and Agent Roster Panel Gu
 # Office UI Chrome & Cockpit Design
 
 ## 1. Dark Studio Architecture
+
 - **Theme Foundation**: Executive dark engineering cockpit (`bg-[#0a0d14]` / `bg-[#0e131f]`).
 - **Tailwind v4 Compliance**:
   - Always convert decimal opacities to percentage integers: `/8`, `/12`, `/15`, `/20`, `/50`, `/80`.
@@ -13,6 +14,7 @@ description: UI/UX Chrome, Header HUD, Bottom Toolbar, and Agent Roster Panel Gu
   - Always enforce `whitespace-nowrap` on action pills and buttons containing icons.
 
 ## 2. Top Navigation HUD
+
 1. **Brand & Title Capsule**:
    - Compact top-left or centered header: `EASYUP HEADQUARTERS` with live status indicator (🟢 `23 ACTIVE AGENTS`).
 2. **Scrolling Agent Strip**:
@@ -23,6 +25,7 @@ description: UI/UX Chrome, Header HUD, Bottom Toolbar, and Agent Roster Panel Gu
    - Clean top-left or top-right zoom in (`+`) and zoom out (`-`) floating buttons with zoom percentage read-out.
 
 ## 3. Bottom Action Toolbar
+
 - Floating bottom bar containing:
   - `+ Agent`: Highlighted action with subtle emerald accent to spawn/hire new agent.
   - `Layout`: View and toggle floor plan layers.
@@ -31,6 +34,7 @@ description: UI/UX Chrome, Header HUD, Bottom Toolbar, and Agent Roster Panel Gu
   - Mode switches: `FOCUS WORK`, `ALL HANDS`, `PANTRY & BREAK`, `REC & GYM`.
 
 ## 4. Slide-Over AGENTS Panel
+
 - Slide-over drawer on the right side of the screen.
 - Real-time search filter by agent name, department, or status.
 - Department groups: Executive/Arch, Engineering Core, QA & SecOps NOC, Intelligence Lab, Operations Hub, Growth Lab.

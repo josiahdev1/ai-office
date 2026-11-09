@@ -18,18 +18,22 @@ export function createClient(
       },
       setAll(cookiesToSet) {
         try {
-            const resolvedStore = cookieStore as unknown as {
-              set?: (
-                name: string,
-                value: string,
-                options?: Record<string, unknown>
-              ) => void
-            }
-            if (typeof resolvedStore?.set === 'function') {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                resolvedStore.set?.(name, value, options as Record<string, unknown>)
+          const resolvedStore = cookieStore as unknown as {
+            set?: (
+              name: string,
+              value: string,
+              options?: Record<string, unknown>
+            ) => void
+          }
+          if (typeof resolvedStore?.set === 'function') {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              resolvedStore.set?.(
+                name,
+                value,
+                options as Record<string, unknown>
               )
-            }
+            )
+          }
         } catch {
           // Server component read-only cookie context; ignore
         }

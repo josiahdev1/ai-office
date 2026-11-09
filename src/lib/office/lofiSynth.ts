@@ -49,7 +49,10 @@ class LofiAudioEngine {
 
       // Master output
       this.masterGain = this.ctx.createGain()
-      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.45, this.ctx.currentTime)
+      this.masterGain.gain.setValueAtTime(
+        this.isMuted ? 0 : 0.45,
+        this.ctx.currentTime
+      )
 
       // Master lowpass filter for warm lofi sound
       this.filterNode = this.ctx.createBiquadFilter()
@@ -91,7 +94,9 @@ class LofiAudioEngine {
     for (let i = 0; i < bufferSize; i++) {
       // Occasional crackle burst
       const isPop = Math.random() < 0.001
-      data[i] = isPop ? (Math.random() * 2 - 1) * 0.8 : (Math.random() * 2 - 1) * 0.03
+      data[i] = isPop
+        ? (Math.random() * 2 - 1) * 0.8
+        : (Math.random() * 2 - 1) * 0.03
     }
 
     const noise = this.ctx.createBufferSource()
@@ -114,7 +119,13 @@ class LofiAudioEngine {
     const bufferSize = this.ctx.sampleRate * 2
     const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate)
     const data = buffer.getChannelData(0)
-    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0
+    let b0 = 0,
+      b1 = 0,
+      b2 = 0,
+      b3 = 0,
+      b4 = 0,
+      b5 = 0,
+      b6 = 0
 
     for (let i = 0; i < bufferSize; i++) {
       const white = Math.random() * 2 - 1
@@ -199,7 +210,10 @@ class LofiAudioEngine {
         void this.ctx.resume()
       }
       const targetGain = muted ? 0 : 0.45
-      this.masterGain.gain.linearRampToValueAtTime(targetGain, this.ctx.currentTime + 0.2)
+      this.masterGain.gain.linearRampToValueAtTime(
+        targetGain,
+        this.ctx.currentTime + 0.2
+      )
     }
 
     if (!muted && !this.isPlaying) {

@@ -1,6 +1,6 @@
 /**
  * Unified Server-Side Storage & Supabase Sync Layer
- * 
+ *
  * Master persistence layer for EasyUp Software Solution HQ.
  * Directly reads & writes to live Supabase tables (`office_agents`, `office_approvals`,
  * `office_logs`, `office_messages`, `office_tasks`, `office_settings`) through db-map.ts.
@@ -59,12 +59,8 @@ export const AgentUpdateSchema = z.object({
   last_action: z.string().optional(),
   room: z.string().optional(),
   color: z.string().optional(),
-  current_coord: z
-    .object({ x: z.number(), y: z.number() })
-    .optional(),
-  target_coord: z
-    .object({ x: z.number(), y: z.number() })
-    .optional(),
+  current_coord: z.object({ x: z.number(), y: z.number() }).optional(),
+  target_coord: z.object({ x: z.number(), y: z.number() }).optional(),
 })
 
 // =============================================================================
@@ -75,7 +71,10 @@ const RATE_LIMIT_WINDOW_MS = 60_000 // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 120
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 
-export function checkRateLimit(key = 'global'): { allowed: boolean; remaining: number } {
+export function checkRateLimit(key = 'global'): {
+  allowed: boolean
+  remaining: number
+} {
   const now = Date.now()
   const entry = rateLimitMap.get(key)
 
@@ -124,7 +123,10 @@ function getSupabase(): SupabaseClient | null {
 let cachedOfficeData: OfficeData | null = null
 
 // Desk Coordinate Map for Dynamic Agents
-export const ROOM_DESK_SLOTS: Record<string, { id: string; room: string; x: number; y: number }[]> = {
+export const ROOM_DESK_SLOTS: Record<
+  string,
+  { id: string; room: string; x: number; y: number }[]
+> = {
   'Engineering Core': [
     { id: 'eng-1', room: 'Engineering Core', x: 2, y: 10 },
     { id: 'eng-2', room: 'Engineering Core', x: 2, y: 11 },
@@ -172,7 +174,8 @@ export function autoAssignDesks(agents: Agent[]): Agent[] {
   return agents.map((agent) => {
     if (agent.desk_coord && agent.desk_id) return agent
 
-    const roomSlots = ROOM_DESK_SLOTS[agent.room] || ROOM_DESK_SLOTS['Engineering Core']
+    const roomSlots =
+      ROOM_DESK_SLOTS[agent.room] || ROOM_DESK_SLOTS['Engineering Core']
     const availableSlot = roomSlots.find((slot) => !occupiedSlots.has(slot.id))
 
     if (availableSlot) {
@@ -226,7 +229,10 @@ export async function getOfficeState(): Promise<OfficeData> {
       .order('name', { ascending: true })
 
     if (agentsError) {
-      console.warn('[Storage] Error reading office_agents:', agentsError.message)
+      console.warn(
+        '[Storage] Error reading office_agents:',
+        agentsError.message
+      )
       if (cachedOfficeData) {
         return {
           ...cachedOfficeData,
@@ -249,12 +255,15 @@ export async function getOfficeState(): Promise<OfficeData> {
       .order('created_at', { ascending: false })
 
     if (approvalsError) {
-      console.warn('[Storage] Error reading office_approvals:', approvalsError.message)
+      console.warn(
+        '[Storage] Error reading office_approvals:',
+        approvalsError.message
+      )
     }
 
-    const approvals: Approval[] = ((rawApprovals as OfficeApprovalRow[]) || []).map(
-      dbRowToApproval
-    )
+    const approvals: Approval[] = (
+      (rawApprovals as OfficeApprovalRow[]) || []
+    ).map(dbRowToApproval)
 
     // 3. Fetch office_logs (recent telemetry)
     const { data: rawLogs, error: logsError } = await supabase
@@ -267,7 +276,9 @@ export async function getOfficeState(): Promise<OfficeData> {
       console.warn('[Storage] Error reading office_logs:', logsError.message)
     }
 
-    const logs: string[] = ((rawLogs as OfficeLogRow[]) || []).map(dbRowToLogString)
+    const logs: string[] = ((rawLogs as OfficeLogRow[]) || []).map(
+      dbRowToLogString
+    )
 
     // 4. Count messages in office_messages
     const { count: messageCount } = await supabase
@@ -279,7 +290,10 @@ export async function getOfficeState(): Promise<OfficeData> {
       playback_speed: '1x',
       agents,
       approvals,
-      logs: logs.length > 0 ? logs : ['[BOOT] Live Supabase connection established.'],
+      logs:
+        logs.length > 0
+          ? logs
+          : ['[BOOT] Live Supabase connection established.'],
       dbConnected: true,
       dbError: null,
       tableCounts: {
@@ -295,7 +309,7 @@ export async function getOfficeState(): Promise<OfficeData> {
   } catch (err: unknown) {
     const errorMsg = (err as Error).message || 'Database connection error'
     console.error('[Storage] getOfficeState error:', errorMsg)
-    
+
     if (cachedOfficeData) {
       return {
         ...cachedOfficeData,
@@ -353,7 +367,10 @@ export async function updateAgent(
       .eq('id', agentId)
 
     if (error) {
-      console.warn(`[Storage] Failed to update agent ${agentId} in DB:`, error.message)
+      console.warn(
+        `[Storage] Failed to update agent ${agentId} in DB:`,
+        error.message
+      )
     }
   }
 
