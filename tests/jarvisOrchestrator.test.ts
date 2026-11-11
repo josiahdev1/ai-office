@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AVAILABLE_MODELS,
   buildJarvisPersonaSystemPrompt,
   buildJarvisTaskPlan,
   buildJarvisTelemetrySnapshot,
@@ -11,6 +12,7 @@ import {
   LlmCallerOutput,
   runJarvisTurn,
 } from '@/lib/jarvis/orchestrator'
+import { cleanJarvisReplyText } from '@/lib/jarvis/localSlm'
 import type { Agent, OfficeData } from '@/components/office/types'
 
 const MOCK_AGENTS: Agent[] = [
@@ -343,7 +345,19 @@ describe('Phase J7: Real Gemini Conversation, Function-Calling Tools & Memory Wi
     expect(buildJarvisPersonaSystemPrompt('Josiah')).toContain('Josiah')
   })
 
-  it('7. routes individual agents ("can you send josiah to canteen" / "send josiah to gym") and supports Local SLM failover', async () => {
+  it('7. routes individual agents, strips **** markdown symbols, and runs Hugging Face neural Local SLM', async () => {
+    // Verify **** and ** are stripped cleanly from AI responses
+    expect(
+      cleanJarvisReplyText('****Hello **Josiah**, here is `code` and ****bold****!')
+    ).toBe('Hello Josiah, here is code and bold!')
+
+    // Verify AVAILABLE_MODELS keeps jarvis-local-slm-v1 and includes Hugging Face local neural SLMs
+    const modelIds = AVAILABLE_MODELS.map((m) => m.id)
+    expect(modelIds).toContain('jarvis-local-slm-v1')
+    expect(modelIds).toContain('hf-smollm2-135m')
+    expect(modelIds).toContain('hf-smollm2-360m')
+    expect(modelIds).toContain('hf-qwen2.5-0.5b')
+
     const agentsWithJosiah: Agent[] = [
       ...MOCK_AGENTS,
       {
@@ -378,9 +392,9 @@ describe('Phase J7: Real Gemini Conversation, Function-Calling Tools & Memory Wi
     expect(cmdGym?.agentId).toBe('josiah')
     expect(cmdGym?.destination).toBe('gym')
 
-    // Verify direct Local SLM execution for conversational questions ("what is programming?", "you know system architecture?")
+    // Verify direct neural Local SLM execution for open-ended questions without hardcoded lookup tables
     const slmTurn = await runJarvisTurn({
-      prompt: 'do you know system architecture?',
+      prompt: 'What is quantum computing in simple terms?',
       operatorName: 'Josiah',
       autonomyMode: 'ask_first',
       preferredModel: 'jarvis-local-slm-v1',
@@ -388,6 +402,7 @@ describe('Phase J7: Real Gemini Conversation, Function-Calling Tools & Memory Wi
     })
     expect(slmTurn.provider).toBe('LOCAL_SLM')
     expect(slmTurn.localSlmTokensUsed).toBeGreaterThan(0)
-    expect(slmTurn.reply).toContain('architecture')
-  })
+    expect(slmTurn.reply.length).toBeGreaterThan(15)
+    expect(slmTurn.reply).not.toContain('**')
+  }, 20000)
 })

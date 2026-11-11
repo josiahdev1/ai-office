@@ -23,9 +23,37 @@ import {
 } from '@/lib/supabase/officeService'
 import { formatPHTTime } from '@/lib/office/db-map'
 import type { JarvisCoreState } from '@/components/jarvis/ArcReactor'
+import { AVAILABLE_MODELS } from '@/lib/jarvis/orchestrator'
 
 const STORAGE_MODE_KEY = 'easyup_hq_mode_v3'
 const STORAGE_OVERRIDES_KEY = 'easyup_hq_overrides_v3'
+
+const DEFAULT_AGENT_MODELS: Record<string, string> = {
+  josiah: 'gemini-2.0-flash',
+  gloria: 'gemini-2.5-pro',
+  jb: 'gemini-2.5-flash',
+  julian: 'hf-qwen2.5-0.5b',
+  arwin: 'gemini-2.0-flash',
+  bonnie: 'gemini-2.5-flash',
+  christian: 'hf-smollm2-360m',
+  john_lloyd: 'gemini-2.0-flash-lite',
+  neil_mar: 'hf-qwen2.5-0.5b',
+  nelmar: 'jarvis-local-slm-v1',
+  gabriel: 'gemini-2.5-pro',
+  keiru: 'hf-qwen2.5-0.5b',
+  roy_jhan: 'hf-smollm2-360m',
+  ryan: 'jarvis-local-slm-v1',
+  gian: 'gemini-2.0-flash',
+  john_arvy: 'hf-smollm2-135m',
+  khent: 'gemini-1.5-flash',
+  jesmond: 'gemini-2.0-flash-lite',
+  jo_vincent: 'hf-smollm2-135m',
+  kin: 'gemini-1.5-flash',
+  anthony: 'gemini-2.0-flash',
+  blaze: 'hf-smollm2-135m',
+  ferwin: 'jarvis-local-slm-v1',
+  mary_grace: 'hf-smollm2-360m',
+}
 
 function modeToRoomName(mode: DepartmentMode, defaultRoom: string): string {
   switch (mode) {
@@ -68,6 +96,7 @@ const DEFAULT_AGENTS: Agent[] = Object.values(AGENT_WORKSTATIONS_3D).map((ws) =>
   current_task: 'Architecting High-Throughput Pipelines',
   current_file: 'src/components/office/OfficeCanvas3D.tsx',
   progress_pct: 82,
+  model: DEFAULT_AGENT_MODELS[ws.agentId] || 'gemini-2.0-flash',
   updated_at: new Date().toISOString(),
 }))
 
@@ -759,6 +788,10 @@ function HQCommandPage() {
         body: JSON.stringify({
           agentId: selectedAgent.id,
           task: promptText,
+          model:
+            selectedAgent.model ||
+            DEFAULT_AGENT_MODELS[selectedAgent.id] ||
+            'gemini-2.0-flash',
         }),
       })
       const data = await res.json()
@@ -771,6 +804,36 @@ function HQCommandPage() {
     } finally {
       setIsDispatching(false)
     }
+  }
+
+  const handleUpdateAgentModel = (
+    agentId: string,
+    newModel: string,
+    applyToAll = false
+  ) => {
+    sfx?.playTrigger?.()
+    if (applyToAll) {
+      setAgents((prev) => prev.map((a) => ({ ...a, model: newModel })))
+      setSelectedAgent((prev) => (prev ? { ...prev, model: newModel } : prev))
+      const logLine = `${formatPHTTime()} [AI ENGINE] Applied model "${newModel}" to all 24 HQ agents.`
+      setLogs((prev) => [logLine, ...prev].slice(0, 50))
+      for (const ag of agents) {
+        void officeSupabase.updateAgent(ag.id, { model: newModel })
+      }
+      return
+    }
+
+    setAgents((prev) =>
+      prev.map((a) => (a.id === agentId ? { ...a, model: newModel } : a))
+    )
+    setSelectedAgent((prev) =>
+      prev && prev.id === agentId ? { ...prev, model: newModel } : prev
+    )
+    const targetName =
+      agents.find((a) => a.id === agentId)?.name || selectedAgent?.name || agentId
+    const logLine = `${formatPHTTime()} [AI ENGINE] ${targetName} switched AI model to "${newModel}".`
+    setLogs((prev) => [logLine, ...prev].slice(0, 50))
+    void officeSupabase.updateAgent(agentId, { model: newModel })
   }
 
   // Mode button pills
@@ -1039,61 +1102,60 @@ function HQCommandPage() {
           )}
         </section>
 
-        {/* Full-Screen Jarvis Holographic Interior Chamber (Office keeps running behind it) */}
-        {jarvisPhase === 'inside' && (
-          <JarvisInterior
-            agents={agents}
-            approvals={approvals}
-            logs={logs}
-            currentMode={currentMode}
-            agentRouteOverrides={agentRouteOverrides}
-            is2DDefault={is2DView}
-            coreState={jarvisCoreState}
-            onCoreStateChange={setJarvisCoreState}
-            onExit={exitJarvis}
-            onSelectAgentAndExit={(ag) => {
-              setSelectedAgent(ag)
-              exitJarvis()
-            }}
-            onGlobalModeChange={handleGlobalModeChange}
-            onRouteIndividualAgent={(agentId, destination, description) => {
-              const found = agents.find(
-                (a) =>
-                  a.id.toLowerCase() === agentId.toLowerCase() ||
-                  a.name.toLowerCase() === agentId.toLowerCase()
-              )
-              if (!found) return
-              const targetMode: DepartmentMode =
-                destination === 'pantry'
-                  ? 'PANTRY'
-                  : destination === 'gym'
-                    ? 'GYM'
-                    : destination === 'meeting'
-                      ? 'ALL_HANDS'
-                      : 'FOCUS_WORK'
-              const newStatus: Agent['status'] =
-                destination === 'pantry'
-                  ? 'on_break'
-                  : destination === 'gym'
-                    ? 'at_gym'
-                    : destination === 'meeting'
-                      ? 'in_meeting'
-                      : 'working'
-              handleRouteIndividualAgent(
-                found,
-                targetMode,
-                newStatus,
-                description
-              )
-            }}
-            onApprove={(approvalId, decision) =>
-              void handleGoSignal(
-                approvalId,
-                decision === 'approved' ? 'approve' : 'reject'
-              )
-            }
-          />
-        )}
+        {/* Full-Screen Jarvis Holographic Interior Chamber (Persistently mounted so Always-On Voice works seamlessly across entering & exiting JARVIS) */}
+        <JarvisInterior
+          agents={agents}
+          approvals={approvals}
+          logs={logs}
+          currentMode={currentMode}
+          agentRouteOverrides={agentRouteOverrides}
+          is2DDefault={is2DView}
+          coreState={jarvisCoreState}
+          isOpen={jarvisPhase === 'inside'}
+          onCoreStateChange={setJarvisCoreState}
+          onExit={exitJarvis}
+          onSelectAgentAndExit={(ag) => {
+            setSelectedAgent(ag)
+            exitJarvis()
+          }}
+          onGlobalModeChange={handleGlobalModeChange}
+          onRouteIndividualAgent={(agentId, destination, description) => {
+            const found = agents.find(
+              (a) =>
+                a.id.toLowerCase() === agentId.toLowerCase() ||
+                a.name.toLowerCase() === agentId.toLowerCase()
+            )
+            if (!found) return
+            const targetMode: DepartmentMode =
+              destination === 'pantry'
+                ? 'PANTRY'
+                : destination === 'gym'
+                  ? 'GYM'
+                  : destination === 'meeting'
+                    ? 'ALL_HANDS'
+                    : 'FOCUS_WORK'
+            const newStatus: Agent['status'] =
+              destination === 'pantry'
+                ? 'on_break'
+                : destination === 'gym'
+                  ? 'at_gym'
+                  : destination === 'meeting'
+                    ? 'in_meeting'
+                    : 'working'
+            handleRouteIndividualAgent(
+              found,
+              targetMode,
+              newStatus,
+              description
+            )
+          }}
+          onApprove={(approvalId, decision) =>
+            void handleGoSignal(
+              approvalId,
+              decision === 'approved' ? 'approve' : 'reject'
+            )
+          }
+        />
 
         {/* ===================================================================== */}
         {/* SLIDE-OVER FULL AI AGENT ROSTER DRAWER (Search, Filter & Quick Route) */}
@@ -1600,6 +1662,53 @@ function HQCommandPage() {
                       {selectedBadge.label}
                     </span>
                   </div>
+                </div>
+
+                {/* Agent AI Model Selector (Gemini / Hugging Face / JARVIS Local SLM) */}
+                <div className="rounded-lg border border-cyan-500/30 bg-slate-950/75 p-2 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[9px] font-bold tracking-wider text-cyan-300 uppercase">
+                      AGENT AI MODEL (GEMINI / HUGGING FACE / SLM):
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleUpdateAgentModel(
+                          selectedAgent.id,
+                          selectedAgent.model ||
+                            DEFAULT_AGENT_MODELS[selectedAgent.id] ||
+                            'gemini-2.0-flash',
+                          true
+                        )
+                      }
+                      className="cursor-pointer rounded border border-cyan-500/40 bg-cyan-950/50 px-1.5 py-0.5 font-mono text-[9px] font-bold text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 transition whitespace-nowrap"
+                    >
+                      Apply to All 24 Agents
+                    </button>
+                  </div>
+                  <select
+                    data-testid="agent-model-selector"
+                    aria-label="Select Agent AI Model"
+                    value={
+                      selectedAgent.model ||
+                      DEFAULT_AGENT_MODELS[selectedAgent.id] ||
+                      'gemini-2.0-flash'
+                    }
+                    onChange={(e) =>
+                      handleUpdateAgentModel(selectedAgent.id, e.target.value)
+                    }
+                    className="w-full cursor-pointer rounded-md border border-slate-800 bg-slate-900 px-2 py-1 font-mono text-[10px] font-bold text-cyan-200 focus:border-cyan-400 focus:outline-none"
+                  >
+                    {AVAILABLE_MODELS.map((m) => (
+                      <option
+                        key={m.id}
+                        value={m.id}
+                        className="bg-slate-950 text-slate-100"
+                      >
+                        {m.name} — {m.tier}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Individual Action Buttons (Direct A* Pathfinding Routing) */}

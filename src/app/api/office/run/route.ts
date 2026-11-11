@@ -6,6 +6,7 @@ import { getOfficeState, saveOfficeState } from '@/lib/storage'
 const RunRequestSchema = z.object({
   agentId: z.string().min(1),
   task: z.string().min(1),
+  model: z.string().optional(),
 })
 
 export async function POST(req: Request) {
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
       )
     }
 
-    const { agentId, task } = parsed.data
+    const { agentId, task, model } = parsed.data
     const state = await getOfficeState()
     const agent = state.agents.find((a) => a.id === agentId)
 
@@ -35,12 +36,17 @@ export async function POST(req: Request) {
       )
     }
 
-    // Execute through LLM hierarchy
+    if (model) {
+      agent.model = model
+    }
+
+    // Execute through LLM hierarchy (Gemini / Hugging Face Local SLM / OpenAI)
     const result = await executeAgentTask(
       agent.id,
       agent.name,
       agent.role,
-      task
+      task,
+      agent.model || 'gemini-2.0-flash'
     )
 
     // Update agent state

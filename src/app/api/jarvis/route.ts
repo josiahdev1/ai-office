@@ -22,11 +22,36 @@ import {
   runJarvisTurn,
 } from '@/lib/jarvis/orchestrator'
 
+let cachedFastOfficeState: Awaited<ReturnType<typeof getFastOfficeState>> | null =
+  null
+let cachedFastOfficeStateAt = 0
+
+async function getUltraFastOfficeState() {
+  const now = Date.now()
+  if (cachedFastOfficeState && now - cachedFastOfficeStateAt < 8000) {
+    return cachedFastOfficeState
+  }
+  if (cachedFastOfficeState) {
+    // Return cached immediately and refresh in background
+    void getFastOfficeState()
+      .then((fresh) => {
+        cachedFastOfficeState = fresh
+        cachedFastOfficeStateAt = Date.now()
+      })
+      .catch(() => {})
+    return cachedFastOfficeState
+  }
+  const fresh = await getFastOfficeState()
+  cachedFastOfficeState = fresh
+  cachedFastOfficeStateAt = Date.now()
+  return fresh
+}
+
 export async function GET() {
   try {
     const providerStatus = detectJarvisProviderStatus()
     const [officeData, messages, memory] = await Promise.all([
-      getFastOfficeState(),
+      getUltraFastOfficeState(),
       getJarvisMessages(20),
       getJarvisRollingMemory(),
     ])
@@ -100,13 +125,8 @@ export async function POST(req: NextRequest) {
   const wantsJson = req.headers.get('accept')?.includes('application/json')
 
   try {
-    const [officeData, storedMemory] = await Promise.all([
-      getFastOfficeState(),
-      getJarvisRollingMemory(),
-    ])
-
-    const effectiveRollingSummary =
-      rollingSummary ?? storedMemory.rollingSummary ?? ''
+    const officeData = await getUltraFastOfficeState()
+    const effectiveRollingSummary = rollingSummary ?? ''
 
     // Non-blocking background persistence of operator message
     void Promise.allSettled([

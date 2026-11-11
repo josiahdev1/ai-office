@@ -69,6 +69,7 @@ export interface Agent {
   car_color?: string
   bay?: number
   accessories?: string[]
+  model?: string
 }
 
 export type CarStyle = 'sedan' | 'hatchback' | 'suv' | 'pickup' | 'van' | 'truck' | 'bus'

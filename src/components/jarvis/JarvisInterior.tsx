@@ -44,6 +44,7 @@ export interface JarvisInteriorProps {
   agentRouteOverrides: Record<string, DepartmentMode>
   is2DDefault?: boolean
   coreState: JarvisCoreState
+  isOpen?: boolean
   onCoreStateChange: (state: JarvisCoreState) => void
   onExit: () => void
   onSelectAgentAndExit: (agent: Agent) => void
@@ -94,6 +95,7 @@ export default function JarvisInterior({
   agentRouteOverrides,
   is2DDefault = false,
   coreState,
+  isOpen = true,
   onCoreStateChange,
   onExit,
   onSelectAgentAndExit,
@@ -820,7 +822,11 @@ export default function JarvisInterior({
       role="dialog"
       aria-modal="true"
       aria-label="JARVIS Holographic Interior Chamber"
-      className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#030711] text-slate-100 select-none"
+      className={`fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#030711] text-slate-100 select-none transition-all duration-300 ${
+        isOpen
+          ? 'opacity-100 pointer-events-auto visible'
+          : 'opacity-0 pointer-events-none invisible'
+      }`}
     >
       {/* Spherical Chamber Radial Hex-Grid & Holographic Vignette Backdrop */}
       <div
@@ -1162,8 +1168,13 @@ export default function JarvisInterior({
                             />
                           </div>
                           <div className="min-w-0">
-                            <div className="font-mono text-xs font-bold text-slate-100 truncate">
-                              {ag.name}
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-xs font-bold text-slate-100 truncate">
+                                {ag.name}
+                              </span>
+                              <span className="rounded border border-cyan-500/30 bg-cyan-950/60 px-1.5 py-0.2 font-mono text-[8px] font-bold text-cyan-300 uppercase whitespace-nowrap">
+                                {ag.model || 'gemini-2.0-flash'}
+                              </span>
                             </div>
                             <div className="font-mono text-[10px] text-slate-400 truncate">
                               {ag.role}
