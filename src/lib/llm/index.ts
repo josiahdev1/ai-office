@@ -62,27 +62,35 @@ export function getActiveLLMProviders(): {
  * Call Google Gemini REST API
  */
 async function callGemini(prompt: string, apiKey: string): Promise<string> {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
-    }),
-    signal: AbortSignal.timeout(12000),
-  })
+  const models = ['gemini-2.5-flash', 'gemini-flash-latest']
+  let lastError = 'Unknown Gemini error'
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Gemini API error (${response.status}): ${errorText}`)
+  for (const model of models) {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
+      }),
+      signal: AbortSignal.timeout(15000),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      lastError = `Gemini API error (${response.status}): ${errorText}`
+      continue
+    }
+
+    const data = await response.json()
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
+    if (text) return text
   }
 
-  const data = await response.json()
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) throw new Error('Empty response from Gemini')
-  return text
+  throw new Error(lastError)
 }
+
 
 /**
  * Call Anthropic Messages API

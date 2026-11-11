@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Agent, Approval } from '@/components/office/types'
 import { DepartmentMode } from '@/config/officeLayout'
 import {
@@ -13,6 +13,11 @@ import {
   JARVIS_CORE_STATES,
   JarvisCoreState,
 } from './ArcReactor'
+import type {
+  JarvisProviderStatus,
+  JarvisTaskPlan,
+  JarvisTurnResult,
+} from '@/lib/jarvis/orchestrator'
 
 export type JarvisQualityPreset = 'low' | 'medium' | 'high'
 
@@ -21,8 +26,11 @@ export interface JarvisChatMessage {
   role: 'jarvis' | 'user'
   text: string
   intent?: 'QUESTION' | 'STATUS' | 'TASK' | 'OFFICE_COMMAND'
+  provider?: string
   timestamp: string
   citations?: string
+  isStreaming?: boolean
+  taskPlan?: JarvisTaskPlan
 }
 
 export interface JarvisInteriorProps {
@@ -38,6 +46,31 @@ export interface JarvisInteriorProps {
   onSelectAgentAndExit: (agent: Agent) => void
   onGlobalModeChange?: (mode: DepartmentMode) => void
   onApprove?: (approvalId: string, decision: 'approved' | 'rejected') => void
+}
+
+interface SpeechRecognitionAlternativeLike {
+  transcript: string
+}
+
+interface SpeechRecognitionResultLike {
+  isFinal: boolean
+  0: SpeechRecognitionAlternativeLike
+}
+
+interface SpeechRecognitionEventLike {
+  resultIndex: number
+  results: ArrayLike<SpeechRecognitionResultLike>
+}
+
+interface SpeechRecognitionLike {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  start: () => void
+  stop: () => void
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null
+  onerror: ((event: { error?: string }) => void) | null
+  onend: (() => void) | null
 }
 
 const STORAGE_USER_NAME_KEY = 'easyup_jarvis_username_v1'
@@ -88,8 +121,17 @@ export default function JarvisInterior({
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(false)
   const [ttsMuted, setTtsMuted] = useState<boolean>(true)
   const [voicePermissionStatus, setVoicePermissionStatus] =
-    useState<string>('Voice Off (Default)')
+    useState<string>('Voice Off (Click Mic to talk)')
   const [sessionTokens, setSessionTokens] = useState<number>(0)
+  const [isTransmitting, setIsTransmitting] = useState<boolean>(false)
+  const [liveAudioLevel, setLiveAudioLevel] = useState<number>(0.45)
+  const [providerStatus, setProviderStatus] = useState<JarvisProviderStatus>({
+    provider: 'GEMINI',
+    modelLabel: 'LIVE AI • GEMINI 2.5 FLASH',
+    isLiveAI: true,
+  })
+  const [dispatchedPlanIds, setDispatchedPlanIds] = useState<Record<string, boolean>>({})
+
   const [reducedMotion, setReducedMotion] = useState<boolean>(() => {
     if (typeof window !== 'undefined' && window.matchMedia) {
       return window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -98,6 +140,12 @@ export default function JarvisInterior({
   })
 
   const inputRef = useRef<HTMLInputElement>(null)
+  const feedEndRef = useRef<HTMLDivElement>(null)
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+  const ttsMutedRef = useRef<boolean>(ttsMuted)
+  useEffect(() => {
+    ttsMutedRef.current = ttsMuted
+  }, [ttsMuted])
 
   // Compute live operational telemetry strictly from real Supabase state
   const telemetry = useMemo(() => {
@@ -158,6 +206,105 @@ export default function JarvisInterior({
 
   const [messages, setMessages] = useState<JarvisChatMessage[]>([])
 
+  // Speak text using Web Speech Synthesis API with British cadence when unmuted or explicitly triggered
+  const speakWithJarvisVoice = useCallback(
+    (text: string, forceSpeak = false) => {
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+      if (ttsMutedRef.current && !forceSpeak) return
+
+      try {
+        window.speechSynthesis.cancel()
+        const utterance = new SpeechSynthesisUtterance(text)
+        const voices = window.speechSynthesis.getVoices()
+        const preferredVoice =
+          voices.find(
+            (v) =>
+              /en[-_]GB/i.test(v.lang) &&
+              /(male|daniel|arthur|google uk english male|oliver|ryan)/i.test(
+                v.name
+              )
+          ) ||
+          voices.find((v) => /en[-_]GB/i.test(v.lang)) ||
+          voices.find((v) => /en/i.test(v.lang))
+
+        if (preferredVoice) {
+          utterance.voice = preferredVoice
+        }
+        utterance.rate = 1.02
+        utterance.pitch = 0.94
+
+        utterance.onstart = () => {
+          onCoreStateChange('speaking')
+          setLiveAudioLevel(0.88)
+        }
+        utterance.onboundary = () => {
+          setLiveAudioLevel(0.55 + Math.random() * 0.4)
+        }
+        utterance.onend = () => {
+          setLiveAudioLevel(0.45)
+          onCoreStateChange('idle')
+        }
+        utterance.onerror = () => {
+          setLiveAudioLevel(0.45)
+          onCoreStateChange('idle')
+        }
+
+        window.speechSynthesis.speak(utterance)
+      } catch {
+        // Ignore speech synthesis errors on headless browsers
+      }
+    },
+    [onCoreStateChange]
+  )
+
+  // Fetch live provider status & persisted Jarvis messages from GET /api/jarvis on mount
+  useEffect(() => {
+    let cancelled = false
+    async function loadInitialJarvisState() {
+      try {
+        const res = await fetch('/api/jarvis', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+
+        if (data.providerStatus) {
+          setProviderStatus(data.providerStatus)
+        }
+        if (Array.isArray(data.messages) && data.messages.length > 0) {
+          const loaded: JarvisChatMessage[] = data.messages.slice(-12).map(
+            (row: {
+              id: string
+              sender_id: string
+              content: string
+              created_at: string
+            }) => ({
+              id: row.id,
+              role: row.sender_id === 'jarvis' ? 'jarvis' : 'user',
+              text: row.content,
+              timestamp: new Date(row.created_at).toLocaleTimeString('en-US', {
+                timeZone: 'Asia/Manila',
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+            })
+          )
+          setMessages(loaded)
+        }
+      } catch {
+        // Keep default state on offline/network drop
+      }
+    }
+    loadInitialJarvisState()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Auto-scroll conversation feed when new messages or streaming tokens arrive
+  useEffect(() => {
+    feedEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [messages])
+
   // Seed initial live status greeting grounded in real Supabase telemetry
   const greetingText = useMemo(() => {
     return `Welcome inside The Brain Core, ${userName}. Live EasyUp HQ telemetry synchronized: ${telemetry.agentsActive} of ${telemetry.totalAgents} agents active (${telemetry.workingCount} at desks, ${telemetry.eatingCount + telemetry.breakCount} in Pantry, ${telemetry.gymCount} in Gym, ${telemetry.meetingCount} in meeting), ${telemetry.tasksRunning} tasks running, and ${telemetry.waitingForYou} approval(s) waiting for your Go-Signal.`
@@ -200,87 +347,326 @@ export default function JarvisInterior({
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  const handleToggleVoice = () => {
-    if (voiceEnabled) {
-      setVoiceEnabled(false)
-      setVoicePermissionStatus('Voice Off (Default)')
-      if (coreState === 'listening') onCoreStateChange('idle')
-      return
+  // Clean up SpeechRecognition and SpeechSynthesis on unmount
+  useEffect(() => {
+    return () => {
+      try {
+        recognitionRef.current?.stop()
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+          window.speechSynthesis.cancel()
+        }
+      } catch {
+        // Ignore cleanup errors
+      }
     }
-    setVoiceEnabled(true)
-    setVoicePermissionStatus('Web Speech Ready • Click Mic to Speak')
-    onCoreStateChange('listening')
-  }
+  }, [])
+
+  const submitDirectiveText = useCallback(
+    async (rawText: string) => {
+      const trimmed = rawText.trim()
+      if (!trimmed || isTransmitting) return
+
+      setIsTransmitting(true)
+      setCommandInput('')
+      onCoreStateChange('thinking')
+
+      const nowStr = new Date().toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Manila',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+
+      const userMsgId = `usr-${Date.now()}`
+      const jarvisMsgId = `jrv-${Date.now() + 1}`
+
+      const historyPayload = messages.slice(-8).map((m) => ({
+        role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: m.text,
+      }))
+
+      const userMsg: JarvisChatMessage = {
+        id: userMsgId,
+        role: 'user',
+        text: trimmed,
+        timestamp: `${nowStr} PHT`,
+      }
+
+      const placeholderJarvisMsg: JarvisChatMessage = {
+        id: jarvisMsgId,
+        role: 'jarvis',
+        text: 'Synthesizing telemetry inside The Brain Core...',
+        timestamp: `${nowStr} PHT`,
+        isStreaming: true,
+      }
+
+      setMessages((prev) => [...prev, userMsg, placeholderJarvisMsg])
+
+      try {
+        const response = await fetch('/api/jarvis', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'text/event-stream',
+          },
+          body: JSON.stringify({
+            prompt: trimmed,
+            operatorName: userName,
+            autonomyMode: autonomyMode === 'ask' ? 'ask_first' : 'auto_safe',
+            history: historyPayload,
+          }),
+        })
+
+        if (!response.ok || !response.body) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let completedTurn: JarvisTurnResult | null = null
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const blocks = buffer.split('\n\n')
+          buffer = blocks.pop() || ''
+
+          for (const block of blocks) {
+            const lines = block.split('\n')
+            const eventLine = lines.find((l) => l.startsWith('event:'))
+            const dataLine = lines.find((l) => l.startsWith('data:'))
+            if (!eventLine || !dataLine) continue
+
+            const eventName = eventLine.replace('event:', '').trim()
+            const rawJson = dataLine.replace('data:', '').trim()
+
+            try {
+              const payload = JSON.parse(rawJson)
+
+              if (eventName === 'status') {
+                onCoreStateChange('thinking')
+                if (payload.modelLabel) {
+                  setProviderStatus({
+                    provider: payload.provider || 'GEMINI',
+                    modelLabel: payload.modelLabel,
+                    isLiveAI: Boolean(payload.isLiveAI),
+                  })
+                }
+              } else if (eventName === 'delta') {
+                onCoreStateChange('speaking')
+                setLiveAudioLevel(0.6 + Math.random() * 0.35)
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === jarvisMsgId
+                      ? {
+                          ...m,
+                          text: payload.accumulated || m.text,
+                          isStreaming: true,
+                        }
+                      : m
+                  )
+                )
+              } else if (eventName === 'complete') {
+                completedTurn = payload as JarvisTurnResult
+              } else if (eventName === 'error') {
+                throw new Error(payload.error || 'Stream error')
+              }
+            } catch {
+              // Ignore partial chunk parse error
+            }
+          }
+        }
+
+        if (completedTurn) {
+          const snap = completedTurn.telemetrySnapshot
+          setProviderStatus({
+            provider: completedTurn.provider,
+            modelLabel: completedTurn.modelLabel,
+            isLiveAI: completedTurn.isLiveAI,
+          })
+          setSessionTokens((prev) => prev + (completedTurn?.tokensUsed || 64))
+
+          // Execute office command if returned
+          if (completedTurn.officeCommand?.type === 'mode' && completedTurn.officeCommand.mode) {
+            const targetMode = completedTurn.officeCommand.mode
+            if (
+              targetMode === 'OVERVIEW' ||
+              targetMode === 'FOCUS_WORK' ||
+              targetMode === 'ALL_HANDS' ||
+              targetMode === 'PANTRY' ||
+              targetMode === 'GYM'
+            ) {
+              onGlobalModeChange?.(targetMode)
+            }
+          }
+
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === jarvisMsgId
+                ? {
+                    ...m,
+                    text: completedTurn!.reply,
+                    intent: completedTurn!.intent,
+                    provider: completedTurn!.modelLabel,
+                    isStreaming: false,
+                    taskPlan: completedTurn!.taskPlan,
+                    citations: `Live Supabase: ${snap.activeAgents}/${snap.totalAgents} active (${snap.atDeskAgents} desk, ${snap.pantryAgents} pantry, ${snap.gymAgents} gym) • ${snap.runningTasks} tasks • ${snap.pendingApprovals} approvals`,
+                  }
+                : m
+            )
+          )
+
+          speakWithJarvisVoice(completedTurn.reply)
+        }
+      } catch (err) {
+        onCoreStateChange('error')
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === jarvisMsgId
+              ? {
+                  ...m,
+                  text: `Diagnostic alert, ${userName}: Unable to complete neural stream (${(err as Error).message}). Falling back to local HQ telemetry (${telemetry.agentsActive}/${telemetry.totalAgents} agents active).`,
+                  intent: 'STATUS',
+                  isStreaming: false,
+                }
+              : m
+          )
+        )
+      } finally {
+        setIsTransmitting(false)
+        setLiveAudioLevel(0.45)
+        setTimeout(() => {
+          onCoreStateChange('idle')
+        }, 700)
+      }
+    },
+    [
+      autonomyMode,
+      isTransmitting,
+      messages,
+      onCoreStateChange,
+      onGlobalModeChange,
+      speakWithJarvisVoice,
+      telemetry.agentsActive,
+      telemetry.totalAgents,
+      userName,
+    ]
+  )
 
   const handleSubmitCommand = (e: React.FormEvent) => {
     e.preventDefault()
-    const trimmed = commandInput.trim()
-    if (!trimmed) return
+    void submitDirectiveText(commandInput)
+  }
 
-    const nowStr = new Date().toLocaleTimeString('en-US', {
-      timeZone: 'Asia/Manila',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    })
+  const handleDispatchPlan = async (plan: JarvisTaskPlan) => {
+    setDispatchedPlanIds((prev) => ({ ...prev, [plan.id]: true }))
+    onCoreStateChange('executing')
+    try {
+      await Promise.allSettled(
+        plan.subtasks.map((sub) =>
+          fetch('/api/office/trigger', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              agentId: sub.assignedAgentId,
+              taskDescription: sub.title,
+              actionName: 'JARVIS_PLAN_DISPATCH',
+            }),
+          })
+        )
+      )
+    } finally {
+      setTimeout(() => {
+        onCoreStateChange('idle')
+      }, 1200)
+    }
+  }
 
-    const userMsg: JarvisChatMessage = {
-      id: `usr-${Date.now()}`,
-      role: 'user',
-      text: trimmed,
-      timestamp: `${nowStr} PHT`,
+  const handleToggleVoice = () => {
+    if (voiceEnabled) {
+      setVoiceEnabled(false)
+      setVoicePermissionStatus('Voice Off (Click Mic to talk)')
+      try {
+        recognitionRef.current?.stop()
+      } catch {
+        // Ignore stop errors
+      }
+      if (coreState === 'listening') onCoreStateChange('idle')
+      return
     }
 
-    onCoreStateChange('thinking')
-    setCommandInput('')
+    const win = window as unknown as {
+      SpeechRecognition?: new () => SpeechRecognitionLike
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike
+    }
+    const SpeechRecCtor = win.SpeechRecognition || win.webkitSpeechRecognition
 
-    const lower = trimmed.toLowerCase()
-    let replyText = ''
-    let intent: JarvisChatMessage['intent'] = 'STATUS'
-
-    if (lower.includes('all hands') || lower.includes('standup')) {
-      intent = 'OFFICE_COMMAND'
-      onGlobalModeChange?.('ALL_HANDS')
-      replyText = `Understood, ${userName}. Routing all ${telemetry.totalAgents} agents to The Brain Command Center for All Hands standup (based on ${telemetry.totalAgents} registered agents).`
-    } else if (lower.includes('pantry') || lower.includes('coffee') || lower.includes('break')) {
-      intent = 'OFFICE_COMMAND'
-      onGlobalModeChange?.('PANTRY')
-      replyText = `Confirmed, ${userName}. Dispatching fleet to Pantry & Canteen break mode.`
-    } else if (lower.includes('gym') || lower.includes('workout')) {
-      intent = 'OFFICE_COMMAND'
-      onGlobalModeChange?.('GYM')
-      replyText = `Confirmed, ${userName}. Routing agents to Rec & Gym recovery zone.`
-    } else if (lower.includes('focus') || lower.includes('work') || lower.includes('desk')) {
-      intent = 'OFFICE_COMMAND'
-      onGlobalModeChange?.('FOCUS_WORK')
-      replyText = `Confirmed, ${userName}. Returning all agents to Focus Work stations.`
-    } else if (lower.includes('approval') || lower.includes('waiting')) {
-      intent = 'QUESTION'
-      replyText =
-        telemetry.waitingForYou > 0
-          ? `${userName}, you have ${telemetry.waitingForYou} pending approval(s) in office_approvals: ${telemetry.pendingApprovals.map((a) => `${a.agent_name} ("${a.title}")`).join('; ')}.`
-          : `${userName}, there are currently 0 pending approvals waiting on you in office_approvals.`
-    } else {
-      intent = 'STATUS'
-      replyText = `Based on ${telemetry.tasksRunning} running tasks, ${telemetry.agentsActive} active agents, and ${telemetry.waitingForYou} pending approvals: average sprint progress across the 24-agent fleet is ${telemetry.avgProgress}%.`
+    if (!SpeechRecCtor) {
+      setVoiceEnabled(true)
+      setVoicePermissionStatus(
+        'Browser SpeechRecognition unavailable — type below or use Chrome/Edge'
+      )
+      onCoreStateChange('listening')
+      inputRef.current?.focus()
+      return
     }
 
-    const tokenEst = Math.max(24, Math.round((trimmed.length + replyText.length) / 3.5))
-    setSessionTokens((prev) => prev + tokenEst)
+    try {
+      const recognition = new SpeechRecCtor()
+      recognition.continuous = false
+      recognition.interimResults = true
+      recognition.lang = 'en-US'
 
-    const jarvisMsg: JarvisChatMessage = {
-      id: `jrv-${Date.now() + 1}`,
-      role: 'jarvis',
-      text: replyText,
-      intent,
-      timestamp: `${nowStr} PHT`,
-      citations: `Based on ${telemetry.totalAgents} agents, ${telemetry.tasksRunning} active tasks, and ${telemetry.waitingForYou} pending approvals`,
-    }
+      // Also unmute TTS automatically when the operator turns on the microphone to talk to Jarvis!
+      setTtsMuted(false)
+      setVoiceEnabled(true)
+      setVoicePermissionStatus('Listening... Speak your directive for JARVIS')
+      onCoreStateChange('listening')
 
-    setMessages((prev) => [...prev, userMsg, jarvisMsg])
-    setTimeout(() => {
+      recognition.onresult = (event: SpeechRecognitionEventLike) => {
+        let interim = ''
+        let finalTranscript = ''
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i]
+          if (res.isFinal) {
+            finalTranscript += res[0].transcript
+          } else {
+            interim += res[0].transcript
+          }
+        }
+        if (interim) {
+          setCommandInput(interim)
+        }
+        if (finalTranscript.trim()) {
+          setCommandInput(finalTranscript.trim())
+          setVoiceEnabled(false)
+          setVoicePermissionStatus('Directive captured • Transmitting to JARVIS')
+          void submitDirectiveText(finalTranscript.trim())
+        }
+      }
+
+      recognition.onerror = (ev) => {
+        setVoiceEnabled(false)
+        setVoicePermissionStatus(
+          `Mic status: ${ev.error || 'stopped'} — click Mic to retry`
+        )
+        onCoreStateChange('idle')
+      }
+
+      recognition.onend = () => {
+        setVoiceEnabled(false)
+      }
+
+      recognitionRef.current = recognition
+      recognition.start()
+    } catch {
+      setVoiceEnabled(false)
+      setVoicePermissionStatus('Microphone unavailable in current context')
       onCoreStateChange('idle')
-    }, 900)
+    }
   }
 
   const activeSpec = ARC_REACTOR_STATE_CONFIG[coreState]
@@ -341,11 +727,19 @@ export default function JarvisInterior({
                 J.A.R.V.I.S. // BRAIN CORE INTERIOR
               </span>
               <span
-                data-testid="jarvis-sim-badge"
-                className="rounded border border-amber-400/50 bg-amber-950/60 px-1.5 py-0.5 font-mono text-[10px] font-bold text-amber-300 whitespace-nowrap"
-                title="Honest mode indicator: Server-side LLM key not yet invoked; operating on deterministic live Supabase telemetry."
+                data-testid="jarvis-provider-badge"
+                className={`rounded border px-2 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap ${
+                  providerStatus.isLiveAI
+                    ? 'border-emerald-400/60 bg-emerald-950/70 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.25)]'
+                    : 'border-amber-400/50 bg-amber-950/60 text-amber-300'
+                }`}
+                title={
+                  providerStatus.isLiveAI
+                    ? `Connected to live LLM provider (${providerStatus.modelLabel}) + real-time Supabase`
+                    : 'Operating on deterministic live Supabase telemetry'
+                }
               >
-                SIM MODE • LIVE DB
+                {providerStatus.modelLabel}
               </span>
             </div>
             <div className="font-mono text-[10px] text-slate-400">
@@ -652,7 +1046,7 @@ export default function JarvisInterior({
               size="interior"
               renderMode={quality === 'low' ? '2d' : renderMode}
               progress={telemetry.avgProgress}
-              audioLevel={coreState === 'speaking' ? 0.85 : 0.45}
+              audioLevel={coreState === 'speaking' ? liveAudioLevel : 0.45}
               showLabel={false}
               reducedMotion={reducedMotion}
               enableOrbit={renderMode === '3d'}
@@ -760,12 +1154,21 @@ export default function JarvisInterior({
           )}
 
           {/* Conversation Feed */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3 font-mono text-xs">
+          <div
+            data-testid="jarvis-conversation-feed"
+            className="flex-1 overflow-y-auto p-3 space-y-3 font-mono text-xs"
+          >
             {/* Initial Grounded Briefing Card */}
             <div className="rounded-xl border border-cyan-500/35 bg-cyan-950/25 p-3">
               <div className="flex items-center justify-between text-[10px] text-cyan-400">
                 <span className="font-bold">JARVIS // SYSTEM BRIEFING</span>
-                <span>LIVE SUPABASE</span>
+                <button
+                  type="button"
+                  onClick={() => speakWithJarvisVoice(greetingText, true)}
+                  className="cursor-pointer rounded border border-cyan-500/40 bg-cyan-950/60 px-1.5 py-0.5 text-[9px] font-bold text-cyan-200 hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
+                >
+                  🔊 SPEAK
+                </button>
               </div>
               <p className="mt-1.5 leading-relaxed text-slate-200">{greetingText}</p>
             </div>
@@ -773,30 +1176,87 @@ export default function JarvisInterior({
             {messages.map((m) => (
               <div
                 key={m.id}
+                data-testid={`jarvis-msg-${m.role}`}
                 className={`rounded-xl border p-3 ${
                   m.role === 'user'
                     ? 'ml-4 border-slate-700 bg-slate-900/90 text-slate-100'
-                    : 'mr-2 border-cyan-500/35 bg-cyan-950/25 text-slate-100'
+                    : 'mr-1 border-cyan-500/40 bg-cyan-950/30 text-slate-100'
                 }`}
               >
-                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400">
                   <span className="font-bold text-cyan-300 uppercase">
-                    {m.role === 'user' ? userName : 'JARVIS'}
+                    {m.role === 'user' ? userName : 'J.A.R.V.I.S.'}
                     {m.intent ? ` • ${m.intent}` : ''}
                   </span>
-                  <span>{m.timestamp}</span>
+                  <div className="flex items-center gap-1.5">
+                    {m.role === 'jarvis' && !m.isStreaming && (
+                      <button
+                        type="button"
+                        onClick={() => speakWithJarvisVoice(m.text, true)}
+                        className="cursor-pointer rounded border border-cyan-500/30 bg-slate-900 px-1.5 py-0.5 text-[9px] text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
+                        title="Speak this response aloud"
+                      >
+                        🔊
+                      </button>
+                    )}
+                    <span>{m.timestamp}</span>
+                  </div>
                 </div>
-                <p className="mt-1 leading-relaxed">{m.text}</p>
+                <p className="mt-1.5 leading-relaxed whitespace-pre-wrap">{m.text}</p>
+
+                {/* Structured Task Plan Confirm Card */}
+                {m.taskPlan && (
+                  <div
+                    data-testid="jarvis-task-plan-card"
+                    className="mt-2.5 rounded-lg border border-cyan-400/40 bg-slate-950/90 p-2.5 space-y-2"
+                  >
+                    <div className="flex items-center justify-between text-[10px] font-bold text-cyan-300">
+                      <span>MULTI-AGENT PLAN ({m.taskPlan.subtasks.length} STAGES)</span>
+                      <span>~{m.taskPlan.totalEstimatedTokens} TOKENS</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {m.taskPlan.subtasks.map((sub, idx) => (
+                        <div
+                          key={sub.id}
+                          className="rounded border border-slate-800 bg-slate-900/80 p-1.5 text-[10px]"
+                        >
+                          <div className="flex items-center justify-between font-bold text-slate-200">
+                            <span>
+                              {idx + 1}. {sub.assignedAgentName} ({sub.department})
+                            </span>
+                            <span className="text-cyan-400 uppercase">{sub.priority}</span>
+                          </div>
+                          <div className="text-slate-400 truncate">{sub.title}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={Boolean(dispatchedPlanIds[m.taskPlan.id])}
+                      onClick={() => void handleDispatchPlan(m.taskPlan!)}
+                      className={`cursor-pointer w-full rounded-lg py-1.5 font-mono text-[10px] font-black uppercase transition whitespace-nowrap ${
+                        dispatchedPlanIds[m.taskPlan.id]
+                          ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
+                          : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400'
+                      }`}
+                    >
+                      {dispatchedPlanIds[m.taskPlan.id]
+                        ? '✓ DISPATCHED TO EASYUP HQ AGENTS'
+                        : 'CONFIRM & DISPATCH PLAN →'}
+                    </button>
+                  </div>
+                )}
+
                 {m.citations && (
-                  <div className="mt-1.5 border-t border-slate-800/80 pt-1 text-[10px] text-cyan-400/90">
-                    Source: {m.citations}
+                  <div className="mt-1.5 border-t border-slate-800/80 pt-1 text-[9px] text-cyan-400/90">
+                    {m.citations}
                   </div>
                 )}
               </div>
             ))}
 
             {/* Latest Live Telemetry Lines from Office */}
-            {logs.length > 0 && (
+            {logs.length > 0 && messages.length === 0 && (
               <div className="rounded-xl border border-slate-800/90 bg-slate-950/75 p-3">
                 <div className="text-[10px] font-bold text-slate-400 uppercase">
                   RECENT HQ TELEMETRY ({logs.length} EVENTS)
@@ -810,9 +1270,11 @@ export default function JarvisInterior({
                 </div>
               </div>
             )}
+
+            <div ref={feedEndRef} />
           </div>
 
-          {/* Quick Directive Chips */}
+          {/* Quick Directive Chips (1-click instant execution!) */}
           <div className="border-t border-slate-800/80 bg-slate-950/75 px-3 py-2">
             <div className="flex flex-wrap items-center gap-1.5">
               {[
@@ -824,11 +1286,9 @@ export default function JarvisInterior({
                 <button
                   key={chip}
                   type="button"
-                  onClick={() => {
-                    setCommandInput(chip)
-                    inputRef.current?.focus()
-                  }}
-                  className="cursor-pointer rounded-full border border-cyan-500/30 bg-cyan-950/40 px-2.5 py-1 font-mono text-[10px] text-cyan-200 transition hover:border-cyan-400 hover:bg-cyan-900/50 whitespace-nowrap"
+                  disabled={isTransmitting}
+                  onClick={() => void submitDirectiveText(chip)}
+                  className="cursor-pointer rounded-full border border-cyan-500/30 bg-cyan-950/40 px-2.5 py-1 font-mono text-[10px] text-cyan-200 transition hover:border-cyan-400 hover:bg-cyan-900/50 disabled:opacity-50 whitespace-nowrap"
                 >
                   {chip}
                 </button>
@@ -846,33 +1306,43 @@ export default function JarvisInterior({
           onSubmit={handleSubmitCommand}
           className="mx-auto flex max-w-5xl flex-wrap items-center gap-2.5"
         >
-          {/* Voice Input Mic Button (Off by default) */}
+          {/* Voice Input Mic Button */}
           <button
             type="button"
             data-testid="jarvis-mic-button"
             onClick={handleToggleVoice}
             className={`cursor-pointer flex items-center gap-1.5 rounded-xl border px-3 py-2 font-mono text-xs font-bold transition whitespace-nowrap ${
               voiceEnabled
-                ? 'border-emerald-400 bg-emerald-950/70 text-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.3)]'
-                : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600 hover:text-slate-200'
+                ? 'border-emerald-400 bg-emerald-950/80 text-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.35)] animate-pulse'
+                : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-cyan-500/50 hover:text-cyan-200'
             }`}
             title={voicePermissionStatus}
           >
-            <span>{voiceEnabled ? '🎙 MIC ON' : '🎙 MIC OFF'}</span>
+            <span>{voiceEnabled ? '🎙 LISTENING...' : '🎙 MIC OFF'}</span>
           </button>
 
           {/* TTS Mute Toggle */}
           <button
             type="button"
             data-testid="jarvis-mute-button"
-            onClick={() => setTtsMuted((m) => !m)}
+            onClick={() => {
+              const nextMuted = !ttsMuted
+              setTtsMuted(nextMuted)
+              if (
+                nextMuted &&
+                typeof window !== 'undefined' &&
+                'speechSynthesis' in window
+              ) {
+                window.speechSynthesis.cancel()
+              }
+            }}
             className={`cursor-pointer rounded-xl border px-3 py-2 font-mono text-xs font-bold transition whitespace-nowrap ${
               !ttsMuted
                 ? 'border-cyan-400 bg-cyan-950/70 text-cyan-300'
                 : 'border-slate-700 bg-slate-900 text-slate-400 hover:text-slate-200'
             }`}
           >
-            {ttsMuted ? '🔇 TTS MUTED' : '🔊 TTS ACTIVE'}
+            {ttsMuted ? '🔇 TTS MUTED' : '🔊 TTS VOICE ON'}
           </button>
 
           {/* Command Text Input */}
@@ -895,10 +1365,11 @@ export default function JarvisInterior({
 
           <button
             type="submit"
+            disabled={isTransmitting}
             data-testid="jarvis-send-button"
-            className="cursor-pointer rounded-xl border border-cyan-400 bg-cyan-500 px-4 py-2 font-mono text-xs font-black text-slate-950 shadow-[0_0_20px_rgba(0,229,255,0.4)] transition hover:bg-cyan-400 whitespace-nowrap"
+            className="cursor-pointer rounded-xl border border-cyan-400 bg-cyan-500 px-4 py-2 font-mono text-xs font-black text-slate-950 shadow-[0_0_20px_rgba(0,229,255,0.4)] transition hover:bg-cyan-400 disabled:opacity-50 whitespace-nowrap"
           >
-            TRANSMIT TO JARVIS →
+            {isTransmitting ? 'SYNTHESIZING...' : 'TRANSMIT TO JARVIS →'}
           </button>
         </form>
       </footer>

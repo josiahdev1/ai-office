@@ -122,11 +122,12 @@ Tracking progress for Office V3 architecture implementation across Phases 1 thro
 - [x] Cinematic ~1.45s fly-in / fly-out camera transition (skippable on click, instant `0ms` when `prefers-reduced-motion: reduce`), saving and restoring exact camera target, position, and zoom on exit (`← EXIT JARVIS [ESC]` button & `Esc` key) while the office keeps running in the background.
 - [x] Lazy-loaded spherical dark chamber ([`src/components/jarvis/JarvisInterior.tsx`](../src/components/jarvis/JarvisInterior.tsx)) with hex-grid backdrop, shared `ArcReactor` (`size="interior"`, 5 concentric rings, 36 radial ticks, 32-bar waveform ring, 84 orbital particles), and curved holographic glass panels (Left: live 24-agent roster by department with click-to-follow; Right: conversation & active plan, operator name setting, autonomy toggle, live approvals; Bottom: command input + mic/TTS toggles; Top: live Supabase readouts for `AGENTS ACTIVE`, `TASKS RUNNING`, `QUEUE`, `WAITING FOR YOU`, `TOKENS`, `SIM MODE`, quality & 3D/2D toggles).
 
-### Phase J3: Streaming `/api/jarvis`, Provider Adapter, Intent Classifier & Live Q&A (Pending)
-- [ ] `POST /api/jarvis` streaming SSE endpoint with Zod validation and rate limiting.
-- [ ] Server-side LLM provider adapter (`GEMINI_API_KEY` -> `ANTHROPIC_API_KEY` -> `OPENAI_API_KEY` -> honest `SIM MODE` badge).
-- [ ] Intent classification (`QUESTION`, `TASK`, `OFFICE_COMMAND`, `STATUS`) and grounded answers citing exact Supabase counts.
-- [ ] Conversation persistence in Supabase (`office_messages` / `office_logs`) and Vitest suite for classifier and context builder.
+### Phase J3: Streaming `/api/jarvis`, Provider Adapter, Intent Classifier & Live Q&A (Completed)
+- [x] `GET /api/jarvis` & `POST /api/jarvis` streaming SSE endpoint ([`src/app/api/jarvis/route.ts`](../src/app/api/jarvis/route.ts)) with Zod validation (`JarvisRequestSchema`), sliding-window rate limiting (`checkRateLimit`), and token-chunk streaming (`status`, `delta`, `complete`).
+- [x] Server-side LLM provider adapter ([`src/lib/jarvis/orchestrator.ts`](../src/lib/jarvis/orchestrator.ts) & [`src/lib/llm/index.ts`](../src/lib/llm/index.ts)) upgraded to `gemini-2.5-flash` / `gemini-flash-latest` (`GEMINI_API_KEY` -> `ANTHROPIC_API_KEY` -> `OPENAI_API_KEY` -> honest `SIM MODE`), displaying live `LIVE AI • GEMINI 2.5 FLASH` badge in `JarvisInterior`.
+- [x] Intent classification (`QUESTION`, `TASK`, `OFFICE_COMMAND`, `STATUS`), grounded system prompt citing exact live Supabase counts, prompt-injection / secret-exfiltration guard, and Web Speech API Mic STT + British TTS synthesis.
+- [x] Conversation persistence in Supabase (`public.office_messages` channel `'jarvis'` & `public.office_logs`) and Vitest suite (`tests/jarvisOrchestrator.test.ts`).
+
 
 ### Phase J4: Multi-Agent Task Plan Dispatch, Confirm Card, Approvals & Final Report (Pending)
 - [ ] Zod-validated structured task plan (`title`, `subtasks[]` with department, priority, dependencies, approval gates).

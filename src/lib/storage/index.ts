@@ -550,3 +550,95 @@ export async function addOfficeLog(
   const updatedState = await getOfficeState()
   return updatedState.logs
 }
+
+export interface JarvisConversationRecord {
+  id: string
+  sender_id: string
+  sender_name: string
+  sender_department: string
+  recipient_id?: string | null
+  recipient_name?: string | null
+  channel: string
+  content: string
+  message_type: string
+  created_at: string
+}
+
+const inMemoryJarvisMessages: JarvisConversationRecord[] = []
+
+/**
+ * Fetches recent Jarvis conversation messages from public.office_messages (channel = 'jarvis')
+ */
+export async function getJarvisMessages(limit = 30): Promise<JarvisConversationRecord[]> {
+  const supabase = getSupabase()
+  if (!supabase) {
+    return inMemoryJarvisMessages.slice(-limit)
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('office_messages')
+      .select('*')
+      .eq('channel', 'jarvis')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error || !data) {
+      return inMemoryJarvisMessages.slice(-limit)
+    }
+
+    return (data as JarvisConversationRecord[]).reverse()
+  } catch {
+    return inMemoryJarvisMessages.slice(-limit)
+  }
+}
+
+/**
+ * Saves a Jarvis conversation message into public.office_messages (and office_logs)
+ */
+export async function saveJarvisMessage(params: {
+  senderId: string
+  senderName: string
+  senderDepartment?: string
+  recipientId?: string
+  recipientName?: string
+  content: string
+  messageType?: string
+}): Promise<void> {
+  const record: JarvisConversationRecord = {
+    id: `jarvis-msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    sender_id: params.senderId,
+    sender_name: params.senderName,
+    sender_department: params.senderDepartment || 'COMMAND',
+    recipient_id: params.recipientId || 'jarvis',
+    recipient_name: params.recipientName || 'J.A.R.V.I.S.',
+    channel: 'jarvis',
+    content: params.content,
+    message_type: params.messageType || 'chat',
+    created_at: new Date().toISOString(),
+  }
+
+  inMemoryJarvisMessages.push(record)
+  if (inMemoryJarvisMessages.length > 60) {
+    inMemoryJarvisMessages.shift()
+  }
+
+  const supabase = getSupabase()
+  if (!supabase) return
+
+  try {
+    await supabase.from('office_messages').insert({
+      sender_id: record.sender_id,
+      sender_name: record.sender_name,
+      sender_department: record.sender_department,
+      recipient_id: record.recipient_id,
+      recipient_name: record.recipient_name,
+      channel: 'jarvis',
+      content: record.content,
+      message_type: record.message_type,
+    })
+  } catch (err) {
+    console.warn('[Storage] Failed to insert into office_messages:', (err as Error).message)
+  }
+}
+
