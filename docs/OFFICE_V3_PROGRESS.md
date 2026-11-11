@@ -191,3 +191,20 @@ Tracking progress for Office V3 architecture implementation across Phases 1 thro
 - [x] **JARVIS Progress Telemetry Grounding**:
   - Added `progress`, `average progress`, `percentage`, `stuck`, `78%`, and `task status` to `classifyJarvisIntent` regex to ensure queries are classified as `STATUS` intent.
   - Grounded JARVIS persona system prompt to inspect live telemetry and truthfully explain agent progress without canned refusals or safety filter timeouts.
+
+### Phase J11: 24/7 Cloud Background AI Learning Engine & Autonomous Fleet Ops (Completed)
+- [x] **24/7 Offline Learning Endpoint (`/api/office/cron/learn`)**:
+  - Created server-side execution loop that triggers independently of whether localhost or the user's laptop is active.
+  - Dynamically picks agent specialists across Engineering, Intelligence, SecOps, DevOps, Operations, and Growth to conduct autonomous sprint deep-dives.
+  - Integrates Google Gemini (with deterministic domain fallback) to formulate concise, high-value technical breakthroughs.
+  - Automatically archives learnings into Supabase `office_knowledge` (The Collective Brain), writes telemetry to `office_logs`, posts cross-agent communications to `office_messages`, and advances progress in `office_agents`.
+- [x] **GitHub Actions 24/7 Scheduler (`.github/workflows/autonomous-learning.yml`)**:
+  - Hourly cron schedule (`0 * * * *`) that triggers the live Vercel AI learning engine (`https://easyup-hq.vercel.app/api/office/cron/learn`) 24/7 without local machine dependency.
+  - Manual `workflow_dispatch` button to trigger immediate fleet sprint studies on demand.
+- [x] **Vercel Cron Integration (`vercel.json`)**:
+  - Configured recurring 30-minute cron (`*/30 * * * *`) directly on the live Vercel production deployment.
+- [x] **Supabase pg_cron & pg_net Migration (`0008_supabase_cron_learning.sql`)**:
+  - Provides native PostgreSQL cron scheduling directly inside Supabase using `pg_cron` and `pg_net` to call the autonomous learning endpoint on a schedule.
+- [x] **Local Command (`npm run fleet:learn`)**:
+  - Added instant CLI trigger to test and run autonomous agent learning cycles locally anytime.
+

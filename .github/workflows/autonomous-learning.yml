@@ -1,0 +1,30 @@
+name: Autonomous AI Team Learning Engine
+
+on:
+  schedule:
+    # Runs every hour 24/7 even when laptop and localhost are off
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab anytime
+
+jobs:
+  learn:
+    name: Autonomous Fleet Learning Cycle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Live Vercel AI Learning Cycle
+        run: |
+          echo "Triggering 24/7 AI Team Learning Engine on live Vercel deployment..."
+          RESPONSE=$(curl -sSL -X POST "https://easyup-hq.vercel.app/api/office/cron/learn" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: GitHub-Actions-Autonomous-Learning-Runner")
+          
+          echo "Response from live AI fleet:"
+          echo "$RESPONSE"
+          
+          # Assert success
+          OK=$(echo "$RESPONSE" | grep -o '"ok":true' || true)
+          if [ -n "$OK" ]; then
+            echo "Autonomous learning cycle executed successfully!"
+          else
+            echo "Warning: Response did not indicate ok:true, check endpoint logs."
+          fi
