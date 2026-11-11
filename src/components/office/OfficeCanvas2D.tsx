@@ -21,6 +21,10 @@ import {
   AgentNavState,
   stepAgentNavigation,
 } from '@/config/walkwayGrid'
+import {
+  drawArcReactor2D,
+  JarvisCoreState,
+} from '@/components/jarvis/ArcReactor'
 
 export interface OfficeCanvas2DProps {
   agents: Agent[]
@@ -34,6 +38,8 @@ export interface OfficeCanvas2DProps {
     effectiveMode: DepartmentMode
   ) => void
   onResetCamera?: () => void
+  coreState?: JarvisCoreState
+  onClickCore?: () => void
   className?: string
 }
 
@@ -69,6 +75,8 @@ export default function OfficeCanvas2D({
   onSelectAgent,
   onArriveAgent,
   onResetCamera,
+  coreState = 'idle',
+  onClickCore,
   className = '',
 }: OfficeCanvas2DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -80,6 +88,14 @@ export default function OfficeCanvas2D({
   const selectedIdRef = useRef<string | null | undefined>(selectedAgentId)
   const onSelectRef = useRef(onSelectAgent)
   const onArriveRef = useRef(onArriveAgent)
+  const coreStateRef = useRef<JarvisCoreState>(coreState)
+  const onClickCoreRef = useRef(onClickCore)
+  const coreHoveredRef = useRef(false)
+  const coreScreenBoxRef = useRef<{ px: number; py: number; radius: number }>({
+    px: 0,
+    py: 0,
+    radius: 28,
+  })
 
   useEffect(() => {
     agentsRef.current = agents
@@ -104,6 +120,14 @@ export default function OfficeCanvas2D({
   useEffect(() => {
     onArriveRef.current = onArriveAgent
   }, [onArriveAgent])
+
+  useEffect(() => {
+    coreStateRef.current = coreState
+  }, [coreState])
+
+  useEffect(() => {
+    onClickCoreRef.current = onClickCore
+  }, [onClickCore])
 
   // Camera state (targetX, targetZ, zoom) + user pan/zoom offsets
   const camStateRef = useRef({
@@ -153,7 +177,17 @@ export default function OfficeCanvas2D({
     }
 
     const handlePointerMove = (e: PointerEvent) => {
-      if (!isDragging) return
+      const rect = canvas.getBoundingClientRect()
+      const mx = e.clientX - rect.left
+      const my = e.clientY - rect.top
+      const coreBox = coreScreenBoxRef.current
+      const isOverCore =
+        Math.hypot(mx - coreBox.px, my - coreBox.py) <= coreBox.radius
+      coreHoveredRef.current = isOverCore
+      if (!isDragging) {
+        canvas.style.cursor = isOverCore ? 'pointer' : 'grab'
+        return
+      }
       const dx = e.clientX - dragStartX
       const dy = e.clientY - dragStartY
       if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
@@ -178,6 +212,11 @@ export default function OfficeCanvas2D({
         const rect = canvas.getBoundingClientRect()
         const clickX = e.clientX - rect.left
         const clickY = e.clientY - rect.top
+        const coreBox = coreScreenBoxRef.current
+        if (Math.hypot(clickX - coreBox.px, clickY - coreBox.py) <= coreBox.radius) {
+          onClickCoreRef.current?.()
+          return
+        }
         const boxes = Object.values(agentScreenBoxesRef.current)
         for (let i = boxes.length - 1; i >= 0; i--) {
           const b = boxes[i]
@@ -654,59 +693,51 @@ export default function OfficeCanvas2D({
 
       // 4B. Central Command Center ("The Brain") Core & Consoles
       enqueue(0, 0, 1.5, () => {
-        drawCylinder(0, 0.35, 0, 1.5, 1.9, 0.7, '#090d16', 24, 1, '#00e5ff')
-        drawGroundRing(0, 0.72, 0, 1.2, 1.45, '#00e5ff', 0.95)
-
-        const centerProj = project(0, 1.8, 0)
-        const pulse = 1 + Math.sin(elapsed * 2.5) * 0.1
-        const coreR = Math.max(8, 0.85 * zoom * pulse)
-
-        ctx.save()
-        const grad = ctx.createRadialGradient(
-          centerProj.px,
-          centerProj.py,
-          coreR * 0.15,
-          centerProj.px,
-          centerProj.py,
-          coreR * 2.4
+        const isCoreHovered = coreHoveredRef.current
+        drawCylinder(
+          0,
+          0.35,
+          0,
+          1.5,
+          1.9,
+          0.7,
+          '#090d16',
+          24,
+          1,
+          isCoreHovered ? '#ffffff' : '#00e5ff'
         )
-        grad.addColorStop(0, 'rgba(0, 229, 255, 0.95)')
-        grad.addColorStop(0.45, 'rgba(56, 189, 248, 0.45)')
-        grad.addColorStop(1, 'rgba(0, 229, 255, 0)')
-        ctx.fillStyle = grad
-        ctx.beginPath()
-        ctx.arc(centerProj.px, centerProj.py, coreR * 2.4, 0, Math.PI * 2)
-        ctx.fill()
+        drawGroundRing(
+          0,
+          0.72,
+          0,
+          1.2,
+          1.45,
+          isCoreHovered ? '#ffffff' : '#00e5ff',
+          0.95
+        )
 
-        ctx.fillStyle = '#38bdf8'
-        ctx.strokeStyle = '#00e5ff'
-        ctx.lineWidth = 1.8
-        ctx.beginPath()
-        ctx.arc(centerProj.px, centerProj.py, coreR * 0.62, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.stroke()
-
-        const rings = [
-          { r: 1.35 * zoom, rot: elapsed * 0.7, color: '#00e5ff' },
-          { r: 1.7 * zoom, rot: -elapsed * 0.55 + 1.0, color: '#38bdf8' },
-          { r: 2.05 * zoom, rot: elapsed * 0.4 + 2.1, color: '#67e8f9' },
-        ]
-        for (const rg of rings) {
-          ctx.strokeStyle = rg.color
-          ctx.lineWidth = 1.6
-          ctx.beginPath()
-          ctx.ellipse(
-            centerProj.px,
-            centerProj.py,
-            rg.r,
-            rg.r * 0.48,
-            rg.rot,
-            0,
-            Math.PI * 2
-          )
-          ctx.stroke()
+        const centerProj = project(0, 1.9, 0)
+        const baseRadiusPx = Math.max(9, 0.92 * zoom)
+        coreScreenBoxRef.current = {
+          px: centerProj.px,
+          py: centerProj.py,
+          radius: Math.max(24, baseRadiusPx * 2.2),
         }
-        ctx.restore()
+
+        drawArcReactor2D(
+          ctx,
+          centerProj.px,
+          centerProj.py,
+          baseRadiusPx,
+          elapsed,
+          {
+            state: coreStateRef.current,
+            size: 'office',
+            hovered: isCoreHovered,
+            showLabel: false,
+            isometricTilt: true,
+          }
+        )
       })
 
       for (const angle of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]) {

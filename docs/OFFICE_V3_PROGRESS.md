@@ -103,3 +103,41 @@ Tracking progress for Office V3 architecture implementation across Phases 1 thro
 - [x] `npm test` — all 14 test suites, 92/92 tests passing.
 - [x] `npm run build` — Next.js Turbopack production build succeeds.
 - [x] Visual verification via Playwright with screenshots saved (`docs/office-3d-v3.png`).
+
+---
+
+## JARVIS: AI Orchestrator Inside The Brain Core (Phases J1 to J6)
+
+### Phase J1: Shared `ArcReactor` Component, `/dev/jarvis` Lab, and Office Brain Core Integration (Completed)
+- [x] Created `docs/JARVIS.md` documenting architecture, original design inspirations (`Open-Jarvis`, `cam-hm/jarvis`, `KofTwentyTwo/Jarvis`, Contra 3D Arc Reactor), and state specifications.
+- [x] Built shared [`src/components/jarvis/ArcReactor.tsx`](../src/components/jarvis/ArcReactor.tsx) supporting both 3D WebGL (`ArcReactor`) and 2D Isometric Canvas (`drawArcReactor2D` / `ArcReactor2DPreview`):
+  - [x] Supports all 6 states: `idle` (slow cyan breathing), `listening` (tightened rings + sonar ripple), `thinking` (amber/orange accent + faster counter-rotation + inward vortex particles), `executing` (synchronized task progress heartbeat pulse), `speaking` (32-bar audio-reactive waveform ring), and `error` (WCAG-safe `< 2.5 Hz` red/orange alert pulse).
+  - [x] Supports both size tiers: `office` (low-detail, compact for The Brain pedestal) and `interior` (high-detail, 5 segmented concentric rings, 36 radial tick marks, 96 vortex particles, and audio waveform ring).
+- [x] Built `/dev/jarvis` showcase page ([`src/app/dev/jarvis/page.tsx`](../src/app/dev/jarvis/page.tsx)) displaying all 6 states at `office` and `interior` sizes in both 3D and 2D views with interactive state, progress, audio level, hover, and reduced-motion controls.
+- [x] Integrated shared `ArcReactor` into the 3D office Brain core ([`src/components/office/three/BrainCore.tsx`](../src/components/office/three/BrainCore.tsx)) and 2D office Brain core ([`src/components/office/OfficeCanvas2D.tsx`](../src/components/office/OfficeCanvas2D.tsx)) with hover highlight and `"JARVIS"` callout pill.
+- [x] Added Vitest unit tests (`tests/jarvisArcReactor.test.ts`) verifying all 6 states, size tiers, WCAG flash-rate safety (`< 3 Hz`), and 2D/3D parity.
+
+### Phase J2: Entry Points, Cinematic Fly-In/Out Transition, and Interior Chamber (Pending)
+- [ ] Entry points: clicking Brain core in 3D and 2D views, top bar & bottom toolbar `JARVIS` buttons, keyboard shortcut `J`, and `#jarvis` URL hash sync.
+- [ ] Cinematic 1.5s fly-in / fly-out camera transition (skippable on click, instant when `prefers-reduced-motion`), restoring exact camera coordinates on exit (`Exit JARVIS` button & `Esc`).
+- [ ] Spherical dark chamber with hex-grid backdrop, curved holographic glass panels (Left: live agent roster by department; Right: conversation & active plan; Bottom: command input + mic toggle; Top: live Supabase readouts).
+
+### Phase J3: Streaming `/api/jarvis`, Provider Adapter, Intent Classifier & Live Q&A (Pending)
+- [ ] `POST /api/jarvis` streaming SSE endpoint with Zod validation and rate limiting.
+- [ ] Server-side LLM provider adapter (`GEMINI_API_KEY` -> `ANTHROPIC_API_KEY` -> `OPENAI_API_KEY` -> honest `SIM MODE` badge).
+- [ ] Intent classification (`QUESTION`, `TASK`, `OFFICE_COMMAND`, `STATUS`) and grounded answers citing exact Supabase counts.
+- [ ] Conversation persistence in Supabase (`office_messages` / `office_logs`) and Vitest suite for classifier and context builder.
+
+### Phase J4: Multi-Agent Task Plan Dispatch, Confirm Card, Approvals & Final Report (Pending)
+- [ ] Zod-validated structured task plan (`title`, `subtasks[]` with department, priority, dependencies, approval gates).
+- [ ] Real agent load balancer mapping subtasks strictly to existing 24 EasyUp HQ agents (never inventing IDs), enforcing subtask/token caps.
+- [ ] Confirm & Edit plan card, Autonomy setting (`Ask me first` vs `Auto-run safe tasks`), parent + child task creation in `office_tasks`, and dispatch through existing pipeline.
+- [ ] Visible agent reactions in office, approval staging in `office_approvals`, prompt-injection test suite, and synthesized final report.
+
+### Phase J5: Office Commands, Web Speech Voice I/O, and Audio-Reactive Polish (Pending)
+- [ ] Natural-language `OFFICE_COMMAND` routing to global modes and individual agent movements.
+- [ ] Optional Web Speech API STT & TTS (off by default, visible permission state, mute toggle) coupled to the `speaking` waveform ring.
+
+### Phase J6: End-to-End Browser QA, Self-Review, and Pull Request (Pending)
+- [ ] Full Playwright E2E walkthrough across 3D, 2D, and mobile viewports with screenshots, self-review fixes, green CI, and PR creation.
+

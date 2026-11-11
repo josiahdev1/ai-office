@@ -1,43 +1,31 @@
 'use client'
 
-import React, { useRef } from 'react'
+import React, { useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import {
+  ArcReactor,
+  ARC_REACTOR_STATE_CONFIG,
+  JarvisCoreState,
+} from '@/components/jarvis/ArcReactor'
 
-export function BrainCore() {
-  const coreRef = useRef<THREE.Mesh>(null)
-  const ring1Ref = useRef<THREE.Mesh>(null)
-  const ring2Ref = useRef<THREE.Mesh>(null)
-  const ring3Ref = useRef<THREE.Mesh>(null)
-  const pulseLightRef = useRef<THREE.PointLight>(null)
+export interface BrainCoreProps {
+  state?: JarvisCoreState
+  onClickCore?: () => void
+}
 
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime()
+export function BrainCore({ state = 'idle', onClickCore }: BrainCoreProps) {
+  const pedestalRingMatRef = useRef<THREE.MeshBasicMaterial>(null)
+  const [hovered, setHovered] = useState(false)
 
-    // Smooth pulsation
-    const pulse = 1 + Math.sin(t * 2.5) * 0.12
-    if (coreRef.current) {
-      coreRef.current.scale.set(pulse, pulse, pulse)
-      coreRef.current.rotation.y = t * 0.4
-    }
-
-    // Dynamic point light pulse
-    if (pulseLightRef.current) {
-      pulseLightRef.current.intensity = 2.5 + Math.sin(t * 3.0) * 1.0
-    }
-
-    // Multi-axis orbital gyroscopic ring rotations
-    if (ring1Ref.current) {
-      ring1Ref.current.rotation.x = t * 0.6
-      ring1Ref.current.rotation.y = t * 0.8
-    }
-    if (ring2Ref.current) {
-      ring2Ref.current.rotation.y = -t * 0.7
-      ring2Ref.current.rotation.z = t * 0.5
-    }
-    if (ring3Ref.current) {
-      ring3Ref.current.rotation.x = -t * 0.4
-      ring3Ref.current.rotation.z = -t * 0.6
+  useFrame((clockState) => {
+    const t = clockState.clock.getElapsedTime()
+    if (pedestalRingMatRef.current) {
+      const cfg = ARC_REACTOR_STATE_CONFIG[state] || ARC_REACTOR_STATE_CONFIG.idle
+      pedestalRingMatRef.current.color.set(hovered ? '#ffffff' : cfg.primaryColor)
+      pedestalRingMatRef.current.opacity = hovered
+        ? 0.98
+        : 0.72 + Math.sin(t * 2.5) * 0.18
     }
   })
 
@@ -52,57 +40,26 @@ export function BrainCore() {
       {/* Pedestal Top Glowing Ring */}
       <mesh position={[0, 0.71, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[1.2, 1.45, 32]} />
-        <meshBasicMaterial color="#00e5ff" side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* 2. Holographic Core (Glowing Cyan Sphere) */}
-      <mesh ref={coreRef} position={[0, 1.8, 0]}>
-        <icosahedronGeometry args={[0.85, 2]} />
-        <meshStandardMaterial
+        <meshBasicMaterial
+          ref={pedestalRingMatRef}
           color="#00e5ff"
-          emissive="#00e5ff"
-          emissiveIntensity={2.0}
-          wireframe={true}
           transparent
           opacity={0.85}
+          side={THREE.DoubleSide}
         />
       </mesh>
 
-      {/* Solid Inner Core */}
-      <mesh position={[0, 1.8, 0]}>
-        <sphereGeometry args={[0.5, 24, 24]} />
-        <meshStandardMaterial
-          color="#38bdf8"
-          emissive="#00e5ff"
-          emissiveIntensity={2.5}
-          transparent
-          opacity={0.9}
+      {/* 2 & 3. Shared Holographic ArcReactor Core (Office Compact Variant) */}
+      <group position={[0, 1.9, 0]}>
+        <ArcReactor
+          state={state}
+          size="office"
+          scale={0.95}
+          showLabel={false}
+          onClick={onClickCore}
+          onHoverChange={setHovered}
         />
-      </mesh>
-
-      {/* Point light casting cyan illumination on surrounding room */}
-      <pointLight
-        ref={pulseLightRef}
-        position={[0, 2.0, 0]}
-        color="#00e5ff"
-        intensity={3.0}
-        distance={12}
-        decay={2}
-      />
-
-      {/* 3. Concentric Orbital Rings */}
-      <mesh ref={ring1Ref} position={[0, 1.8, 0]}>
-        <torusGeometry args={[1.35, 0.03, 16, 64]} />
-        <meshBasicMaterial color="#00e5ff" />
-      </mesh>
-      <mesh ref={ring2Ref} position={[0, 1.8, 0]}>
-        <torusGeometry args={[1.7, 0.025, 16, 64]} />
-        <meshBasicMaterial color="#38bdf8" />
-      </mesh>
-      <mesh ref={ring3Ref} position={[0, 1.8, 0]}>
-        <torusGeometry args={[2.05, 0.02, 16, 64]} />
-        <meshBasicMaterial color="#67e8f9" />
-      </mesh>
+      </group>
 
       {/* 4. Curved Ring Consoles / Operator Desks */}
       {[0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2].map((angle, i) => {
