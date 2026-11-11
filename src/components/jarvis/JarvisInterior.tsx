@@ -55,6 +55,8 @@ export interface JarvisInteriorProps {
     description: string
   ) => void
   onApprove?: (approvalId: string, decision: 'approved' | 'rejected') => void
+  onVoiceTranscription?: (transcript: string, role: 'user' | 'jarvis') => void
+  onVoiceStateChange?: (voiceActive: boolean, isListening: boolean) => void
 }
 
 interface SpeechRecognitionAlternativeLike {
@@ -102,6 +104,8 @@ export default function JarvisInterior({
   onGlobalModeChange,
   onRouteIndividualAgent,
   onApprove,
+  onVoiceTranscription,
+  onVoiceStateChange,
 }: JarvisInteriorProps) {
   const [userName, setUserName] = useState<string>(() => {
     if (typeof window !== 'undefined') {
@@ -239,6 +243,7 @@ export default function JarvisInterior({
   // Speak text using Web Speech Synthesis API with British cadence when unmuted or explicitly triggered
   const speakWithJarvisVoice = useCallback(
     (text: string, forceSpeak = false) => {
+      onVoiceTranscription?.(text, 'jarvis')
       if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
       if (ttsMutedRef.current && !forceSpeak) return
 
@@ -273,7 +278,11 @@ export default function JarvisInterior({
         utterance.rate = 1.06
         utterance.pitch = 0.95
 
+        let safetyHandled = false
         const resumeListeningAfterSpeech = () => {
+          if (safetyHandled) return
+          safetyHandled = true
+          clearTimeout(safetyTimer)
           isSpeakingTtsRef.current = false
           setLiveAudioLevel(0.45)
           if (voiceEnabledRef.current) {
@@ -287,6 +296,8 @@ export default function JarvisInterior({
             onCoreStateChange('idle')
           }
         }
+
+        const safetyTimer = setTimeout(resumeListeningAfterSpeech, 9000)
 
         utterance.onstart = () => {
           onCoreStateChange('speaking')
@@ -303,7 +314,7 @@ export default function JarvisInterior({
         isSpeakingTtsRef.current = false
       }
     },
-    [onCoreStateChange]
+    [onCoreStateChange, onVoiceTranscription]
   )
 
   // Fetch live provider status & persisted Jarvis messages from GET /api/jarvis on mount
@@ -671,98 +682,135 @@ export default function JarvisInterior({
     }
 
     try {
-      if (!recognitionRef.current) {
-        const instance = new SpeechRecCtor()
-        instance.continuous = true
-        instance.interimResults = true
-        instance.lang = 'en-US'
-
-        instance.onresult = (event: SpeechRecognitionEventLike) => {
-          if (isSpeakingTtsRef.current) return
-          let interim = ''
-          let finalTranscript = ''
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const res = event.results[i]
-            if (res.isFinal) {
-              finalTranscript += res[0].transcript
-            } else {
-              interim += res[0].transcript
-            }
-          }
-          if (interim) {
-            setCommandInput(interim)
-          }
-          if (finalTranscript.trim()) {
-            const spoken = finalTranscript.trim()
-            setCommandInput('')
-            setVoicePermissionStatus(
-              `Heard: "${spoken.slice(0, 42)}" • Always-On Mic Active`
-            )
-            void submitDirectiveRef.current(spoken)
-          }
+      // Discard previous ended/stopped instance to avoid Chromium InvalidStateError
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.onresult = null
+          recognitionRef.current.onerror = null
+          recognitionRef.current.onend = null
+          recognitionRef.current.stop()
+        } catch {
+          // Ignore stop on stale instance
         }
-
-        instance.onerror = (ev) => {
-          isRecognitionRunningRef.current = false
-          if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
-            setVoicePermissionStatus(
-              'Mic permission blocked by browser — allow microphone access to speak'
-            )
-            return
-          }
-        }
-
-        instance.onend = () => {
-          isRecognitionRunningRef.current = false
-          // Automatically restart continuous listening whenever Mic is enabled and Jarvis isn't speaking TTS
-          if (voiceEnabledRef.current && !isSpeakingTtsRef.current) {
-            setTimeout(() => {
-              if (
-                voiceEnabledRef.current &&
-                !isSpeakingTtsRef.current &&
-                !isRecognitionRunningRef.current
-              ) {
-                try {
-                  recognitionRef.current?.start()
-                  isRecognitionRunningRef.current = true
-                } catch {
-                  // Ignore if already started
-                }
-              }
-            }, 180)
-          }
-        }
-
-        recognitionRef.current = instance
+        recognitionRef.current = null
       }
 
+      const instance = new SpeechRecCtor()
+      instance.continuous = true
+      instance.interimResults = true
+      instance.lang = 'en-US'
+
+      instance.onresult = (event: SpeechRecognitionEventLike) => {
+        if (isSpeakingTtsRef.current) return
+        let interim = ''
+        let finalTranscript = ''
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i]
+          if (res.isFinal) {
+            finalTranscript += res[0].transcript
+          } else {
+            interim += res[0].transcript
+          }
+        }
+        if (interim) {
+          setCommandInput(interim)
+        }
+        if (finalTranscript.trim()) {
+          const spoken = finalTranscript.trim()
+          setCommandInput('')
+          setVoicePermissionStatus(
+            `Heard: "${spoken.slice(0, 42)}" • Always-On Mic Active`
+          )
+          onVoiceTranscription?.(spoken, 'user')
+          void submitDirectiveRef.current(spoken)
+        }
+      }
+
+      instance.onerror = (ev) => {
+        isRecognitionRunningRef.current = false
+        if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+          setVoicePermissionStatus(
+            'Mic permission blocked by browser — allow microphone access to speak'
+          )
+          onVoiceStateChange?.(false, false)
+          return
+        }
+        // Non-fatal errors in Chrome (no-speech, network, aborted) are normal during pauses
+        if (voiceEnabledRef.current && !isSpeakingTtsRef.current) {
+          setTimeout(() => {
+            if (
+              voiceEnabledRef.current &&
+              !isSpeakingTtsRef.current &&
+              !isRecognitionRunningRef.current
+            ) {
+              startRecognitionFnRef.current()
+            }
+          }, 250)
+        }
+      }
+
+      instance.onend = () => {
+        isRecognitionRunningRef.current = false
+        // Automatically restart continuous listening with fresh instance whenever Mic is enabled and Jarvis isn't speaking TTS
+        if (voiceEnabledRef.current && !isSpeakingTtsRef.current) {
+          setTimeout(() => {
+            if (
+              voiceEnabledRef.current &&
+              !isSpeakingTtsRef.current &&
+              !isRecognitionRunningRef.current
+            ) {
+              startRecognitionFnRef.current()
+            }
+          }, 180)
+        }
+      }
+
+      recognitionRef.current = instance
       recognitionRef.current.start()
       isRecognitionRunningRef.current = true
       setVoicePermissionStatus('Always-On Mic Active • Speak anytime to JARVIS')
       onCoreStateChange('listening')
+      onVoiceStateChange?.(true, true)
     } catch {
-      // Ignore if already running
+      isRecognitionRunningRef.current = false
+      setTimeout(() => {
+        if (
+          voiceEnabledRef.current &&
+          !isSpeakingTtsRef.current &&
+          !isRecognitionRunningRef.current
+        ) {
+          startRecognitionFnRef.current()
+        }
+      }, 500)
     }
-  }, [onCoreStateChange])
+  }, [onCoreStateChange, onVoiceTranscription, onVoiceStateChange])
 
   useEffect(() => {
     startRecognitionFnRef.current = startContinuousRecognition
   }, [startContinuousRecognition])
 
-  // Auto-start continuous microphone recognition on mount since voiceEnabled defaults to true
+  // Auto-start continuous microphone recognition on mount
   useEffect(() => {
     if (voiceEnabled) {
       startContinuousRecognition()
     }
-    return () => {
-      isRecognitionRunningRef.current = false
-      try {
-        recognitionRef.current?.stop()
-      } catch {
-        // Ignore stop errors
-      }
-    }
   }, [voiceEnabled, startContinuousRecognition])
+
+  // Watchdog: ensures continuous speech recognition is never stuck, resurrecting cleanly within 2 seconds
+  useEffect(() => {
+    if (!voiceEnabled) return
+    const watchdog = setInterval(() => {
+      if (
+        voiceEnabledRef.current &&
+        !isSpeakingTtsRef.current &&
+        !isRecognitionRunningRef.current &&
+        !isTransmitting
+      ) {
+        startContinuousRecognition()
+      }
+    }, 2000)
+    return () => clearInterval(watchdog)
+  }, [voiceEnabled, isTransmitting, startContinuousRecognition])
 
   const handleSubmitCommand = (e: React.FormEvent) => {
     e.preventDefault()

@@ -209,6 +209,11 @@ function HQCommandPage() {
   // JARVIS Orchestrator State & Cinematic Transition Phase
   const [jarvisPhase, setJarvisPhase] = useState<JarvisTransitionPhase>('closed')
   const [jarvisCoreState, setJarvisCoreState] = useState<JarvisCoreState>('idle')
+  const [officeVoiceSnippet, setOfficeVoiceSnippet] = useState<{
+    text: string
+    role: 'user' | 'jarvis'
+    timestamp: number
+  } | null>(null)
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearTransitionTimer = () => {
@@ -1100,6 +1105,76 @@ function HQCommandPage() {
               </div>
             </div>
           )}
+
+          {/* Floating JARVIS Live Voice HUD for Office View (Always-On Speech in Office or Brain) */}
+          {jarvisPhase === 'closed' && (
+            <div
+              data-testid="office-jarvis-voice-hud"
+              className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex max-w-xl items-center gap-3 rounded-full border border-cyan-500/40 bg-slate-950/85 px-4 py-2 text-xs font-mono backdrop-blur-md shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all"
+            >
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="relative flex h-3 w-3">
+                  <span
+                    className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                      jarvisCoreState === 'speaking'
+                        ? 'bg-emerald-400 animate-ping'
+                        : jarvisCoreState === 'thinking'
+                          ? 'bg-amber-400 animate-ping'
+                          : 'bg-cyan-400 animate-pulse'
+                    }`}
+                  />
+                  <span
+                    className={`relative inline-flex h-3 w-3 rounded-full ${
+                      jarvisCoreState === 'speaking'
+                        ? 'bg-emerald-400'
+                        : jarvisCoreState === 'thinking'
+                          ? 'bg-amber-400'
+                          : 'bg-cyan-400'
+                    }`}
+                  />
+                </span>
+                <span className="font-bold text-cyan-300 tracking-wider">
+                  JARVIS{' '}
+                  {jarvisCoreState === 'speaking'
+                    ? 'SPEAKING'
+                    : jarvisCoreState === 'thinking'
+                      ? 'THINKING'
+                      : 'LISTENING'}
+                </span>
+              </div>
+
+              <div className="h-3 w-px bg-slate-800 shrink-0" />
+
+              <div className="truncate text-slate-300 min-w-0 max-w-xs sm:max-w-md">
+                {officeVoiceSnippet ? (
+                  <span>
+                    <strong
+                      className={
+                        officeVoiceSnippet.role === 'user'
+                          ? 'text-amber-300'
+                          : 'text-cyan-300'
+                      }
+                    >
+                      {officeVoiceSnippet.role === 'user' ? 'You: ' : 'JARVIS: '}
+                    </strong>
+                    {officeVoiceSnippet.text}
+                  </span>
+                ) : (
+                  <span className="text-slate-500 italic">
+                    Say &quot;send Josiah to gym&quot; or &quot;what models are agents using?&quot;
+                  </span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={enterJarvis}
+                className="cursor-pointer ml-auto shrink-0 rounded-full border border-cyan-400/50 bg-cyan-950/80 px-2.5 py-1 text-[10px] font-bold text-cyan-200 transition hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
+              >
+                OPEN CORE [J]
+              </button>
+            </div>
+          )}
         </section>
 
         {/* Full-Screen Jarvis Holographic Interior Chamber (Persistently mounted so Always-On Voice works seamlessly across entering & exiting JARVIS) */}
@@ -1112,6 +1187,9 @@ function HQCommandPage() {
           is2DDefault={is2DView}
           coreState={jarvisCoreState}
           isOpen={jarvisPhase === 'inside'}
+          onVoiceTranscription={(transcript, role) =>
+            setOfficeVoiceSnippet({ text: transcript, role, timestamp: Date.now() })
+          }
           onCoreStateChange={setJarvisCoreState}
           onExit={exitJarvis}
           onSelectAgentAndExit={(ag) => {

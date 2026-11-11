@@ -162,10 +162,18 @@ Tracking progress for Office V3 architecture implementation across Phases 1 thro
   - [x] Collapsible `Sources` footer rendered **only** when `toolsUsed.length > 0`.
   - [x] Vitest suite (`tests/jarvisOrchestrator.test.ts`) verifying all 6 required test cases.
 
-### Phase J8: Live Voice Input Transcription, Level Meter & Spoken Replies (Pending)
-- [ ] Live interim speech-to-text transcript inside input box, audio level meter, and seamless British TTS playback.
+### Phase J8: Live Continuous Voice Input & Office Floating HUD (Completed)
+- [x] Unlimited continuous Web Speech API recognition that never terminates when navigating between the 3D/2D office and the holographic brain core.
+- [x] Discarded single-instance SpeechRecognition reuse to avoid Chromium `InvalidStateError`, instantiating fresh sessions on restarts.
+- [x] Auto-resurrecting watchdog timer (2s heartbeat) and TTS safety release timeout (9s) ensuring the mic is never permanently locked.
+- [x] Floating JARVIS Voice HUD pill in the office view (`jarvisPhase === 'closed'`) showing live listening/thinking/speaking audio pulse, live transcription snippet, and quick [J] entry button.
 
-### Phase J9: End-to-End Verification & Final QA (Pending)
-- [ ] Full Playwright E2E verification of live Gemini conversation, tool calls, and voice controls.
+### Phase J9: Live Supabase Fleet Models & Collective Brain Knowledge Storage (Completed)
+- [x] Fully grounded JARVIS in live Supabase database with all 24 agents, roles, and assigned AI models (Gemini 2.0/2.5 & Hugging Face Local SLMs).
+- [x] Added `list_agents` server-side tool returning full agent fleet with `assignedModel` and `modelBreakdown`.
+- [x] Added `query_brain_knowledge` and `save_brain_learning` tools connected to `office_knowledge` table in Supabase (`0007_office_knowledge_brain.sql`).
+- [x] Created `/api/office/brain` REST endpoint for agent self-learning and Antigravity multi-agent coding synchronization.
+- [x] Zero-delay live AI responses tested against Google Gemini and Hugging Face Local SLMs without generic "no access to personal data" disclaimers.
+
 
 

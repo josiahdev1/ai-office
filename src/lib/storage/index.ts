@@ -98,7 +98,7 @@ export function checkRateLimit(key = 'global'): { allowed: boolean; remaining: n
 
 let serverSupabaseClient: SupabaseClient | null = null
 
-function getSupabase(): SupabaseClient | null {
+export function getSupabase(): SupabaseClient | null {
   if (serverSupabaseClient) return serverSupabaseClient
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -749,5 +749,148 @@ export async function saveJarvisRollingMemory(
 
   return inMemoryRollingMemory
 }
+
+// =============================================================================
+// 9. Collective Knowledge Brain Storage (Self-Learning Memory)
+// =============================================================================
+
+export interface OfficeKnowledgeItem {
+  id: string
+  category: 'learning' | 'architecture' | 'code_pattern' | 'agent_memory' | 'rule' | 'decision'
+  title: string
+  content: string
+  agent_id?: string
+  agent_name?: string
+  tags?: string[]
+  metadata?: Record<string, unknown>
+  created_at?: string
+  updated_at?: string
+}
+
+const inMemoryKnowledge: OfficeKnowledgeItem[] = [
+  {
+    id: 'know-1',
+    category: 'architecture',
+    title: 'EasyUp HQ Core Architecture & Tech Stack',
+    content:
+      'EasyUp Software Solution HQ is powered by Next.js 16 (App Router), React 19, Tailwind CSS v4, Three.js/Fiber 3D & HTML5 Canvas 2D viewports, and Supabase Realtime for state synchronization. All telemetry streams across office_agents, office_tasks, office_approvals, and office_logs.',
+    agent_id: 'arwin',
+    agent_name: 'Arwin',
+    tags: ['architecture', 'tech-stack', 'nextjs', 'react19', 'supabase'],
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'know-2',
+    category: 'agent_memory',
+    title: '24 Autonomous Agent Fleet & AI Model Distribution',
+    content:
+      'EasyUp HQ operates a 24-agent autonomous AI workforce across 6 functional departments (Engineering, Product & Design, QA & Security, Operations & DevOps, Marketing & Growth, HR & Culture). Agents use live Gemini models (gemini-2.0-flash, gemini-2.5-flash, gemini-2.5-pro) and Hugging Face in-project Neural Local SLMs (jarvis-local-slm-v1, hf-smollm2-135m, hf-smollm2-360m, hf-qwen2.5-0.5b).',
+    agent_id: 'jarvis',
+    agent_name: 'J.A.R.V.I.S.',
+    tags: ['agents', 'fleet', 'ai-models', 'gemini', 'local-slm'],
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'know-3',
+    category: 'code_pattern',
+    title: 'Go-Signal Human-in-the-Loop Governance Pattern',
+    content:
+      'High-risk operations (production deployments, database migrations, security modifications) require human operator Go-Signal approval via office_approvals. Tasks are staged and await operator confirmation before dispatching.',
+    agent_id: 'blaise',
+    agent_name: 'Blaise',
+    tags: ['security', 'governance', 'approvals', 'go-signal'],
+    created_at: new Date().toISOString(),
+  },
+]
+
+export async function getOfficeKnowledge(
+  query = '',
+  category = ''
+): Promise<OfficeKnowledgeItem[]> {
+  const supabase = getSupabase()
+  if (supabase) {
+    try {
+      let req = supabase
+        .from('office_knowledge')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (category && category !== 'ALL') {
+        req = req.eq('category', category)
+      }
+
+      const { data, error } = await req
+      if (!error && Array.isArray(data) && data.length > 0) {
+        let results = data as OfficeKnowledgeItem[]
+        if (query.trim()) {
+          const q = query.toLowerCase()
+          results = results.filter(
+            (k) =>
+              k.title.toLowerCase().includes(q) ||
+              k.content.toLowerCase().includes(q) ||
+              (k.tags || []).some((t) => t.toLowerCase().includes(q))
+          )
+        }
+        return results
+      }
+    } catch {
+      // Fallback to in-memory knowledge store
+    }
+  }
+
+  // Filter in-memory knowledge fallback
+  return inMemoryKnowledge.filter((k) => {
+    const matchesCat = !category || category === 'ALL' || k.category === category
+    const q = query.trim().toLowerCase()
+    const matchesQ =
+      !q ||
+      k.title.toLowerCase().includes(q) ||
+      k.content.toLowerCase().includes(q) ||
+      (k.tags || []).some((t) => t.toLowerCase().includes(q))
+    return matchesCat && matchesQ
+  })
+}
+
+export async function saveOfficeKnowledge(
+  item: Omit<OfficeKnowledgeItem, 'id' | 'created_at' | 'updated_at'>
+): Promise<OfficeKnowledgeItem> {
+  const newItem: OfficeKnowledgeItem = {
+    ...item,
+    id: `know-${Date.now()}`,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+
+  inMemoryKnowledge.unshift(newItem)
+
+  const supabase = getSupabase()
+  if (supabase) {
+    try {
+      const { data } = await supabase
+        .from('office_knowledge')
+        .insert({
+          category: newItem.category,
+          title: newItem.title,
+          content: newItem.content,
+          agent_id: newItem.agent_id,
+          agent_name: newItem.agent_name,
+          tags: newItem.tags || [],
+          metadata: newItem.metadata || {},
+        })
+        .select()
+        .single()
+
+      if (data) {
+        return data as OfficeKnowledgeItem
+      }
+    } catch {
+      // Keep in-memory item on error
+    }
+  }
+
+  return newItem
+}
+
 
 
