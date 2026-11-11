@@ -118,10 +118,11 @@ export default function JarvisInterior({
   const [deptFilter, setDeptFilter] = useState<string>('ALL')
   const [rosterSearch, setRosterSearch] = useState<string>('')
   const [commandInput, setCommandInput] = useState<string>('')
-  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(false)
-  const [ttsMuted, setTtsMuted] = useState<boolean>(true)
-  const [voicePermissionStatus, setVoicePermissionStatus] =
-    useState<string>('Voice Off (Click Mic to talk)')
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true)
+  const [ttsMuted, setTtsMuted] = useState<boolean>(false)
+  const [voicePermissionStatus, setVoicePermissionStatus] = useState<string>(
+    'Always-On Mic Active • Speak anytime to JARVIS'
+  )
   const [sessionTokens, setSessionTokens] = useState<number>(0)
   const [isTransmitting, setIsTransmitting] = useState<boolean>(false)
   const [liveAudioLevel, setLiveAudioLevel] = useState<number>(0.45)
@@ -142,7 +143,16 @@ export default function JarvisInterior({
   const inputRef = useRef<HTMLInputElement>(null)
   const feedEndRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+  const voiceEnabledRef = useRef<boolean>(voiceEnabled)
+  const isSpeakingTtsRef = useRef<boolean>(false)
+  const isRecognitionRunningRef = useRef<boolean>(false)
+  const startRecognitionFnRef = useRef<() => void>(() => {})
   const ttsMutedRef = useRef<boolean>(ttsMuted)
+
+  useEffect(() => {
+    voiceEnabledRef.current = voiceEnabled
+  }, [voiceEnabled])
+
   useEffect(() => {
     ttsMutedRef.current = ttsMuted
   }, [ttsMuted])
@@ -213,6 +223,16 @@ export default function JarvisInterior({
       if (ttsMutedRef.current && !forceSpeak) return
 
       try {
+        // Pause microphone recognition while Jarvis speaks so Jarvis doesn't transcribe its own voice
+        isSpeakingTtsRef.current = true
+        if (isRecognitionRunningRef.current) {
+          try {
+            recognitionRef.current?.stop()
+          } catch {
+            // Ignore stop error
+          }
+        }
+
         window.speechSynthesis.cancel()
         const utterance = new SpeechSynthesisUtterance(text)
         const voices = window.speechSynthesis.getVoices()
@@ -230,8 +250,23 @@ export default function JarvisInterior({
         if (preferredVoice) {
           utterance.voice = preferredVoice
         }
-        utterance.rate = 1.02
-        utterance.pitch = 0.94
+        utterance.rate = 1.06
+        utterance.pitch = 0.95
+
+        const resumeListeningAfterSpeech = () => {
+          isSpeakingTtsRef.current = false
+          setLiveAudioLevel(0.45)
+          if (voiceEnabledRef.current) {
+            onCoreStateChange('listening')
+            setTimeout(() => {
+              if (voiceEnabledRef.current && !isSpeakingTtsRef.current) {
+                startRecognitionFnRef.current()
+              }
+            }, 150)
+          } else {
+            onCoreStateChange('idle')
+          }
+        }
 
         utterance.onstart = () => {
           onCoreStateChange('speaking')
@@ -240,18 +275,12 @@ export default function JarvisInterior({
         utterance.onboundary = () => {
           setLiveAudioLevel(0.55 + Math.random() * 0.4)
         }
-        utterance.onend = () => {
-          setLiveAudioLevel(0.45)
-          onCoreStateChange('idle')
-        }
-        utterance.onerror = () => {
-          setLiveAudioLevel(0.45)
-          onCoreStateChange('idle')
-        }
+        utterance.onend = resumeListeningAfterSpeech
+        utterance.onerror = resumeListeningAfterSpeech
 
         window.speechSynthesis.speak(utterance)
       } catch {
-        // Ignore speech synthesis errors on headless browsers
+        isSpeakingTtsRef.current = false
       }
     },
     [onCoreStateChange]
@@ -538,9 +567,11 @@ export default function JarvisInterior({
       } finally {
         setIsTransmitting(false)
         setLiveAudioLevel(0.45)
-        setTimeout(() => {
-          onCoreStateChange('idle')
-        }, 700)
+        if (!isSpeakingTtsRef.current) {
+          setTimeout(() => {
+            onCoreStateChange(voiceEnabledRef.current ? 'listening' : 'idle')
+          }, 300)
+        }
       }
     },
     [
@@ -555,6 +586,122 @@ export default function JarvisInterior({
       userName,
     ]
   )
+
+  const submitDirectiveRef = useRef(submitDirectiveText)
+  useEffect(() => {
+    submitDirectiveRef.current = submitDirectiveText
+  }, [submitDirectiveText])
+
+  const startContinuousRecognition = useCallback(() => {
+    if (typeof window === 'undefined' || !voiceEnabledRef.current) return
+    if (isSpeakingTtsRef.current || isRecognitionRunningRef.current) return
+
+    const win = window as unknown as {
+      SpeechRecognition?: new () => SpeechRecognitionLike
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike
+    }
+    const SpeechRecCtor = win.SpeechRecognition || win.webkitSpeechRecognition
+
+    if (!SpeechRecCtor) {
+      setVoicePermissionStatus(
+        'Browser SpeechRecognition unavailable — type below or use Chrome/Edge'
+      )
+      return
+    }
+
+    try {
+      let recognition = recognitionRef.current
+      if (!recognition) {
+        recognition = new SpeechRecCtor()
+        recognition.continuous = true
+        recognition.interimResults = true
+        recognition.lang = 'en-US'
+        recognitionRef.current = recognition
+      }
+
+      recognition.onresult = (event: SpeechRecognitionEventLike) => {
+        if (isSpeakingTtsRef.current) return
+        let interim = ''
+        let finalTranscript = ''
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i]
+          if (res.isFinal) {
+            finalTranscript += res[0].transcript
+          } else {
+            interim += res[0].transcript
+          }
+        }
+        if (interim) {
+          setCommandInput(interim)
+        }
+        if (finalTranscript.trim()) {
+          const spoken = finalTranscript.trim()
+          setCommandInput('')
+          setVoicePermissionStatus(
+            `Heard: "${spoken.slice(0, 42)}" • Always-On Mic Active`
+          )
+          void submitDirectiveRef.current(spoken)
+        }
+      }
+
+      recognition.onerror = (ev) => {
+        isRecognitionRunningRef.current = false
+        if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+          setVoicePermissionStatus(
+            'Mic permission blocked by browser — allow microphone access to speak'
+          )
+          return
+        }
+      }
+
+      recognition.onend = () => {
+        isRecognitionRunningRef.current = false
+        // Automatically restart continuous listening whenever Mic is enabled and Jarvis isn't speaking TTS
+        if (voiceEnabledRef.current && !isSpeakingTtsRef.current) {
+          setTimeout(() => {
+            if (
+              voiceEnabledRef.current &&
+              !isSpeakingTtsRef.current &&
+              !isRecognitionRunningRef.current
+            ) {
+              try {
+                recognitionRef.current?.start()
+                isRecognitionRunningRef.current = true
+              } catch {
+                // Ignore if already started
+              }
+            }
+          }, 180)
+        }
+      }
+
+      recognition.start()
+      isRecognitionRunningRef.current = true
+      setVoicePermissionStatus('Always-On Mic Active • Speak anytime to JARVIS')
+      onCoreStateChange('listening')
+    } catch {
+      // Ignore if already running
+    }
+  }, [onCoreStateChange])
+
+  useEffect(() => {
+    startRecognitionFnRef.current = startContinuousRecognition
+  }, [startContinuousRecognition])
+
+  // Auto-start continuous microphone recognition on mount since voiceEnabled defaults to true
+  useEffect(() => {
+    if (voiceEnabled) {
+      startContinuousRecognition()
+    }
+    return () => {
+      isRecognitionRunningRef.current = false
+      try {
+        recognitionRef.current?.stop()
+      } catch {
+        // Ignore stop errors
+      }
+    }
+  }, [voiceEnabled, startContinuousRecognition])
 
   const handleSubmitCommand = (e: React.FormEvent) => {
     e.preventDefault()
@@ -580,15 +727,17 @@ export default function JarvisInterior({
       )
     } finally {
       setTimeout(() => {
-        onCoreStateChange('idle')
+        onCoreStateChange(voiceEnabledRef.current ? 'listening' : 'idle')
       }, 1200)
     }
   }
 
   const handleToggleVoice = () => {
     if (voiceEnabled) {
+      voiceEnabledRef.current = false
       setVoiceEnabled(false)
-      setVoicePermissionStatus('Voice Off (Click Mic to talk)')
+      isRecognitionRunningRef.current = false
+      setVoicePermissionStatus('Voice Off (Click Mic to enable Always-On Mic)')
       try {
         recognitionRef.current?.stop()
       } catch {
@@ -598,75 +747,10 @@ export default function JarvisInterior({
       return
     }
 
-    const win = window as unknown as {
-      SpeechRecognition?: new () => SpeechRecognitionLike
-      webkitSpeechRecognition?: new () => SpeechRecognitionLike
-    }
-    const SpeechRecCtor = win.SpeechRecognition || win.webkitSpeechRecognition
-
-    if (!SpeechRecCtor) {
-      setVoiceEnabled(true)
-      setVoicePermissionStatus(
-        'Browser SpeechRecognition unavailable — type below or use Chrome/Edge'
-      )
-      onCoreStateChange('listening')
-      inputRef.current?.focus()
-      return
-    }
-
-    try {
-      const recognition = new SpeechRecCtor()
-      recognition.continuous = false
-      recognition.interimResults = true
-      recognition.lang = 'en-US'
-
-      // Also unmute TTS automatically when the operator turns on the microphone to talk to Jarvis!
-      setTtsMuted(false)
-      setVoiceEnabled(true)
-      setVoicePermissionStatus('Listening... Speak your directive for JARVIS')
-      onCoreStateChange('listening')
-
-      recognition.onresult = (event: SpeechRecognitionEventLike) => {
-        let interim = ''
-        let finalTranscript = ''
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const res = event.results[i]
-          if (res.isFinal) {
-            finalTranscript += res[0].transcript
-          } else {
-            interim += res[0].transcript
-          }
-        }
-        if (interim) {
-          setCommandInput(interim)
-        }
-        if (finalTranscript.trim()) {
-          setCommandInput(finalTranscript.trim())
-          setVoiceEnabled(false)
-          setVoicePermissionStatus('Directive captured • Transmitting to JARVIS')
-          void submitDirectiveText(finalTranscript.trim())
-        }
-      }
-
-      recognition.onerror = (ev) => {
-        setVoiceEnabled(false)
-        setVoicePermissionStatus(
-          `Mic status: ${ev.error || 'stopped'} — click Mic to retry`
-        )
-        onCoreStateChange('idle')
-      }
-
-      recognition.onend = () => {
-        setVoiceEnabled(false)
-      }
-
-      recognitionRef.current = recognition
-      recognition.start()
-    } catch {
-      setVoiceEnabled(false)
-      setVoicePermissionStatus('Microphone unavailable in current context')
-      onCoreStateChange('idle')
-    }
+    voiceEnabledRef.current = true
+    setVoiceEnabled(true)
+    setTtsMuted(false)
+    startContinuousRecognition()
   }
 
   const activeSpec = ARC_REACTOR_STATE_CONFIG[coreState]

@@ -195,6 +195,25 @@ export function autoAssignDesks(agents: Agent[]): Agent[] {
 // 5. Database Read Operations
 // =============================================================================
 
+let cachedOfficeDataTimestamp = 0
+
+/**
+ * Fast cache-first read of live Supabase OfficeData (returns in <5ms when cache is fresh,
+ * and triggers a non-blocking background refresh).
+ */
+export async function getFastOfficeState(maxAgeMs = 8000): Promise<OfficeData> {
+  const now = Date.now()
+  if (cachedOfficeData && now - cachedOfficeDataTimestamp < maxAgeMs) {
+    return cachedOfficeData
+  }
+  if (cachedOfficeData) {
+    // Refresh in background and return cached state immediately for zero latency
+    void getOfficeState()
+    return cachedOfficeData
+  }
+  return getOfficeState()
+}
+
 /**
  * Reads live office state directly from Supabase tables:
  * - office_agents
@@ -219,12 +238,23 @@ export async function getOfficeState(): Promise<OfficeData> {
   }
 
   try {
-    // 1. Fetch office_agents
-    const { data: rawAgents, error: agentsError } = await supabase
-      .from('office_agents')
-      .select('*')
-      .order('name', { ascending: true })
+    // Fetch all 4 Supabase tables in parallel for minimal latency
+    const [agentsRes, approvalsRes, logsRes, msgCountRes] = await Promise.all([
+      supabase.from('office_agents').select('*').order('name', { ascending: true }),
+      supabase
+        .from('office_approvals')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('office_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(30),
+      supabase.from('office_messages').select('*', { count: 'exact', head: true }),
+    ])
 
+    const { data: rawAgents, error: agentsError } = agentsRes
     if (agentsError) {
       console.warn('[Storage] Error reading office_agents:', agentsError.message)
       if (cachedOfficeData) {
@@ -241,13 +271,7 @@ export async function getOfficeState(): Promise<OfficeData> {
       ((rawAgents as OfficeAgentRow[]) || []).map(dbRowToAgent)
     )
 
-    // 2. Fetch office_approvals (pending)
-    const { data: rawApprovals, error: approvalsError } = await supabase
-      .from('office_approvals')
-      .select('*')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-
+    const { data: rawApprovals, error: approvalsError } = approvalsRes
     if (approvalsError) {
       console.warn('[Storage] Error reading office_approvals:', approvalsError.message)
     }
@@ -256,23 +280,13 @@ export async function getOfficeState(): Promise<OfficeData> {
       dbRowToApproval
     )
 
-    // 3. Fetch office_logs (recent telemetry)
-    const { data: rawLogs, error: logsError } = await supabase
-      .from('office_logs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(30)
-
+    const { data: rawLogs, error: logsError } = logsRes
     if (logsError) {
       console.warn('[Storage] Error reading office_logs:', logsError.message)
     }
 
     const logs: string[] = ((rawLogs as OfficeLogRow[]) || []).map(dbRowToLogString)
-
-    // 4. Count messages in office_messages
-    const { count: messageCount } = await supabase
-      .from('office_messages')
-      .select('*', { count: 'exact', head: true })
+    const messageCount = msgCountRes.count
 
     const state: OfficeData = {
       company_name: 'EasyUp Software Solution',
@@ -291,6 +305,7 @@ export async function getOfficeState(): Promise<OfficeData> {
     }
 
     cachedOfficeData = state
+    cachedOfficeDataTimestamp = Date.now()
     return state
   } catch (err: unknown) {
     const errorMsg = (err as Error).message || 'Database connection error'

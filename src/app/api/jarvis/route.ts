@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   addOfficeLog,
   checkRateLimit,
+  getFastOfficeState,
   getJarvisMessages,
-  getOfficeState,
   saveJarvisMessage,
 } from '@/lib/storage'
 import {
@@ -17,8 +17,8 @@ export async function GET() {
   try {
     const providerStatus = detectJarvisProviderStatus()
     const [officeData, messages] = await Promise.all([
-      getOfficeState(),
-      getJarvisMessages(30),
+      getFastOfficeState(),
+      getJarvisMessages(20),
     ])
     const telemetrySnapshot = buildJarvisTelemetrySnapshot(officeData)
 
@@ -81,10 +81,11 @@ export async function POST(req: NextRequest) {
   const wantsJson = req.headers.get('accept')?.includes('application/json')
 
   try {
-    const officeData = await getOfficeState()
+    // Ultra-fast cache-first read of live Supabase state (<5ms when warm)
+    const officeData = await getFastOfficeState()
 
-    // Persist operator message to Supabase office_messages & office_logs
-    await Promise.allSettled([
+    // Non-blocking background persistence of operator message
+    void Promise.allSettled([
       saveJarvisMessage({
         senderId: operatorName.toLowerCase().replace(/\s+/g, '_'),
         senderName: operatorName,
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
         officeData,
       })
 
-      await Promise.allSettled([
+      void Promise.allSettled([
         saveJarvisMessage({
           senderId: 'jarvis',
           senderName: 'J.A.R.V.I.S.',
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, data: turn })
     }
 
-    // Stream Server-Sent Events (SSE)
+    // Stream Server-Sent Events (SSE) with zero artificial delay
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
@@ -161,22 +162,17 @@ export async function POST(req: NextRequest) {
             officeData,
           })
 
-          // Stream words in smooth high-cadence chunks so the UI and ArcReactor speaking ring animate naturally
-          const words = turn.reply.split(/(\s+)/)
-          let accumulated = ''
-          const chunkSize = 4
-          for (let i = 0; i < words.length; i += chunkSize) {
-            const slice = words.slice(i, i + chunkSize).join('')
-            accumulated += slice
-            sendEvent('delta', {
-              delta: slice,
-              accumulated,
-              state: 'speaking',
-            })
-            await new Promise((r) => setTimeout(r, 18))
-          }
+          // Emit delta & complete immediately so text and TTS voice start with zero lag
+          sendEvent('delta', {
+            delta: turn.reply,
+            accumulated: turn.reply,
+            state: 'speaking',
+          })
 
-          await Promise.allSettled([
+          sendEvent('complete', turn)
+
+          // Persist Jarvis response asynchronously without holding up the stream
+          void Promise.allSettled([
             saveJarvisMessage({
               senderId: 'jarvis',
               senderName: 'J.A.R.V.I.S.',
@@ -194,8 +190,6 @@ export async function POST(req: NextRequest) {
               'info'
             ),
           ])
-
-          sendEvent('complete', turn)
         } catch (err: unknown) {
           sendEvent('error', {
             error: (err as Error).message || 'Jarvis stream interrupted',
