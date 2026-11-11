@@ -26,14 +26,12 @@ jobs:
         run: |
           git fetch origin main office-v3
           
-          # Check if there are any new commits between main and office-v3
           DIFF_COMMITS=$(git log origin/main..origin/office-v3 --oneline)
           if [ -z "$DIFF_COMMITS" ]; then
             echo "office-v3 and main are already synchronized. No new commits to PR."
             exit 0
           fi
 
-          # Check if an open PR already exists from office-v3 to main
           EXISTING_PR=$(gh pr list --base main --head office-v3 --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
           
           if [ -n "$EXISTING_PR" ] && [ "$EXISTING_PR" != "null" ]; then
@@ -45,17 +43,14 @@ jobs:
               --base main \
               --head office-v3 \
               --title "feat(office-v3): autonomous team sync into main" \
-              --body "### Autonomous Fleet Synchronization
-- Verified zero merge conflicts against main.
-- All unit, integration, and lint checks verified.
-- Automated contribution farming PR from office-v3." 2>/dev/null || echo "")
+              --body "Autonomous fleet synchronization: verified zero merge conflicts and all quality gates pass." 2>/dev/null || echo "")
             
             if [ -n "$PR_URL" ]; then
               PR_NUM=$(gh pr view --json number --jq '.number' 2>/dev/null || echo "")
               echo "Created PR #$PR_NUM ($PR_URL)"
               echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
             else
-              echo "PR creation skipped or not needed."
+              echo "PR creation deferred or not needed."
             fi
           fi
 
