@@ -45,6 +45,32 @@ Tailwind's scale is based on `1 unit = 4px` (0.25rem). Avoid arbitrary pixel bra
 - **Button & Flex layout safety**: Always include `whitespace-nowrap` on buttons, pills, or badges that contain text next to icons to prevent awkward multiline line breaks.
 - **Semantic theme tokens**: Prefer project CSS variables and theme tokens (e.g., `bg-background`, `text-foreground`, `border-border`, `text-muted-foreground`) over arbitrary hardcoded hex codes.
 
+## Autonomous Team Git & GitHub Contribution Rules
+
+This project operates on an autonomous AI team workflow where Josiah is the lead architect accompanied by an autonomous engineering fleet. To continuously track progress, farm GitHub contributions (PRs & merges), and maintain zero-drift release integrity:
+
+### 1. Active Working Branch: `office-v3`
+- All active development, features, and fixes must be developed and committed on the `office-v3` branch.
+- Never commit broken code or secrets (`.env.local`, API keys) to any branch.
+- Before every commit, verify all quality gates pass: `npm run lint`, `npx tsc --noEmit`, `npm test`, and `npm run build`.
+
+### 2. Autonomous Pull Request Creation & Conflict Prevention
+- After committing and pushing to `office-v3`, compare `office-v3` with the base `main` branch.
+- **Zero-Conflict Guarantee**: If `main` has advanced with new commits (e.g. from upstream merges or Dependabot), fetch `main` and test the merge into `office-v3` first:
+  ```bash
+  git fetch origin main
+  git merge --no-commit --no-ff origin/main
+  ```
+- If any merge conflict is detected, **resolve all conflicts immediately** on `office-v3`, verify tests and build pass cleanly, and commit the resolved merge before proceeding. Never push or merge with unresolved conflict markers.
+
+### 3. Automated Pull Request & Merge Workflow
+- Never require manual Pull Request creation or manual merging on the GitHub UI.
+- Open an automated Pull Request from `office-v3` targeting `main`:
+  - Handled automatically in the cloud on every push via `.github/workflows/auto-pr-merge.yml`.
+  - Or executed locally via `npm run sync:pr` (`scripts/sync-pr-merge.sh`).
+- Once checks pass, the Pull Request is automatically merged into `main` without manual intervention.
+- Synchronize `origin/main` so that `main` and `office-v3` remain perfectly in sync, recording both Pull Request creation and Pull Request Merge activity on Josiah's GitHub profile (`josiahdev1`).
+
 <!-- BEGIN:nextjs-agent-feedback -->
 
 ## Report Next.js feedback
