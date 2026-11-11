@@ -58,11 +58,19 @@ export function getActiveLLMProviders(): {
   return { gemini, anthropic, openai, activeProvider }
 }
 
+import dns from 'dns'
+
+try {
+  dns.setDefaultResultOrder('ipv4first')
+} catch {
+  // Ignore in edge/browser environments
+}
+
 /**
  * Call Google Gemini REST API
  */
 async function callGemini(prompt: string, apiKey: string): Promise<string> {
-  const models = ['gemini-2.5-flash', 'gemini-flash-latest']
+  const models = ['gemini-flash-lite-latest', 'gemini-flash-latest']
   let lastError = 'Unknown Gemini error'
 
   for (const model of models) {
@@ -72,9 +80,9 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
+        generationConfig: { temperature: 0.4, maxOutputTokens: 512 },
       }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(6000),
     })
 
     if (!response.ok) {
