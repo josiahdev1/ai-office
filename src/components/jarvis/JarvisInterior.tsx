@@ -13,10 +13,11 @@ import {
   JARVIS_CORE_STATES,
   JarvisCoreState,
 } from './ArcReactor'
-import type {
-  JarvisProviderStatus,
-  JarvisTaskPlan,
-  JarvisTurnResult,
+import {
+  AVAILABLE_MODELS,
+  type JarvisProviderStatus,
+  type JarvisTaskPlan,
+  type JarvisTurnResult,
 } from '@/lib/jarvis/orchestrator'
 
 export type JarvisQualityPreset = 'low' | 'medium' | 'high'
@@ -47,6 +48,11 @@ export interface JarvisInteriorProps {
   onExit: () => void
   onSelectAgentAndExit: (agent: Agent) => void
   onGlobalModeChange?: (mode: DepartmentMode) => void
+  onRouteIndividualAgent?: (
+    agentId: string,
+    destination: 'work' | 'pantry' | 'gym' | 'meeting',
+    description: string
+  ) => void
   onApprove?: (approvalId: string, decision: 'approved' | 'rejected') => void
 }
 
@@ -78,6 +84,7 @@ interface SpeechRecognitionLike {
 const STORAGE_USER_NAME_KEY = 'easyup_jarvis_username_v1'
 const STORAGE_QUALITY_KEY = 'easyup_jarvis_quality_v1'
 const STORAGE_AUTONOMY_KEY = 'easyup_jarvis_autonomy_v1'
+const STORAGE_MODEL_KEY = 'easyup_jarvis_model_v1'
 
 export default function JarvisInterior({
   agents,
@@ -91,6 +98,7 @@ export default function JarvisInterior({
   onExit,
   onSelectAgentAndExit,
   onGlobalModeChange,
+  onRouteIndividualAgent,
   onApprove,
 }: JarvisInteriorProps) {
   const [userName, setUserName] = useState<string>(() => {
@@ -113,6 +121,12 @@ export default function JarvisInterior({
     }
     return 'ask'
   })
+  const [selectedModel, setSelectedModel] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return window.localStorage.getItem(STORAGE_MODEL_KEY) || 'gemini-2.0-flash'
+    }
+    return 'gemini-2.0-flash'
+  })
 
   const [renderMode, setRenderMode] = useState<'3d' | '2d'>(
     is2DDefault ? '2d' : '3d'
@@ -126,11 +140,13 @@ export default function JarvisInterior({
     'Always-On Mic Active • Speak anytime to JARVIS'
   )
   const [sessionTokens, setSessionTokens] = useState<number>(0)
+  const [apiTokens, setApiTokens] = useState<number>(0)
+  const [localSlmTokens, setLocalSlmTokens] = useState<number>(0)
   const [isTransmitting, setIsTransmitting] = useState<boolean>(false)
   const [liveAudioLevel, setLiveAudioLevel] = useState<number>(0.45)
   const [providerStatus, setProviderStatus] = useState<JarvisProviderStatus>({
     provider: 'GEMINI',
-    modelLabel: 'LIVE AI • GEMINI 2.5 FLASH',
+    modelLabel: 'LIVE AI • GEMINI 2.0 FLASH',
     isLiveAI: true,
   })
   const [dispatchedPlanIds, setDispatchedPlanIds] = useState<Record<string, boolean>>({})
@@ -447,6 +463,8 @@ export default function JarvisInterior({
             prompt: trimmed,
             operatorName: userName,
             autonomyMode: autonomyMode === 'ask' ? 'ask_first' : 'auto_safe',
+            preferredModel: selectedModel,
+            allowLocalSlmFallback: true,
             history: historyPayload,
           }),
         })
@@ -525,22 +543,44 @@ export default function JarvisInterior({
             modelLabel: completedTurn.modelLabel,
             isLiveAI: completedTurn.isLiveAI,
           })
-          setSessionTokens((prev) => prev + (completedTurn?.tokensUsed || 64))
+          const turnTokens = completedTurn.tokensUsed || 64
+          const turnApiTokens =
+            completedTurn.apiTokensUsed ??
+            (completedTurn.provider === 'LOCAL_SLM' ? 0 : turnTokens)
+          const turnLocalTokens =
+            completedTurn.localSlmTokensUsed ??
+            (completedTurn.provider === 'LOCAL_SLM' ? turnTokens : 0)
 
-          // Execute office command if returned
-          if (
-            completedTurn.officeCommand?.type === 'mode' &&
-            completedTurn.officeCommand.mode
-          ) {
-            const targetMode = completedTurn.officeCommand.mode
+          setSessionTokens((prev) => prev + turnTokens)
+          setApiTokens((prev) => prev + turnApiTokens)
+          setLocalSlmTokens((prev) => prev + turnLocalTokens)
+
+          // Execute office command if returned (either global mode OR individual agent route!)
+          if (completedTurn.officeCommand) {
             if (
-              targetMode === 'OVERVIEW' ||
-              targetMode === 'FOCUS_WORK' ||
-              targetMode === 'ALL_HANDS' ||
-              targetMode === 'PANTRY' ||
-              targetMode === 'GYM'
+              completedTurn.officeCommand.type === 'mode' &&
+              completedTurn.officeCommand.mode
             ) {
-              onGlobalModeChange?.(targetMode)
+              const targetMode = completedTurn.officeCommand.mode
+              if (
+                targetMode === 'OVERVIEW' ||
+                targetMode === 'FOCUS_WORK' ||
+                targetMode === 'ALL_HANDS' ||
+                targetMode === 'PANTRY' ||
+                targetMode === 'GYM'
+              ) {
+                onGlobalModeChange?.(targetMode)
+              }
+            } else if (
+              completedTurn.officeCommand.type === 'agent_route' &&
+              completedTurn.officeCommand.agentId &&
+              completedTurn.officeCommand.destination
+            ) {
+              onRouteIndividualAgent?.(
+                completedTurn.officeCommand.agentId,
+                completedTurn.officeCommand.destination,
+                completedTurn.officeCommand.description
+              )
             }
           }
 
@@ -599,6 +639,8 @@ export default function JarvisInterior({
       messages,
       onCoreStateChange,
       onGlobalModeChange,
+      onRouteIndividualAgent,
+      selectedModel,
       speakWithJarvisVoice,
       userName,
     ]
@@ -913,19 +955,54 @@ export default function JarvisInterior({
 
           <div className="rounded-lg border border-cyan-500/30 bg-slate-950/85 px-3 py-1 font-mono">
             <div className="text-[9px] tracking-wider text-slate-400 uppercase whitespace-nowrap">
-              TOKENS
+              TOKENS (API / LOCAL SLM)
             </div>
             <div
               data-testid="readout-tokens"
-              className="text-xs font-black text-indigo-300 whitespace-nowrap"
+              className="flex items-center gap-1.5 text-xs font-black text-indigo-300 whitespace-nowrap"
             >
-              {sessionTokens.toLocaleString()}
+              <span>{sessionTokens.toLocaleString()}</span>
+              <span className="text-[9px] font-semibold text-cyan-300/90">
+                (API: {apiTokens.toLocaleString()} • SLM: {localSlmTokens.toLocaleString()})
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Right: Core State Switcher + 3D/2D + Quality Controls */}
+        {/* Right: Dynamic AI Model Switcher + Core State Switcher + 3D/2D + Quality Controls */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Dynamic AI Model Selector (Cloud Gemini / OpenAI / Local SLM) */}
+          <select
+            data-testid="jarvis-model-selector"
+            aria-label="Select AI Model or Local SLM"
+            value={selectedModel}
+            onChange={(e) => {
+              const val = e.target.value
+              setSelectedModel(val)
+              if (typeof window !== 'undefined') {
+                window.localStorage.setItem(STORAGE_MODEL_KEY, val)
+              }
+              const found = AVAILABLE_MODELS.find((m) => m.id === val)
+              if (found) {
+                setProviderStatus({
+                  provider: found.provider,
+                  modelLabel:
+                    found.provider === 'LOCAL_SLM'
+                      ? 'LOCAL SLM • JARVIS-SLM-V1'
+                      : `LIVE AI • ${found.name.toUpperCase()}`,
+                  isLiveAI: true,
+                })
+              }
+            }}
+            className="rounded-lg border border-cyan-500/40 bg-slate-950 px-2.5 py-1 font-mono text-[10px] font-bold text-emerald-300 focus:border-cyan-400 focus:outline-none"
+          >
+            {AVAILABLE_MODELS.map((m) => (
+              <option key={m.id} value={m.id}>
+                MODEL: {m.name} — {m.tier}
+              </option>
+            ))}
+          </select>
+
           <div className="hidden xl:flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950/90 p-1">
             {JARVIS_CORE_STATES.map((st) => {
               const cfg = ARC_REACTOR_STATE_CONFIG[st]

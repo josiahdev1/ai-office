@@ -1,13 +1,129 @@
-import dns from 'dns'
 import { z } from 'zod'
 import { Agent, OfficeData } from '@/components/office/types'
 import { DepartmentMode } from '@/config/officeLayout'
 import { summarizeOlderTurns } from '@/lib/storage'
+import { runLocalJarvisSlm } from './localSlm'
 
-try {
-  dns.setDefaultResultOrder('ipv4first')
-} catch {
-  // Ignore in browser/edge environments
+export const DEFAULT_PRIORITY_LIST: string[] = [
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+  'gemini-2.5-flash',
+  'gemini-3.1-flash-lite-preview',
+  'gemini-3.5-flash',
+  'gemini-3-flash-preview',
+]
+
+export interface JarvisModelCatalogEntry {
+  id: string
+  name: string
+  tier: string
+  provider: 'GEMINI' | 'OPENAI' | 'LOCAL_SLM'
+  recommended?: boolean
+}
+
+export const AVAILABLE_MODELS: JarvisModelCatalogEntry[] = [
+  {
+    id: 'auto',
+    name: 'Auto-Failover (Cloud API → Local SLM)',
+    tier: 'Automatic Smart Failover',
+    provider: 'GEMINI',
+    recommended: true,
+  },
+  {
+    id: 'gemini-2.0-flash',
+    name: 'Gemini 2.0 Flash (Recommended)',
+    tier: 'High Speed & Generous Quota',
+    provider: 'GEMINI',
+    recommended: true,
+  },
+  {
+    id: 'gemini-2.0-flash-lite',
+    name: 'Gemini 2.0 Flash-Lite',
+    tier: 'Ultra Fast & Low Latency',
+    provider: 'GEMINI',
+  },
+  {
+    id: 'gemini-1.5-flash',
+    name: 'Gemini 1.5 Flash',
+    tier: 'Stable & High Capacity',
+    provider: 'GEMINI',
+  },
+  {
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    tier: 'Advanced Reasoning',
+    provider: 'GEMINI',
+  },
+  {
+    id: 'gemini-1.5-pro',
+    name: 'Gemini 1.5 Pro',
+    tier: 'Complex Context',
+    provider: 'GEMINI',
+  },
+  {
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    tier: 'Flagship Intelligence',
+    provider: 'GEMINI',
+  },
+  {
+    id: 'gemini-3.1-flash-lite-preview',
+    name: 'Gemini 3.1 Flash-Lite',
+    tier: 'Sub-Second 2026 Tier',
+    provider: 'GEMINI',
+  },
+  {
+    id: 'gemini-3.5-flash',
+    name: 'Gemini 3.5 Flash',
+    tier: 'High-Speed Tool Calling',
+    provider: 'GEMINI',
+  },
+  {
+    id: 'gpt-4o-mini',
+    name: 'OpenAI GPT-4o Mini (Key Pool)',
+    tier: 'OpenAI Pool Rotation',
+    provider: 'OPENAI',
+  },
+  {
+    id: 'jarvis-local-slm-v1',
+    name: 'JARVIS Local SLM (In-Project Engine)',
+    tier: 'Zero-Latency Local SLM (Unlimited)',
+    provider: 'LOCAL_SLM',
+  },
+]
+
+/**
+ * Maps legacy/aliased Gemini model names to currently active 2026 endpoints on Google's API
+ * so choosing 'gemini-2.0-flash' or 'gemini-1.5-flash' in the selector seamlessly routes
+ * to the fastest active endpoint first.
+ */
+export function resolveExecutableGeminiModels(preferredModel?: string): string[] {
+  const aliasMap: Record<string, string> = {
+    'gemini-2.0-flash': 'gemini-3.1-flash-lite-preview',
+    'gemini-2.0-flash-lite': 'gemini-3.1-flash-lite-preview',
+    'gemini-1.5-flash': 'gemini-3-flash-preview',
+    'gemini-2.5-flash': 'gemini-3.5-flash',
+    'gemini-1.5-pro': 'gemini-3.5-flash',
+    'gemini-2.5-pro': 'gemini-3.5-flash',
+  }
+
+  const resolvedPreferred =
+    preferredModel && preferredModel !== 'auto'
+      ? aliasMap[preferredModel] || preferredModel
+      : undefined
+
+  return Array.from(
+    new Set(
+      [
+        resolvedPreferred,
+        'gemini-3.1-flash-lite-preview',
+        'gemini-3-flash-preview',
+        'gemini-3.5-flash',
+        'gemini-3.6-flash',
+      ].filter((m): m is string => Boolean(m))
+    )
+  )
 }
 
 export const JarvisIntentSchema = z.enum([
@@ -42,6 +158,8 @@ export const JarvisRequestSchema = z.object({
     .max(2000, 'Prompt exceeds 2000 character safety cap'),
   operatorName: z.string().trim().min(1).max(60).default('Josiah'),
   autonomyMode: z.enum(['ask_first', 'auto_safe']).default('ask_first'),
+  preferredModel: z.string().max(80).optional(),
+  allowLocalSlmFallback: z.boolean().optional().default(true),
   history: z.array(JarvisHistoryItemSchema).max(60).optional().default([]),
   rollingSummary: z.string().max(2000).optional(),
 })
@@ -98,18 +216,20 @@ export interface JarvisTelemetrySnapshot {
 }
 
 export interface JarvisProviderStatus {
-  provider: 'GEMINI' | 'ANTHROPIC' | 'OPENAI' | 'SIM_MODE'
+  provider: 'GEMINI' | 'ANTHROPIC' | 'OPENAI' | 'LOCAL_SLM' | 'SIM_MODE'
   modelLabel: string
   isLiveAI: boolean
 }
 
 export interface JarvisTurnResult {
   reply: string
-  provider: 'GEMINI' | 'ANTHROPIC' | 'OPENAI' | 'SIM_MODE'
+  provider: 'GEMINI' | 'ANTHROPIC' | 'OPENAI' | 'LOCAL_SLM' | 'SIM_MODE'
   modelLabel: string
   isLiveAI: boolean
   intent: JarvisIntent
   tokensUsed: number
+  apiTokensUsed?: number
+  localSlmTokensUsed?: number
   toolsUsed: JarvisToolName[]
   officeCommand?: JarvisOfficeCommand
   taskPlan?: JarvisTaskPlan
@@ -837,6 +957,7 @@ PERSONA & CONVERSATION RULES:
 export interface LlmCallerInput {
   systemPrompt: string
   prompt: string
+  preferredModel?: string
   history: Array<{ role: 'user' | 'assistant'; content: string }>
   rollingSummary?: string
   executeTool: (
@@ -847,14 +968,14 @@ export interface LlmCallerInput {
 
 export interface LlmCallerOutput {
   reply: string
-  provider: 'GEMINI' | 'ANTHROPIC' | 'OPENAI'
+  provider: 'GEMINI' | 'ANTHROPIC' | 'OPENAI' | 'LOCAL_SLM'
   model: string
   toolsUsed: JarvisToolName[]
 }
 
 /**
- * Default live LLM caller: calls Google Gemini (configurable via GEMINI_MODEL) with native function calling,
- * falling back to Anthropic / OpenAI if configured, or throwing an explicit error if unreachable.
+ * Default live LLM caller: calls Google Gemini (using resolveExecutableGeminiModels),
+ * falling back to OpenAI key pool if configured, or throwing so runJarvisTurn can auto-switch to Local SLM.
  */
 export async function defaultJarvisLlmCaller(
   input: LlmCallerInput
@@ -862,15 +983,9 @@ export async function defaultJarvisLlmCaller(
   const geminiKey = process.env.GEMINI_API_KEY?.trim()
   const errors: string[] = []
 
-  if (geminiKey && geminiKey.length > 5) {
-    const primaryModel = getConfiguredGeminiModel()
-    const candidateModels = Array.from(
-      new Set([
-        primaryModel,
-        'gemini-3.1-flash-lite-preview',
-        'gemini-3.5-flash',
-        'gemini-3.6-flash',
-      ])
+  if (geminiKey && geminiKey.length > 5 && input.preferredModel !== 'gpt-4o-mini') {
+    const candidateModels = resolveExecutableGeminiModels(
+      input.preferredModel || getConfiguredGeminiModel()
     )
 
     const fetchWithTransientRetry = async (
@@ -878,20 +993,20 @@ export async function defaultJarvisLlmCaller(
       init: RequestInit
     ): Promise<Response> => {
       let lastError: Error | null = null
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 2; attempt++) {
         try {
           const res = await fetch(url, {
             ...init,
-            signal: AbortSignal.timeout(7000),
+            signal: AbortSignal.timeout(5500),
           })
-          if (res.status !== 503 || attempt === 2) {
+          if (res.status !== 503 || attempt === 1) {
             return res
           }
         } catch (err) {
           lastError = err as Error
-          if (attempt === 2) throw lastError
+          if (attempt === 1) throw lastError
         }
-        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)))
+        await new Promise((r) => setTimeout(r, 300))
       }
       throw lastError || new Error('HTTP 503 after retries')
     }
@@ -1046,15 +1161,19 @@ export async function defaultJarvisLlmCaller(
 
 /**
  * Executes a full JARVIS conversational turn with:
+ * - Instant deterministic office command & agent routing ("can you send josiah to gym" / "canteen")
  * - 20-turn memory window + rolling summary of older turns
  * - Authentic British JARVIS persona system prompt
  * - Server-side Zod-validated function-calling tools (called ONLY when needed)
- * - Zero silent template fallbacks (throws visible error on LLM failure, or explicit SIM_MODE when no API key is configured)
+ * - Automatic failover to built-in Local SLM (`jarvis-local-slm-v1`) when allowLocalSlmFallback is enabled
+ *   or when preferredModel === 'jarvis-local-slm-v1', while tracking API vs Local SLM tokens separately.
  */
 export async function runJarvisTurn(params: {
   prompt: string
   operatorName: string
   autonomyMode: 'ask_first' | 'auto_safe'
+  preferredModel?: string
+  allowLocalSlmFallback?: boolean
   history?: Array<{ role: 'user' | 'assistant'; content: string }>
   rollingSummary?: string
   officeData: OfficeData
@@ -1063,6 +1182,8 @@ export async function runJarvisTurn(params: {
   const {
     prompt,
     operatorName,
+    preferredModel,
+    allowLocalSlmFallback = false,
     history = [],
     rollingSummary: incomingSummary = '',
     officeData,
@@ -1071,9 +1192,11 @@ export async function runJarvisTurn(params: {
 
   const telemetrySnapshot = buildJarvisTelemetrySnapshot(officeData)
   const providerStatus = detectJarvisProviderStatus()
+  const agents = officeData.agents || []
 
   // 1. Apply 20-turn memory window + rolling summary of older turns (> 20 turns)
-  const olderTurns = history.length > 20 ? history.slice(0, history.length - 20) : []
+  const olderTurns =
+    history.length > 20 ? history.slice(0, history.length - 20) : []
   const recentWindow = history.slice(-20)
   const effectiveRollingSummary =
     olderTurns.length > 0
@@ -1093,6 +1216,8 @@ export async function runJarvisTurn(params: {
       isLiveAI: providerStatus.isLiveAI,
       intent: 'QUESTION',
       tokensUsed: 42,
+      apiTokensUsed: 0,
+      localSlmTokensUsed: 42,
       toolsUsed: [],
       telemetrySnapshot,
       memoryWindowCount: recentWindow.length,
@@ -1100,8 +1225,79 @@ export async function runJarvisTurn(params: {
     }
   }
 
-  // 3. If no API key is configured at all (and no custom test llmCaller is injected), return explicit SIM MODE notice
-  if (providerStatus.provider === 'SIM_MODE' && llmCaller === defaultJarvisLlmCaller) {
+  // 3. Pre-detect explicit Office Commands (e.g. "can you send josiah to canteen", "send josiah to gym", "call all hands")
+  // so agent movement ALWAYS executes immediately (<20ms) and never fails on an LLM timeout!
+  const directOfficeCmd = detectOfficeCommand(prompt, agents)
+  if (directOfficeCmd && llmCaller === defaultJarvisLlmCaller) {
+    const slmCmdResult = runLocalJarvisSlm({
+      prompt,
+      operatorName,
+      history: recentWindow,
+      officeData,
+    })
+    const localTokens = Math.max(
+      36,
+      Math.round((prompt.length + slmCmdResult.reply.length) / 3.8)
+    )
+    return {
+      reply: slmCmdResult.reply,
+      provider: 'LOCAL_SLM',
+      modelLabel: 'LOCAL SLM • INSTANT ROUTER',
+      isLiveAI: true,
+      intent: 'OFFICE_COMMAND',
+      tokensUsed: localTokens,
+      apiTokensUsed: 0,
+      localSlmTokensUsed: localTokens,
+      toolsUsed: ['office_command'],
+      officeCommand: directOfficeCmd,
+      telemetrySnapshot,
+      memoryWindowCount: recentWindow.length,
+      rollingSummary: effectiveRollingSummary,
+    }
+  }
+
+  // 4. If user explicitly selected the Local SLM model ('jarvis-local-slm-v1')
+  if (preferredModel === 'jarvis-local-slm-v1' && llmCaller === defaultJarvisLlmCaller) {
+    const slmOut = runLocalJarvisSlm({
+      prompt,
+      operatorName,
+      history: recentWindow,
+      officeData,
+    })
+    const localTokens = Math.max(
+      42,
+      Math.round((prompt.length + slmOut.reply.length) / 3.8)
+    )
+    return {
+      reply: slmOut.reply,
+      provider: 'LOCAL_SLM',
+      modelLabel: 'LOCAL SLM • JARVIS-SLM-V1',
+      isLiveAI: true,
+      intent: slmOut.officeCommand
+        ? 'OFFICE_COMMAND'
+        : slmOut.taskPlan
+          ? 'TASK'
+          : slmOut.toolsUsed.length > 0
+            ? 'STATUS'
+            : 'QUESTION',
+      tokensUsed: localTokens,
+      apiTokensUsed: 0,
+      localSlmTokensUsed: localTokens,
+      toolsUsed: slmOut.toolsUsed,
+      officeCommand: slmOut.officeCommand,
+      taskPlan: slmOut.taskPlan,
+      telemetrySnapshot,
+      memoryWindowCount: recentWindow.length,
+      rollingSummary: effectiveRollingSummary,
+    }
+  }
+
+  // 5. If no API key is configured at all (and no custom test llmCaller is injected)
+  if (
+    providerStatus.provider === 'SIM_MODE' &&
+    llmCaller === defaultJarvisLlmCaller &&
+    !allowLocalSlmFallback
+  ) {
     return {
       reply: `[SIM MODE — LIMITED OFFLINE MODE] No Gemini, Anthropic, or OpenAI API key is configured on the server, ${operatorName}. Live AI conversation requires a valid GEMINI_API_KEY in .env.local.`,
       provider: 'SIM_MODE',
@@ -1109,6 +1305,8 @@ export async function runJarvisTurn(params: {
       isLiveAI: false,
       intent: 'QUESTION',
       tokensUsed: 32,
+      apiTokensUsed: 0,
+      localSlmTokensUsed: 0,
       toolsUsed: [],
       telemetrySnapshot,
       memoryWindowCount: recentWindow.length,
@@ -1116,7 +1314,7 @@ export async function runJarvisTurn(params: {
     }
   }
 
-  // 4. Build clean persona system prompt (no office stats dumped unless a tool is called!)
+  // 6. Build clean persona system prompt (no office stats dumped unless a tool is called!)
   const systemPrompt = buildJarvisPersonaSystemPrompt(
     operatorName,
     effectiveRollingSummary
@@ -1135,50 +1333,92 @@ export async function runJarvisTurn(params: {
     return res.output
   }
 
-  // 5. Call the LLM (no silent catch fallback — any failure propagates as a visible error!)
-  const llmResult = await llmCaller({
-    systemPrompt,
-    prompt,
-    history: recentWindow,
-    rollingSummary: effectiveRollingSummary,
-    executeTool: executeToolCallback,
-  })
+  // 7. Call the Cloud LLM; if allowLocalSlmFallback is enabled and the Cloud API is rate-limited/unreachable,
+  // automatically switch to the in-project Local SLM so the user never gets stuck on a timeout error!
+  try {
+    const llmResult = await llmCaller({
+      systemPrompt,
+      prompt,
+      preferredModel,
+      history: recentWindow,
+      rollingSummary: effectiveRollingSummary,
+      executeTool: executeToolCallback,
+    })
 
-  // Derive intent from actual tools called (or fallback classification)
-  let finalIntent: JarvisIntent = 'QUESTION'
-  if (llmResult.toolsUsed.includes('office_command') || stagedOfficeCommand) {
-    finalIntent = 'OFFICE_COMMAND'
-  } else if (llmResult.toolsUsed.includes('dispatch_plan') || stagedTaskPlan) {
-    finalIntent = 'TASK'
-  } else if (
-    llmResult.toolsUsed.includes('get_office_status') ||
-    llmResult.toolsUsed.includes('list_tasks') ||
-    llmResult.toolsUsed.includes('get_agent') ||
-    llmResult.toolsUsed.includes('list_approvals') ||
-    llmResult.toolsUsed.includes('recent_activity')
-  ) {
-    finalIntent = 'STATUS'
-  }
+    let finalIntent: JarvisIntent = 'QUESTION'
+    if (llmResult.toolsUsed.includes('office_command') || stagedOfficeCommand) {
+      finalIntent = 'OFFICE_COMMAND'
+    } else if (llmResult.toolsUsed.includes('dispatch_plan') || stagedTaskPlan) {
+      finalIntent = 'TASK'
+    } else if (
+      llmResult.toolsUsed.includes('get_office_status') ||
+      llmResult.toolsUsed.includes('list_tasks') ||
+      llmResult.toolsUsed.includes('get_agent') ||
+      llmResult.toolsUsed.includes('list_approvals') ||
+      llmResult.toolsUsed.includes('recent_activity')
+    ) {
+      finalIntent = 'STATUS'
+    }
 
-  const tokensUsed = Math.max(
-    48,
-    Math.round(
-      (systemPrompt.length + prompt.length + llmResult.reply.length) / 4
+    const tokensUsed = Math.max(
+      48,
+      Math.round(
+        (systemPrompt.length + prompt.length + llmResult.reply.length) / 4
+      )
     )
-  )
 
-  return {
-    reply: llmResult.reply,
-    provider: llmResult.provider,
-    modelLabel: `LIVE AI • ${llmResult.model.toUpperCase()}`,
-    isLiveAI: true,
-    intent: finalIntent,
-    tokensUsed,
-    toolsUsed: llmResult.toolsUsed,
-    officeCommand: stagedOfficeCommand,
-    taskPlan: stagedTaskPlan,
-    telemetrySnapshot,
-    memoryWindowCount: recentWindow.length,
-    rollingSummary: effectiveRollingSummary,
+    return {
+      reply: llmResult.reply,
+      provider: llmResult.provider,
+      modelLabel: `LIVE AI • ${llmResult.model.toUpperCase()}`,
+      isLiveAI: true,
+      intent: finalIntent,
+      tokensUsed,
+      apiTokensUsed: tokensUsed,
+      localSlmTokensUsed: 0,
+      toolsUsed: llmResult.toolsUsed,
+      officeCommand: stagedOfficeCommand,
+      taskPlan: stagedTaskPlan,
+      telemetrySnapshot,
+      memoryWindowCount: recentWindow.length,
+      rollingSummary: effectiveRollingSummary,
+    }
+  } catch (err) {
+    if (allowLocalSlmFallback && llmCaller === defaultJarvisLlmCaller) {
+      const slmOut = runLocalJarvisSlm({
+        prompt,
+        operatorName,
+        history: recentWindow,
+        officeData,
+      })
+      const localTokens = Math.max(
+        44,
+        Math.round((prompt.length + slmOut.reply.length) / 3.8)
+      )
+      return {
+        reply: slmOut.reply,
+        provider: 'LOCAL_SLM',
+        modelLabel: 'AUTO-FAILOVER • LOCAL SLM',
+        isLiveAI: true,
+        intent: slmOut.officeCommand
+          ? 'OFFICE_COMMAND'
+          : slmOut.taskPlan
+            ? 'TASK'
+            : slmOut.toolsUsed.length > 0
+              ? 'STATUS'
+              : 'QUESTION',
+        tokensUsed: localTokens,
+        apiTokensUsed: 0,
+        localSlmTokensUsed: localTokens,
+        toolsUsed: slmOut.toolsUsed,
+        officeCommand: slmOut.officeCommand || stagedOfficeCommand,
+        taskPlan: slmOut.taskPlan || stagedTaskPlan,
+        telemetrySnapshot,
+        memoryWindowCount: recentWindow.length,
+        rollingSummary: effectiveRollingSummary,
+      }
+    }
+    throw err
   }
 }
+

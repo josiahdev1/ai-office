@@ -1,4 +1,11 @@
+import dns from 'dns'
 import { NextRequest, NextResponse } from 'next/server'
+
+try {
+  dns.setDefaultResultOrder('ipv4first')
+} catch {
+  // Ignore in edge runtime
+}
 import {
   addOfficeLog,
   checkRateLimit,
@@ -81,8 +88,15 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { prompt, operatorName, autonomyMode, history, rollingSummary } =
-    validation.data
+  const {
+    prompt,
+    operatorName,
+    autonomyMode,
+    preferredModel,
+    allowLocalSlmFallback,
+    history,
+    rollingSummary,
+  } = validation.data
   const wantsJson = req.headers.get('accept')?.includes('application/json')
 
   try {
@@ -119,6 +133,8 @@ export async function POST(req: NextRequest) {
         prompt,
         operatorName,
         autonomyMode,
+        preferredModel,
+        allowLocalSlmFallback,
         history,
         rollingSummary: effectiveRollingSummary,
         officeData,
@@ -175,6 +191,8 @@ export async function POST(req: NextRequest) {
             prompt,
             operatorName,
             autonomyMode,
+            preferredModel,
+            allowLocalSlmFallback,
             history,
             rollingSummary: effectiveRollingSummary,
             officeData,

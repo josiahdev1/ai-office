@@ -331,7 +331,7 @@ describe('Phase J7: Real Gemini Conversation, Function-Calling Tools & Memory Wi
       classifyJarvisIntent('Send everyone to Pantry', MOCK_AGENTS)
     ).toBe('OFFICE_COMMAND')
     expect(
-       detectOfficeCommand('Route Arwin to the gym', MOCK_AGENTS)?.destination
+      detectOfficeCommand('Route Arwin to the gym', MOCK_AGENTS)?.destination
     ).toBe('gym')
     expect(
       buildJarvisTaskPlan('Deploy database migration', MOCK_AGENTS)
@@ -341,5 +341,53 @@ describe('Phase J7: Real Gemini Conversation, Function-Calling Tools & Memory Wi
       buildJarvisTelemetrySnapshot(MOCK_OFFICE_DATA).pantryAgentNames
     ).toEqual(['Anthony'])
     expect(buildJarvisPersonaSystemPrompt('Josiah')).toContain('Josiah')
+  })
+
+  it('7. routes individual agents ("can you send josiah to canteen" / "send josiah to gym") and supports Local SLM failover', async () => {
+    const agentsWithJosiah: Agent[] = [
+      ...MOCK_AGENTS,
+      {
+        id: 'josiah',
+        name: 'Josiah',
+        role: 'Lead Architect',
+        department: 'COMMAND',
+        room: 'Command Center',
+        status: 'working',
+        current_task: 'Reviewing HQ architecture',
+        progress_pct: 95,
+        updated_at: '2026-11-11T10:00:00Z',
+        color: '#00e5ff',
+      },
+    ]
+
+    const cmdCanteen = detectOfficeCommand(
+      'can you send josiah to canteen?',
+      agentsWithJosiah
+    )
+    expect(cmdCanteen).toBeDefined()
+    expect(cmdCanteen?.type).toBe('agent_route')
+    expect(cmdCanteen?.agentId).toBe('josiah')
+    expect(cmdCanteen?.destination).toBe('pantry')
+
+    const cmdGym = detectOfficeCommand(
+      'can you send josiah to gym',
+      agentsWithJosiah
+    )
+    expect(cmdGym).toBeDefined()
+    expect(cmdGym?.type).toBe('agent_route')
+    expect(cmdGym?.agentId).toBe('josiah')
+    expect(cmdGym?.destination).toBe('gym')
+
+    // Verify direct Local SLM execution for conversational questions ("what is programming?", "you know system architecture?")
+    const slmTurn = await runJarvisTurn({
+      prompt: 'do you know system architecture?',
+      operatorName: 'Josiah',
+      autonomyMode: 'ask_first',
+      preferredModel: 'jarvis-local-slm-v1',
+      officeData: { ...MOCK_OFFICE_DATA, agents: agentsWithJosiah },
+    })
+    expect(slmTurn.provider).toBe('LOCAL_SLM')
+    expect(slmTurn.localSlmTokensUsed).toBeGreaterThan(0)
+    expect(slmTurn.reply).toContain('architecture')
   })
 })

@@ -1056,6 +1056,36 @@ function HQCommandPage() {
               exitJarvis()
             }}
             onGlobalModeChange={handleGlobalModeChange}
+            onRouteIndividualAgent={(agentId, destination, description) => {
+              const found = agents.find(
+                (a) =>
+                  a.id.toLowerCase() === agentId.toLowerCase() ||
+                  a.name.toLowerCase() === agentId.toLowerCase()
+              )
+              if (!found) return
+              const targetMode: DepartmentMode =
+                destination === 'pantry'
+                  ? 'PANTRY'
+                  : destination === 'gym'
+                    ? 'GYM'
+                    : destination === 'meeting'
+                      ? 'ALL_HANDS'
+                      : 'FOCUS_WORK'
+              const newStatus: Agent['status'] =
+                destination === 'pantry'
+                  ? 'on_break'
+                  : destination === 'gym'
+                    ? 'at_gym'
+                    : destination === 'meeting'
+                      ? 'in_meeting'
+                      : 'working'
+              handleRouteIndividualAgent(
+                found,
+                targetMode,
+                newStatus,
+                description
+              )
+            }}
             onApprove={(approvalId, decision) =>
               void handleGoSignal(
                 approvalId,
