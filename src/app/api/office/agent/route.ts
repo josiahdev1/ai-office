@@ -10,6 +10,7 @@ const CreateAgentSchema = z.object({
   department: z.string().min(2, 'Department is required'),
   room: z.string().optional(),
   color: z.string().optional(),
+  model: z.string().optional(),
 })
 
 export async function POST(req: Request) {
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
       )
     }
 
-    const { name, role, department, room, color } = parsed.data
+    const { name, role, department, room, color, model } = parsed.data
     const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_')
     const finalDept = room ? roomToDepartment(room) : department
     const finalRoom = room || 'Engineering Core'
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
         status: 'coding',
         current_task: 'Onboarding & Workspace Sync',
         color: color || '#3b82f6',
-        model: 'claude-3-7-sonnet',
+        model: model || 'gemini-2.0-flash',
         updated_at: new Date().toISOString(),
       }
 

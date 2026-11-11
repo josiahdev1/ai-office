@@ -260,6 +260,10 @@ export function dbRowToAgent(row: OfficeAgentRow): Agent {
     car_color: row.car_color || undefined,
     bay: row.bay ?? undefined,
     accessories: Array.isArray(row.accessories) ? row.accessories : undefined,
+    model:
+      row.model && !row.model.startsWith('claude') && row.model !== 'gpt-4o'
+        ? row.model
+        : 'gemini-2.0-flash',
   }
 }
 
@@ -377,6 +381,7 @@ export function agentToDbRow(agent: Partial<Agent>): Partial<OfficeAgentRow> {
   if (agent.car_color !== undefined) row.car_color = agent.car_color
   if (agent.bay !== undefined) row.bay = agent.bay
   if (agent.accessories !== undefined) row.accessories = agent.accessories
+  if (agent.model !== undefined) row.model = agent.model
   
   row.updated_at = new Date().toISOString()
   return row

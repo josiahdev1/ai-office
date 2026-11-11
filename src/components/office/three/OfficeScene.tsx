@@ -11,6 +11,7 @@ import { BrainCore } from './BrainCore'
 import { OfficeFurniture } from './OfficeFurniture'
 import { ProceduralAgent3D } from './ProceduralAgent3D'
 import { CameraController } from './CameraController'
+import { JarvisCoreState } from '@/components/jarvis/ArcReactor'
 
 export interface OfficeSceneProps {
   agents: Agent[]
@@ -23,6 +24,9 @@ export interface OfficeSceneProps {
     finalPos: [number, number, number],
     effectiveMode: DepartmentMode
   ) => void
+  coreState?: JarvisCoreState
+  onClickCore?: () => void
+  isDivingToJarvis?: boolean
 }
 
 export function OfficeScene({
@@ -32,6 +36,9 @@ export function OfficeScene({
   selectedAgentId,
   onSelectAgent,
   onArriveAgent,
+  coreState = 'idle',
+  onClickCore,
+  isDivingToJarvis = false,
 }: OfficeSceneProps) {
   // Compute real Philippine Standard Time (PHT, Asia/Manila, UTC+8) for lighting
   const lighting = useMemo(() => {
@@ -110,14 +117,14 @@ export function OfficeScene({
         intensity={0.38}
       />
 
-      {/* 2. Interactive Camera Controller with Mode Lerping */}
-      <CameraController mode={mode} />
+      {/* 2. Interactive Camera Controller with Mode Lerping & Jarvis Dive */}
+      <CameraController mode={mode} isDivingToJarvis={isDivingToJarvis} />
 
       {/* 3. Procedural 3x3 Architectural Building + Outdoor Highway & Parking */}
       <BuildingArchitecture />
 
       {/* 4. Central Command Center ("The Brain") Holographic Core */}
-      <BrainCore />
+      <BrainCore state={coreState} onClickCore={onClickCore} />
 
       {/* 5. Departmental Props & Furniture */}
       <OfficeFurniture />

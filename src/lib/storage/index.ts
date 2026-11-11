@@ -98,7 +98,7 @@ export function checkRateLimit(key = 'global'): { allowed: boolean; remaining: n
 
 let serverSupabaseClient: SupabaseClient | null = null
 
-function getSupabase(): SupabaseClient | null {
+export function getSupabase(): SupabaseClient | null {
   if (serverSupabaseClient) return serverSupabaseClient
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -195,6 +195,25 @@ export function autoAssignDesks(agents: Agent[]): Agent[] {
 // 5. Database Read Operations
 // =============================================================================
 
+let cachedOfficeDataTimestamp = 0
+
+/**
+ * Fast cache-first read of live Supabase OfficeData (returns in <5ms when cache is fresh,
+ * and triggers a non-blocking background refresh).
+ */
+export async function getFastOfficeState(maxAgeMs = 8000): Promise<OfficeData> {
+  const now = Date.now()
+  if (cachedOfficeData && now - cachedOfficeDataTimestamp < maxAgeMs) {
+    return cachedOfficeData
+  }
+  if (cachedOfficeData) {
+    // Refresh in background and return cached state immediately for zero latency
+    void getOfficeState()
+    return cachedOfficeData
+  }
+  return getOfficeState()
+}
+
 /**
  * Reads live office state directly from Supabase tables:
  * - office_agents
@@ -219,12 +238,23 @@ export async function getOfficeState(): Promise<OfficeData> {
   }
 
   try {
-    // 1. Fetch office_agents
-    const { data: rawAgents, error: agentsError } = await supabase
-      .from('office_agents')
-      .select('*')
-      .order('name', { ascending: true })
+    // Fetch all 4 Supabase tables in parallel for minimal latency
+    const [agentsRes, approvalsRes, logsRes, msgCountRes] = await Promise.all([
+      supabase.from('office_agents').select('*').order('name', { ascending: true }),
+      supabase
+        .from('office_approvals')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('office_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(30),
+      supabase.from('office_messages').select('*', { count: 'exact', head: true }),
+    ])
 
+    const { data: rawAgents, error: agentsError } = agentsRes
     if (agentsError) {
       console.warn('[Storage] Error reading office_agents:', agentsError.message)
       if (cachedOfficeData) {
@@ -241,13 +271,7 @@ export async function getOfficeState(): Promise<OfficeData> {
       ((rawAgents as OfficeAgentRow[]) || []).map(dbRowToAgent)
     )
 
-    // 2. Fetch office_approvals (pending)
-    const { data: rawApprovals, error: approvalsError } = await supabase
-      .from('office_approvals')
-      .select('*')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-
+    const { data: rawApprovals, error: approvalsError } = approvalsRes
     if (approvalsError) {
       console.warn('[Storage] Error reading office_approvals:', approvalsError.message)
     }
@@ -256,23 +280,13 @@ export async function getOfficeState(): Promise<OfficeData> {
       dbRowToApproval
     )
 
-    // 3. Fetch office_logs (recent telemetry)
-    const { data: rawLogs, error: logsError } = await supabase
-      .from('office_logs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(30)
-
+    const { data: rawLogs, error: logsError } = logsRes
     if (logsError) {
       console.warn('[Storage] Error reading office_logs:', logsError.message)
     }
 
     const logs: string[] = ((rawLogs as OfficeLogRow[]) || []).map(dbRowToLogString)
-
-    // 4. Count messages in office_messages
-    const { count: messageCount } = await supabase
-      .from('office_messages')
-      .select('*', { count: 'exact', head: true })
+    const messageCount = msgCountRes.count
 
     const state: OfficeData = {
       company_name: 'EasyUp Software Solution',
@@ -291,6 +305,7 @@ export async function getOfficeState(): Promise<OfficeData> {
     }
 
     cachedOfficeData = state
+    cachedOfficeDataTimestamp = Date.now()
     return state
   } catch (err: unknown) {
     const errorMsg = (err as Error).message || 'Database connection error'
@@ -550,3 +565,332 @@ export async function addOfficeLog(
   const updatedState = await getOfficeState()
   return updatedState.logs
 }
+
+export interface JarvisConversationRecord {
+  id: string
+  sender_id: string
+  sender_name: string
+  sender_department: string
+  recipient_id?: string | null
+  recipient_name?: string | null
+  channel: string
+  content: string
+  message_type: string
+  created_at: string
+}
+
+const inMemoryJarvisMessages: JarvisConversationRecord[] = []
+
+/**
+ * Fetches recent Jarvis conversation messages from public.office_messages (channel = 'jarvis')
+ */
+export async function getJarvisMessages(limit = 30): Promise<JarvisConversationRecord[]> {
+  const supabase = getSupabase()
+  if (!supabase) {
+    return inMemoryJarvisMessages.slice(-limit)
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('office_messages')
+      .select('*')
+      .eq('channel', 'jarvis')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error || !data) {
+      return inMemoryJarvisMessages.slice(-limit)
+    }
+
+    return (data as JarvisConversationRecord[]).reverse()
+  } catch {
+    return inMemoryJarvisMessages.slice(-limit)
+  }
+}
+
+/**
+ * Saves a Jarvis conversation message into public.office_messages (and office_logs)
+ */
+export async function saveJarvisMessage(params: {
+  senderId: string
+  senderName: string
+  senderDepartment?: string
+  recipientId?: string
+  recipientName?: string
+  content: string
+  messageType?: string
+}): Promise<void> {
+  const record: JarvisConversationRecord = {
+    id: `jarvis-msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    sender_id: params.senderId,
+    sender_name: params.senderName,
+    sender_department: params.senderDepartment || 'COMMAND',
+    recipient_id: params.recipientId || 'jarvis',
+    recipient_name: params.recipientName || 'J.A.R.V.I.S.',
+    channel: 'jarvis',
+    content: params.content,
+    message_type: params.messageType || 'chat',
+    created_at: new Date().toISOString(),
+  }
+
+  inMemoryJarvisMessages.push(record)
+  if (inMemoryJarvisMessages.length > 60) {
+    inMemoryJarvisMessages.shift()
+  }
+
+  const supabase = getSupabase()
+  if (!supabase) return
+
+  try {
+    await supabase.from('office_messages').insert({
+      sender_id: record.sender_id,
+      sender_name: record.sender_name,
+      sender_department: record.sender_department,
+      recipient_id: record.recipient_id,
+      recipient_name: record.recipient_name,
+      channel: 'jarvis',
+      content: record.content,
+      message_type: record.message_type,
+    })
+  } catch (err) {
+    console.warn('[Storage] Failed to insert into office_messages:', (err as Error).message)
+  }
+}
+
+export interface JarvisRollingMemory {
+  operatorName: string
+  preferences: string
+  rollingSummary: string
+  totalTurnsSummarized: number
+  updatedAt: string
+}
+
+let inMemoryRollingMemory: JarvisRollingMemory = {
+  operatorName: 'Josiah',
+  preferences: 'Prefers concise, witty British JARVIS replies; speaks English and Taglish/Filipino.',
+  rollingSummary: '',
+  totalTurnsSummarized: 0,
+  updatedAt: new Date().toISOString(),
+}
+
+/**
+ * Builds a deterministic rolling summary of older conversation turns (> 20 turns ago)
+ * and persists it in Supabase (`office_messages` with message_type = 'jarvis_memory').
+ */
+export function summarizeOlderTurns(
+  turns: Array<{ role: 'user' | 'assistant'; content: string }>,
+  existingSummary = ''
+): string {
+  if (!turns || turns.length === 0) return existingSummary
+  const snippets = turns.slice(-12).map((t) => {
+    const clean = t.content.replace(/\s+/g, ' ').trim().slice(0, 90)
+    return `${t.role === 'user' ? 'Operator' : 'JARVIS'}: ${clean}`
+  })
+  const combined = [existingSummary, ...snippets].filter(Boolean).join(' | ')
+  return combined.slice(-800)
+}
+
+export async function getJarvisRollingMemory(): Promise<JarvisRollingMemory> {
+  const supabase = getSupabase()
+  if (!supabase) return inMemoryRollingMemory
+
+  try {
+    const { data, error } = await supabase
+      .from('office_messages')
+      .select('*')
+      .eq('channel', 'jarvis_memory')
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (!error && data && data.length > 0) {
+      const row = data[0] as JarvisConversationRecord
+      const parsed = JSON.parse(row.content) as Partial<JarvisRollingMemory>
+      inMemoryRollingMemory = {
+        operatorName: parsed.operatorName || inMemoryRollingMemory.operatorName,
+        preferences: parsed.preferences || inMemoryRollingMemory.preferences,
+        rollingSummary: parsed.rollingSummary || '',
+        totalTurnsSummarized: parsed.totalTurnsSummarized || 0,
+        updatedAt: row.created_at || new Date().toISOString(),
+      }
+    }
+  } catch {
+    // Fallback to in-memory rolling summary
+  }
+
+  return inMemoryRollingMemory
+}
+
+export async function saveJarvisRollingMemory(
+  update: Partial<JarvisRollingMemory>
+): Promise<JarvisRollingMemory> {
+  inMemoryRollingMemory = {
+    ...inMemoryRollingMemory,
+    ...update,
+    updatedAt: new Date().toISOString(),
+  }
+
+  const supabase = getSupabase()
+  if (supabase) {
+    try {
+      await supabase.from('office_messages').insert({
+        sender_id: 'jarvis',
+        sender_name: 'J.A.R.V.I.S.',
+        sender_department: 'THE BRAIN',
+        recipient_id: inMemoryRollingMemory.operatorName.toLowerCase().replace(/\s+/g, '_'),
+        recipient_name: inMemoryRollingMemory.operatorName,
+        channel: 'jarvis_memory',
+        content: JSON.stringify(inMemoryRollingMemory),
+        message_type: 'jarvis_memory',
+      })
+    } catch {
+      // Ignore DB error if offline
+    }
+  }
+
+  return inMemoryRollingMemory
+}
+
+// =============================================================================
+// 9. Collective Knowledge Brain Storage (Self-Learning Memory)
+// =============================================================================
+
+export interface OfficeKnowledgeItem {
+  id: string
+  category: 'learning' | 'architecture' | 'code_pattern' | 'agent_memory' | 'rule' | 'decision'
+  title: string
+  content: string
+  agent_id?: string
+  agent_name?: string
+  tags?: string[]
+  metadata?: Record<string, unknown>
+  created_at?: string
+  updated_at?: string
+}
+
+const inMemoryKnowledge: OfficeKnowledgeItem[] = [
+  {
+    id: 'know-1',
+    category: 'architecture',
+    title: 'EasyUp HQ Core Architecture & Tech Stack',
+    content:
+      'EasyUp Software Solution HQ is powered by Next.js 16 (App Router), React 19, Tailwind CSS v4, Three.js/Fiber 3D & HTML5 Canvas 2D viewports, and Supabase Realtime for state synchronization. All telemetry streams across office_agents, office_tasks, office_approvals, and office_logs.',
+    agent_id: 'arwin',
+    agent_name: 'Arwin',
+    tags: ['architecture', 'tech-stack', 'nextjs', 'react19', 'supabase'],
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'know-2',
+    category: 'agent_memory',
+    title: '24 Autonomous Agent Fleet & AI Model Distribution',
+    content:
+      'EasyUp HQ operates a 24-agent autonomous AI workforce across 6 functional departments (Engineering, Product & Design, QA & Security, Operations & DevOps, Marketing & Growth, HR & Culture). Agents use live Gemini models (gemini-2.0-flash, gemini-2.5-flash, gemini-2.5-pro) and Hugging Face in-project Neural Local SLMs (jarvis-local-slm-v1, hf-smollm2-135m, hf-smollm2-360m, hf-qwen2.5-0.5b).',
+    agent_id: 'jarvis',
+    agent_name: 'J.A.R.V.I.S.',
+    tags: ['agents', 'fleet', 'ai-models', 'gemini', 'local-slm'],
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'know-3',
+    category: 'code_pattern',
+    title: 'Go-Signal Human-in-the-Loop Governance Pattern',
+    content:
+      'High-risk operations (production deployments, database migrations, security modifications) require human operator Go-Signal approval via office_approvals. Tasks are staged and await operator confirmation before dispatching.',
+    agent_id: 'blaise',
+    agent_name: 'Blaise',
+    tags: ['security', 'governance', 'approvals', 'go-signal'],
+    created_at: new Date().toISOString(),
+  },
+]
+
+export async function getOfficeKnowledge(
+  query = '',
+  category = ''
+): Promise<OfficeKnowledgeItem[]> {
+  const supabase = getSupabase()
+  if (supabase) {
+    try {
+      let req = supabase
+        .from('office_knowledge')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (category && category !== 'ALL') {
+        req = req.eq('category', category)
+      }
+
+      const { data, error } = await req
+      if (!error && Array.isArray(data) && data.length > 0) {
+        let results = data as OfficeKnowledgeItem[]
+        if (query.trim()) {
+          const q = query.toLowerCase()
+          results = results.filter(
+            (k) =>
+              k.title.toLowerCase().includes(q) ||
+              k.content.toLowerCase().includes(q) ||
+              (k.tags || []).some((t) => t.toLowerCase().includes(q))
+          )
+        }
+        return results
+      }
+    } catch {
+      // Fallback to in-memory knowledge store
+    }
+  }
+
+  // Filter in-memory knowledge fallback
+  return inMemoryKnowledge.filter((k) => {
+    const matchesCat = !category || category === 'ALL' || k.category === category
+    const q = query.trim().toLowerCase()
+    const matchesQ =
+      !q ||
+      k.title.toLowerCase().includes(q) ||
+      k.content.toLowerCase().includes(q) ||
+      (k.tags || []).some((t) => t.toLowerCase().includes(q))
+    return matchesCat && matchesQ
+  })
+}
+
+export async function saveOfficeKnowledge(
+  item: Omit<OfficeKnowledgeItem, 'id' | 'created_at' | 'updated_at'>
+): Promise<OfficeKnowledgeItem> {
+  const newItem: OfficeKnowledgeItem = {
+    ...item,
+    id: `know-${Date.now()}`,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+
+  inMemoryKnowledge.unshift(newItem)
+
+  const supabase = getSupabase()
+  if (supabase) {
+    try {
+      const { data } = await supabase
+        .from('office_knowledge')
+        .insert({
+          category: newItem.category,
+          title: newItem.title,
+          content: newItem.content,
+          agent_id: newItem.agent_id,
+          agent_name: newItem.agent_name,
+          tags: newItem.tags || [],
+          metadata: newItem.metadata || {},
+        })
+        .select()
+        .single()
+
+      if (data) {
+        return data as OfficeKnowledgeItem
+      }
+    } catch {
+      // Keep in-memory item on error
+    }
+  }
+
+  return newItem
+}
+
+
+

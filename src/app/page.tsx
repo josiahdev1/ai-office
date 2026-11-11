@@ -22,9 +22,38 @@ import {
   OfficeLogRecord,
 } from '@/lib/supabase/officeService'
 import { formatPHTTime } from '@/lib/office/db-map'
+import type { JarvisCoreState } from '@/components/jarvis/ArcReactor'
+import { AVAILABLE_MODELS } from '@/lib/jarvis/orchestrator'
 
 const STORAGE_MODE_KEY = 'easyup_hq_mode_v3'
 const STORAGE_OVERRIDES_KEY = 'easyup_hq_overrides_v3'
+
+const DEFAULT_AGENT_MODELS: Record<string, string> = {
+  josiah: 'gemini-2.0-flash',
+  gloria: 'gemini-2.5-pro',
+  jb: 'gemini-2.5-flash',
+  julian: 'hf-qwen2.5-0.5b',
+  arwin: 'gemini-2.0-flash',
+  bonnie: 'gemini-2.5-flash',
+  christian: 'hf-smollm2-360m',
+  john_lloyd: 'gemini-2.0-flash-lite',
+  neil_mar: 'hf-qwen2.5-0.5b',
+  nelmar: 'jarvis-local-slm-v1',
+  gabriel: 'gemini-2.5-pro',
+  keiru: 'hf-qwen2.5-0.5b',
+  roy_jhan: 'hf-smollm2-360m',
+  ryan: 'jarvis-local-slm-v1',
+  gian: 'gemini-2.0-flash',
+  john_arvy: 'hf-smollm2-135m',
+  khent: 'gemini-1.5-flash',
+  jesmond: 'gemini-2.0-flash-lite',
+  jo_vincent: 'hf-smollm2-135m',
+  kin: 'gemini-1.5-flash',
+  anthony: 'gemini-2.0-flash',
+  blaze: 'hf-smollm2-135m',
+  ferwin: 'jarvis-local-slm-v1',
+  mary_grace: 'hf-smollm2-360m',
+}
 
 function modeToRoomName(mode: DepartmentMode, defaultRoom: string): string {
   switch (mode) {
@@ -67,8 +96,47 @@ const DEFAULT_AGENTS: Agent[] = Object.values(AGENT_WORKSTATIONS_3D).map((ws) =>
   current_task: 'Architecting High-Throughput Pipelines',
   current_file: 'src/components/office/OfficeCanvas3D.tsx',
   progress_pct: 82,
+  model: DEFAULT_AGENT_MODELS[ws.agentId] || 'gemini-2.0-flash',
   updated_at: new Date().toISOString(),
 }))
+
+const DEPARTMENT_TASK_CYCLES: Record<string, string[]> = {
+  ENGINEERING: [
+    'Architect & implement core changes for high-throughput streaming',
+    'Optimize distributed state cache & Realtime sync latency',
+    'Execute Playwright end-to-end integration tests & verify HUD',
+    'Harden PostgreSQL RLS policies & connection pool auto-scaling',
+    'Refactor Three.js canvas buffer geometry for 60 FPS isometric viewport',
+    'Implement automated CI/CD canary matrix in GitHub Actions',
+  ],
+  INTELLIGENCE: [
+    'Benchmark Gemini 3.1 Flash vs local SLM latency & throughput',
+    'Tune dynamic system prompt injections for autonomous agent decisions',
+    'Evaluate vector embeddings & collective brain knowledge retrieval',
+    'Synthesize executive telemetry digest & operational risk signals',
+  ],
+  'QA & SECOPS': [
+    'Audit API endpoints against OWASP Top 10 security standards',
+    'Execute synthetic load testing across 24 concurrent agent websockets',
+    'Verify zero secret leakage in client bundle & environment manifests',
+    'Regression test A* pathfinding walkability across office layout',
+  ],
+  COMMAND: [
+    'Orchestrate sprint priorities & unblock cross-functional agent pipelines',
+    'Review high-risk production go-signal approvals & audit logs',
+    'Align quarterly roadmap deliverables across Engineering and Intelligence',
+  ],
+  OPERATIONS: [
+    'Automate customer support ticket categorization & SLA routing',
+    'Synchronize Zapier CRM webhook leads & customer journey automations',
+    'Monitor infrastructure uptime & database resource saturation',
+  ],
+  GROWTH: [
+    'Analyze user engagement analytics & optimize conversion funnels',
+    'A/B test onboarding copy & product landing pages',
+    'Tune paid acquisition budget & creative RoAS attribution models',
+  ],
+}
 
 // Contextual non-looping engineering & operational milestones
 const CONTEXTUAL_EVENTS: {
@@ -147,6 +215,14 @@ const OfficeCanvas3D = dynamic(
   }
 )
 
+// Lazy-load Jarvis Interior Chamber (SSR disabled so office loads as fast as before)
+const JarvisInterior = dynamic(
+  () => import('@/components/jarvis/JarvisInterior'),
+  { ssr: false }
+)
+
+export type JarvisTransitionPhase = 'closed' | 'entering' | 'inside' | 'exiting'
+
 function HQCommandPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -156,8 +232,11 @@ function HQCommandPage() {
   const [agents, setAgents] = useState<Agent[]>(DEFAULT_AGENTS)
   const [approvals, setApprovals] = useState<Approval[]>([])
   const [logs, setLogs] = useState<string[]>([])
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(DEFAULT_AGENTS[0])
   const [, setSupabaseActive] = useState<boolean>(false)
+  const [selectedAgentState, setSelectedAgent] = useState<Agent | null>(DEFAULT_AGENTS[0])
+  const selectedAgent =
+    (selectedAgentState ? agents.find((a) => a.id === selectedAgentState.id) : null) ||
+    selectedAgentState
   const [currentMode, setCurrentMode] = useState<DepartmentMode>('OVERVIEW')
   const [agentRouteOverrides, setAgentRouteOverrides] = useState<
     Record<string, DepartmentMode>
@@ -167,6 +246,119 @@ function HQCommandPage() {
   const [isRosterOpen, setIsRosterOpen] = useState<boolean>(false)
   const [rosterSearch, setRosterSearch] = useState<string>('')
   const [rosterDeptFilter, setRosterDeptFilter] = useState<string>('ALL')
+
+  // JARVIS Orchestrator State & Cinematic Transition Phase
+  const [jarvisPhase, setJarvisPhase] = useState<JarvisTransitionPhase>('closed')
+  const [jarvisCoreState, setJarvisCoreState] = useState<JarvisCoreState>('idle')
+  const [officeVoiceSnippet, setOfficeVoiceSnippet] = useState<{
+    text: string
+    role: 'user' | 'jarvis'
+    timestamp: number
+  } | null>(null)
+  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearTransitionTimer = () => {
+    if (transitionTimerRef.current) {
+      clearTimeout(transitionTimerRef.current)
+      transitionTimerRef.current = null
+    }
+  }
+
+  const enterJarvis = React.useCallback(() => {
+    clearTransitionTimer()
+    sfx?.playTrigger?.()
+    if (typeof window !== 'undefined') {
+      const targetUrl = `${window.location.pathname}${window.location.search}#jarvis`
+      window.history.replaceState(null, '', targetUrl)
+      const reduced =
+        window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (reduced) {
+        setJarvisPhase('inside')
+        return
+      }
+    }
+    setJarvisPhase('entering')
+    transitionTimerRef.current = setTimeout(() => {
+      setJarvisPhase('inside')
+      transitionTimerRef.current = null
+    }, 1450)
+  }, [])
+
+  const exitJarvis = React.useCallback(() => {
+    clearTransitionTimer()
+    if (typeof window !== 'undefined') {
+      const cleanUrl = `${window.location.pathname}${window.location.search}`
+      window.history.replaceState(null, '', cleanUrl)
+      const reduced =
+        window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (reduced) {
+        setJarvisPhase('closed')
+        return
+      }
+    }
+    setJarvisPhase('exiting')
+    transitionTimerRef.current = setTimeout(() => {
+      setJarvisPhase('closed')
+      transitionTimerRef.current = null
+    }, 650)
+  }, [])
+
+  const skipJarvisTransition = () => {
+    clearTransitionTimer()
+    if (jarvisPhase === 'entering') {
+      setJarvisPhase('inside')
+    } else if (jarvisPhase === 'exiting') {
+      setJarvisPhase('closed')
+    }
+  }
+
+  // Sync with URL hash (#jarvis) and global keyboard shortcuts (J and Escape)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.hash === '#jarvis') {
+      setJarvisPhase('inside')
+    }
+    const handleHashChange = () => {
+      if (window.location.hash === '#jarvis') {
+        enterJarvis()
+      } else {
+        setJarvisPhase('closed')
+      }
+    }
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [enterJarvis])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName?.toLowerCase()
+      const isEditable =
+        tag === 'input' ||
+        tag === 'textarea' ||
+        tag === 'select' ||
+        target?.isContentEditable
+
+      if (e.key === 'Escape' && (jarvisPhase === 'inside' || jarvisPhase === 'entering')) {
+        e.preventDefault()
+        exitJarvis()
+        return
+      }
+
+      if (!isEditable && (e.key === 'j' || e.key === 'J') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        if (jarvisPhase === 'closed' || jarvisPhase === 'exiting') {
+          enterJarvis()
+        } else {
+          exitJarvis()
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [jarvisPhase, enterJarvis, exitJarvis])
 
   // Real-time PHT Clock (Asia/Manila, UTC+8)
   const [phtTime, setPhtTime] = useState<string>('')
@@ -407,6 +599,96 @@ function HQCommandPage() {
     }
   }, [])
 
+  // 4. Real-time Autonomous Agent Progress & Task Completion Engine
+  useEffect(() => {
+    const progressTimer = setInterval(() => {
+      setAgents((prevAgents) => {
+        let changed = false
+        const updated = prevAgents.map((ag) => {
+          // Only advance agents who are actively working at their desks or stations
+          const isWorking =
+            ag.status === 'working' ||
+            ag.status === 'active' ||
+            ag.sub_state === 'typing' ||
+            ag.sub_state === 'seated'
+
+          if (!isWorking) return ag
+
+          const currentPct = typeof ag.progress_pct === 'number' ? ag.progress_pct : 0
+          // Advance progress by 2% - 5% per cycle
+          const increment = Math.floor(Math.random() * 4) + 2
+          const nextPct = currentPct + increment
+
+          if (nextPct >= 100) {
+            changed = true
+            const completedTask = ag.current_task || 'Assigned Sprint Objective'
+            const dept = (ag.department || 'ENGINEERING').toUpperCase()
+            const taskCycle =
+              DEPARTMENT_TASK_CYCLES[dept] || DEPARTMENT_TASK_CYCLES.ENGINEERING
+            const nextTaskIdx = Math.floor(Math.random() * taskCycle.length)
+            const nextTask = taskCycle[nextTaskIdx]
+
+            // 100% Completion Milestone Event
+            const completionLog = `${formatPHTTime()} [TASK_COMPLETE] ${ag.name} completed: "${completedTask}" (100% Milestone)`
+            setLogs((prev) =>
+              [completionLog, ...prev.filter((p) => p !== completionLog)].slice(0, 50)
+            )
+
+            // Log activity to Supabase
+            void officeSupabase.logActivity(
+              'TASK_COMPLETE',
+              `${ag.name} completed: "${completedTask}" -> Next: "${nextTask}"`,
+              { id: ag.id, name: ag.name },
+              'success'
+            )
+
+            // Save to Collective Brain Storage
+            void fetch('/api/office/brain', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: `${ag.name}: Task Completed`,
+                content: `Agent ${ag.name} (${dept}) completed task: "${completedTask}". Transitioned to: "${nextTask}".`,
+                category: 'task_completion',
+                agentName: ag.name,
+              }),
+            }).catch(() => {})
+
+            // Persist reset progress and next task to Supabase
+            void officeSupabase.updateAgent(ag.id, {
+              progress_pct: 0,
+              current_task: nextTask,
+            })
+
+            return {
+              ...ag,
+              progress_pct: 0,
+              current_task: nextTask,
+            }
+          }
+
+          changed = true
+          // Sync to Supabase at milestones (approx every 25%)
+          if (nextPct % 25 < increment) {
+            void officeSupabase.updateAgent(ag.id, {
+              progress_pct: nextPct,
+            })
+          }
+
+          return {
+            ...ag,
+            progress_pct: nextPct,
+          }
+        })
+
+        if (!changed) return prevAgents
+        return updated
+      })
+    }, 3200)
+
+    return () => clearInterval(progressTimer)
+  }, [])
+
   // Handle Go-Signal Authorizations
   const handleGoSignal = async (approvalId: string, action: 'approve' | 'reject') => {
     try {
@@ -642,6 +924,10 @@ function HQCommandPage() {
         body: JSON.stringify({
           agentId: selectedAgent.id,
           task: promptText,
+          model:
+            selectedAgent.model ||
+            DEFAULT_AGENT_MODELS[selectedAgent.id] ||
+            'gemini-2.0-flash',
         }),
       })
       const data = await res.json()
@@ -654,6 +940,36 @@ function HQCommandPage() {
     } finally {
       setIsDispatching(false)
     }
+  }
+
+  const handleUpdateAgentModel = (
+    agentId: string,
+    newModel: string,
+    applyToAll = false
+  ) => {
+    sfx?.playTrigger?.()
+    if (applyToAll) {
+      setAgents((prev) => prev.map((a) => ({ ...a, model: newModel })))
+      setSelectedAgent((prev) => (prev ? { ...prev, model: newModel } : prev))
+      const logLine = `${formatPHTTime()} [AI ENGINE] Applied model "${newModel}" to all 24 HQ agents.`
+      setLogs((prev) => [logLine, ...prev].slice(0, 50))
+      for (const ag of agents) {
+        void officeSupabase.updateAgent(ag.id, { model: newModel })
+      }
+      return
+    }
+
+    setAgents((prev) =>
+      prev.map((a) => (a.id === agentId ? { ...a, model: newModel } : a))
+    )
+    setSelectedAgent((prev) =>
+      prev && prev.id === agentId ? { ...prev, model: newModel } : prev
+    )
+    const targetName =
+      agents.find((a) => a.id === agentId)?.name || selectedAgent?.name || agentId
+    const logLine = `${formatPHTTime()} [AI ENGINE] ${targetName} switched AI model to "${newModel}".`
+    setLogs((prev) => [logLine, ...prev].slice(0, 50))
+    void officeSupabase.updateAgent(agentId, { model: newModel })
   }
 
   // Mode button pills
@@ -748,17 +1064,17 @@ function HQCommandPage() {
       {/* ========================================================================= */}
       {/* 1. EXECUTIVE COMMAND HEADER (bg-[#0a0d14]) */}
       {/* ========================================================================= */}
-      <header className="flex h-14 w-full shrink-0 items-center justify-between border-b border-slate-800/80 bg-[#0a0d14] px-4 shadow-2xl z-30">
+      <header className="flex h-14 w-full shrink-0 items-center justify-between gap-2 border-b border-slate-800/80 bg-[#0a0d14] px-3 shadow-2xl z-30">
         {/* Left: Branding & Status */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 border border-cyan-500/30">
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 border border-cyan-500/30 shrink-0">
             <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00e5ff]" />
           </div>
-          <div>
-            <div className="font-mono text-xs font-black tracking-widest text-slate-100 uppercase">
+          <div className="whitespace-nowrap">
+            <div className="font-mono text-xs font-black tracking-wider text-slate-100 uppercase whitespace-nowrap">
               EASYUP SOFTWARE SOLUTION // HQ COMMAND
             </div>
-            <div className="flex items-center gap-2 font-mono text-[10px] text-slate-400">
+            <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-400 whitespace-nowrap">
               <span>ILOILO CITY</span>
               <span>•</span>
               <span className="text-cyan-400 font-medium">BRANCH: office-v3</span>
@@ -767,7 +1083,7 @@ function HQCommandPage() {
         </div>
 
         {/* Center: Department Mode Pills (Shared Across Both 3D & 2D Views) */}
-        <div className="hidden lg:flex items-center gap-1.5 rounded-xl border border-slate-800/80 bg-slate-950/80 p-1 backdrop-blur-md">
+        <div className="hidden lg:flex items-center gap-1 rounded-xl border border-slate-800/80 bg-slate-950/80 p-1 backdrop-blur-md shrink-0">
           {modeButtons.map((btn) => {
             const isActive = currentMode === btn.mode
             return (
@@ -775,7 +1091,7 @@ function HQCommandPage() {
                 key={btn.mode}
                 type="button"
                 onClick={() => handleGlobalModeChange(btn.mode)}
-                className={`cursor-pointer rounded-lg px-3 py-1 font-mono text-[11px] font-bold tracking-tight transition-all whitespace-nowrap ${
+                className={`cursor-pointer rounded-lg px-2.5 py-1 font-mono text-[11px] font-bold tracking-tight transition-all whitespace-nowrap ${
                   isActive
                     ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
                     : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
@@ -788,16 +1104,27 @@ function HQCommandPage() {
         </div>
 
         {/* Right: Real-time PHT Clock, Live Badge & Instant 3D / 2D Viewport Switcher */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Digital Clock (Asia/Manila) */}
-          <div className="hidden sm:flex flex-col items-end">
-            <span className="font-mono text-xs font-bold text-slate-200 tracking-wider">
+          <div className="hidden xl:flex flex-col items-end whitespace-nowrap">
+            <span className="font-mono text-xs font-bold text-slate-200 tracking-wider whitespace-nowrap">
               {phtTime || '00:00:00 AM PHT'}
             </span>
-            <span className="font-mono text-[9px] text-slate-500 font-semibold tracking-wider">
+            <span className="font-mono text-[9px] text-slate-500 font-semibold tracking-wider whitespace-nowrap">
               1X REAL-TIME WORK PACE
             </span>
           </div>
+
+          {/* Top-Bar JARVIS Core Entry Button */}
+          <button
+            type="button"
+            data-testid="top-bar-jarvis-btn"
+            onClick={enterJarvis}
+            className="cursor-pointer flex items-center gap-1.5 rounded-lg border border-cyan-400/70 bg-cyan-950/80 px-3 py-1 font-mono text-xs font-bold text-cyan-200 shadow-[0_0_15px_rgba(0,229,255,0.25)] transition-all hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
+          >
+            <span className="h-2 w-2 rounded-full bg-cyan-300 animate-pulse" />
+            <span>JARVIS [J]</span>
+          </button>
 
           {/* Clickable Live Roster Button (24 Agents Online) */}
           <button
@@ -862,6 +1189,11 @@ function HQCommandPage() {
               onSelectAgent={(ag) => setSelectedAgent(ag)}
               onArriveAgent={handleAgentArrive}
               onResetCamera={() => handleGlobalModeChange('OVERVIEW')}
+              coreState={jarvisCoreState}
+              onClickCore={enterJarvis}
+              isDivingToJarvis={
+                jarvisPhase === 'entering' || jarvisPhase === 'inside'
+              }
             />
           ) : (
             <OfficeCanvas3D
@@ -872,9 +1204,167 @@ function HQCommandPage() {
               onSelectAgent={(ag) => setSelectedAgent(ag)}
               onArriveAgent={handleAgentArrive}
               onResetCamera={() => handleGlobalModeChange('OVERVIEW')}
+              coreState={jarvisCoreState}
+              onClickCore={enterJarvis}
+              isDivingToJarvis={
+                jarvisPhase === 'entering' || jarvisPhase === 'inside'
+              }
             />
           )}
+
+          {/* Cinematic 1.5s Fly-In / Fly-Out Bloom Transition Overlay (Skippable on Click) */}
+          {(jarvisPhase === 'entering' || jarvisPhase === 'exiting') && (
+            <div
+              data-testid="jarvis-transition-overlay"
+              onClick={skipJarvisTransition}
+              className="absolute inset-0 z-40 flex cursor-pointer flex-col items-center justify-center overflow-hidden backdrop-blur-xs transition-opacity duration-500"
+              style={{
+                background:
+                  jarvisPhase === 'entering'
+                    ? 'radial-gradient(circle at 50% 50%, rgba(224, 242, 254, 0.92) 0%, rgba(0, 229, 255, 0.65) 28%, rgba(3, 7, 17, 0.88) 72%)'
+                    : 'radial-gradient(circle at 50% 50%, rgba(0, 229, 255, 0.35) 0%, rgba(3, 7, 17, 0.45) 70%)',
+              }}
+            >
+              <div className="relative flex items-center justify-center">
+                <div className="h-56 w-56 animate-ping rounded-full border-2 border-cyan-300/80 shadow-[0_0_80px_#00e5ff]" />
+                <div className="absolute h-32 w-32 rounded-full bg-cyan-200/90 blur-md shadow-[0_0_120px_#ffffff]" />
+              </div>
+              <div className="mt-8 rounded-full border border-cyan-300/60 bg-slate-950/90 px-4 py-1.5 font-mono text-xs font-bold tracking-widest text-cyan-200 shadow-2xl">
+                {jarvisPhase === 'entering'
+                  ? 'ENTERING THE BRAIN CORE // INITIALIZING J.A.R.V.I.S. (CLICK TO SKIP)'
+                  : 'EXITING J.A.R.V.I.S. // RESTORING HQ CAMERA (CLICK TO SKIP)'}
+              </div>
+            </div>
+          )}
+
+          {/* Floating JARVIS Live Voice HUD for Office View (Always-On Speech in Office or Brain) */}
+          {jarvisPhase === 'closed' && (
+            <div
+              data-testid="office-jarvis-voice-hud"
+              className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex max-w-xl items-center gap-3 rounded-full border border-cyan-500/40 bg-slate-950/85 px-4 py-2 text-xs font-mono backdrop-blur-md shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all"
+            >
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="relative flex h-3 w-3">
+                  <span
+                    className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                      jarvisCoreState === 'speaking'
+                        ? 'bg-emerald-400 animate-ping'
+                        : jarvisCoreState === 'thinking'
+                          ? 'bg-amber-400 animate-ping'
+                          : 'bg-cyan-400 animate-pulse'
+                    }`}
+                  />
+                  <span
+                    className={`relative inline-flex h-3 w-3 rounded-full ${
+                      jarvisCoreState === 'speaking'
+                        ? 'bg-emerald-400'
+                        : jarvisCoreState === 'thinking'
+                          ? 'bg-amber-400'
+                          : 'bg-cyan-400'
+                    }`}
+                  />
+                </span>
+                <span className="font-bold text-cyan-300 tracking-wider">
+                  JARVIS{' '}
+                  {jarvisCoreState === 'speaking'
+                    ? 'SPEAKING'
+                    : jarvisCoreState === 'thinking'
+                      ? 'THINKING'
+                      : 'LISTENING'}
+                </span>
+              </div>
+
+              <div className="h-3 w-px bg-slate-800 shrink-0" />
+
+              <div className="truncate text-slate-300 min-w-0 max-w-xs sm:max-w-md">
+                {officeVoiceSnippet ? (
+                  <span>
+                    <strong
+                      className={
+                        officeVoiceSnippet.role === 'user'
+                          ? 'text-amber-300'
+                          : 'text-cyan-300'
+                      }
+                    >
+                      {officeVoiceSnippet.role === 'user' ? 'You: ' : 'JARVIS: '}
+                    </strong>
+                    {officeVoiceSnippet.text}
+                  </span>
+                ) : (
+                  <span className="text-slate-500 italic">
+                    Say &quot;send Josiah to gym&quot; or &quot;what models are agents using?&quot;
+                  </span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={enterJarvis}
+                className="cursor-pointer ml-auto shrink-0 rounded-full border border-cyan-400/50 bg-cyan-950/80 px-2.5 py-1 text-[10px] font-bold text-cyan-200 transition hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
+              >
+                OPEN CORE [J]
+              </button>
+            </div>
+          )}
         </section>
+
+        {/* Full-Screen Jarvis Holographic Interior Chamber (Persistently mounted so Always-On Voice works seamlessly across entering & exiting JARVIS) */}
+        <JarvisInterior
+          agents={agents}
+          approvals={approvals}
+          logs={logs}
+          currentMode={currentMode}
+          agentRouteOverrides={agentRouteOverrides}
+          is2DDefault={is2DView}
+          coreState={jarvisCoreState}
+          isOpen={jarvisPhase === 'inside'}
+          onVoiceTranscription={(transcript, role) =>
+            setOfficeVoiceSnippet({ text: transcript, role, timestamp: Date.now() })
+          }
+          onCoreStateChange={setJarvisCoreState}
+          onExit={exitJarvis}
+          onSelectAgentAndExit={(ag) => {
+            setSelectedAgent(ag)
+            exitJarvis()
+          }}
+          onGlobalModeChange={handleGlobalModeChange}
+          onRouteIndividualAgent={(agentId, destination, description) => {
+            const found = agents.find(
+              (a) =>
+                a.id.toLowerCase() === agentId.toLowerCase() ||
+                a.name.toLowerCase() === agentId.toLowerCase()
+            )
+            if (!found) return
+            const targetMode: DepartmentMode =
+              destination === 'pantry'
+                ? 'PANTRY'
+                : destination === 'gym'
+                  ? 'GYM'
+                  : destination === 'meeting'
+                    ? 'ALL_HANDS'
+                    : 'FOCUS_WORK'
+            const newStatus: Agent['status'] =
+              destination === 'pantry'
+                ? 'on_break'
+                : destination === 'gym'
+                  ? 'at_gym'
+                  : destination === 'meeting'
+                    ? 'in_meeting'
+                    : 'working'
+            handleRouteIndividualAgent(
+              found,
+              targetMode,
+              newStatus,
+              description
+            )
+          }}
+          onApprove={(approvalId, decision) =>
+            void handleGoSignal(
+              approvalId,
+              decision === 'approved' ? 'approve' : 'reject'
+            )
+          }
+        />
 
         {/* ===================================================================== */}
         {/* SLIDE-OVER FULL AI AGENT ROSTER DRAWER (Search, Filter & Quick Route) */}
@@ -1383,6 +1873,53 @@ function HQCommandPage() {
                   </div>
                 </div>
 
+                {/* Agent AI Model Selector (Gemini / Hugging Face / JARVIS Local SLM) */}
+                <div className="rounded-lg border border-cyan-500/30 bg-slate-950/75 p-2 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[9px] font-bold tracking-wider text-cyan-300 uppercase">
+                      AGENT AI MODEL (GEMINI / HUGGING FACE / SLM):
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleUpdateAgentModel(
+                          selectedAgent.id,
+                          selectedAgent.model ||
+                            DEFAULT_AGENT_MODELS[selectedAgent.id] ||
+                            'gemini-2.0-flash',
+                          true
+                        )
+                      }
+                      className="cursor-pointer rounded border border-cyan-500/40 bg-cyan-950/50 px-1.5 py-0.5 font-mono text-[9px] font-bold text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 transition whitespace-nowrap"
+                    >
+                      Apply to All 24 Agents
+                    </button>
+                  </div>
+                  <select
+                    data-testid="agent-model-selector"
+                    aria-label="Select Agent AI Model"
+                    value={
+                      selectedAgent.model ||
+                      DEFAULT_AGENT_MODELS[selectedAgent.id] ||
+                      'gemini-2.0-flash'
+                    }
+                    onChange={(e) =>
+                      handleUpdateAgentModel(selectedAgent.id, e.target.value)
+                    }
+                    className="w-full cursor-pointer rounded-md border border-slate-800 bg-slate-900 px-2 py-1 font-mono text-[10px] font-bold text-cyan-200 focus:border-cyan-400 focus:outline-none"
+                  >
+                    {AVAILABLE_MODELS.map((m) => (
+                      <option
+                        key={m.id}
+                        value={m.id}
+                        className="bg-slate-950 text-slate-100"
+                      >
+                        {m.name} — {m.tier}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Individual Action Buttons (Direct A* Pathfinding Routing) */}
                 <div>
                   <div className="font-mono text-[9px] font-bold tracking-wider text-slate-400 uppercase pb-1">
@@ -1489,12 +2026,12 @@ function HQCommandPage() {
                   <div className="pt-1">
                     <div className="flex justify-between font-mono text-[9px] text-slate-400 pb-0.5">
                       <span>PROGRESS</span>
-                      <span>{selectedAgent.progress_pct || 78}%</span>
+                      <span>{selectedAgent.progress_pct ?? 0}%</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full transition-all duration-500"
-                        style={{ width: `${selectedAgent.progress_pct || 78}%` }}
+                        style={{ width: `${selectedAgent.progress_pct ?? 0}%` }}
                       />
                     </div>
                   </div>

@@ -21,6 +21,10 @@ import {
   AgentNavState,
   stepAgentNavigation,
 } from '@/config/walkwayGrid'
+import {
+  drawArcReactor2D,
+  JarvisCoreState,
+} from '@/components/jarvis/ArcReactor'
 
 export interface OfficeCanvas2DProps {
   agents: Agent[]
@@ -34,6 +38,9 @@ export interface OfficeCanvas2DProps {
     effectiveMode: DepartmentMode
   ) => void
   onResetCamera?: () => void
+  coreState?: JarvisCoreState
+  onClickCore?: () => void
+  isDivingToJarvis?: boolean
   className?: string
 }
 
@@ -69,6 +76,9 @@ export default function OfficeCanvas2D({
   onSelectAgent,
   onArriveAgent,
   onResetCamera,
+  coreState = 'idle',
+  onClickCore,
+  isDivingToJarvis = false,
   className = '',
 }: OfficeCanvas2DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -80,6 +90,21 @@ export default function OfficeCanvas2D({
   const selectedIdRef = useRef<string | null | undefined>(selectedAgentId)
   const onSelectRef = useRef(onSelectAgent)
   const onArriveRef = useRef(onArriveAgent)
+  const coreStateRef = useRef<JarvisCoreState>(coreState)
+  const onClickCoreRef = useRef(onClickCore)
+  const isDivingRef = useRef(isDivingToJarvis)
+  const coreHoveredRef = useRef(false)
+  const coreScreenBoxRef = useRef<{
+    px: number
+    py: number
+    radius: number
+    pillRect: [number, number, number, number]
+  }>({
+    px: 0,
+    py: 0,
+    radius: 36,
+    pillRect: [0, 0, 0, 0],
+  })
 
   useEffect(() => {
     agentsRef.current = agents
@@ -105,6 +130,18 @@ export default function OfficeCanvas2D({
     onArriveRef.current = onArriveAgent
   }, [onArriveAgent])
 
+  useEffect(() => {
+    coreStateRef.current = coreState
+  }, [coreState])
+
+  useEffect(() => {
+    onClickCoreRef.current = onClickCore
+  }, [onClickCore])
+
+  useEffect(() => {
+    isDivingRef.current = isDivingToJarvis
+  }, [isDivingToJarvis])
+
   // Camera state (targetX, targetZ, zoom) + user pan/zoom offsets
   const camStateRef = useRef({
     targetX: CAMERA_PRESETS[mode].target[0],
@@ -115,6 +152,15 @@ export default function OfficeCanvas2D({
     zoomMultiplier: 1,
     lastMode: mode,
   })
+  const savedCamBeforeDiveRef = useRef<{
+    targetX: number
+    targetZ: number
+    zoom: number
+    panOffsetX: number
+    panOffsetZ: number
+    zoomMultiplier: number
+  } | null>(null)
+  const wasDiving2DRef = useRef(false)
 
   // Persistent A* navigation state per agent
   const agentNavMapRef = useRef<Record<string, AgentNavState>>({})
@@ -145,6 +191,14 @@ export default function OfficeCanvas2D({
     let dragStartY = 0
     let clickMoved = false
 
+    const isPointInCore = (x: number, y: number) => {
+      const coreBox = coreScreenBoxRef.current
+      const [rx, ry, rw, rh] = coreBox.pillRect
+      const inPill = x >= rx && x <= rx + rw && y >= ry && y <= ry + rh
+      const inCircle = Math.hypot(x - coreBox.px, y - coreBox.py) <= coreBox.radius
+      return inPill || inCircle
+    }
+
     const handlePointerDown = (e: PointerEvent) => {
       isDragging = true
       clickMoved = false
@@ -153,7 +207,15 @@ export default function OfficeCanvas2D({
     }
 
     const handlePointerMove = (e: PointerEvent) => {
-      if (!isDragging) return
+      const rect = canvas.getBoundingClientRect()
+      const mx = e.clientX - rect.left
+      const my = e.clientY - rect.top
+      const isOverCore = isPointInCore(mx, my)
+      coreHoveredRef.current = isOverCore
+      if (!isDragging) {
+        canvas.style.cursor = isOverCore ? 'pointer' : 'grab'
+        return
+      }
       const dx = e.clientX - dragStartX
       const dy = e.clientY - dragStartY
       if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
@@ -178,6 +240,10 @@ export default function OfficeCanvas2D({
         const rect = canvas.getBoundingClientRect()
         const clickX = e.clientX - rect.left
         const clickY = e.clientY - rect.top
+        if (isPointInCore(clickX, clickY)) {
+          onClickCoreRef.current?.()
+          return
+        }
         const boxes = Object.values(agentScreenBoxesRef.current)
         for (let i = boxes.length - 1; i >= 0; i--) {
           const b = boxes[i]
@@ -238,11 +304,40 @@ export default function OfficeCanvas2D({
         cam.zoomMultiplier = 1
       }
 
+      const diving = isDivingRef.current
+      if (diving && !wasDiving2DRef.current) {
+        wasDiving2DRef.current = true
+        savedCamBeforeDiveRef.current = {
+          targetX: cam.targetX,
+          targetZ: cam.targetZ,
+          zoom: cam.zoom,
+          panOffsetX: cam.panOffsetX,
+          panOffsetZ: cam.panOffsetZ,
+          zoomMultiplier: cam.zoomMultiplier,
+        }
+      } else if (!diving && wasDiving2DRef.current) {
+        wasDiving2DRef.current = false
+        if (savedCamBeforeDiveRef.current) {
+          cam.targetX = savedCamBeforeDiveRef.current.targetX
+          cam.targetZ = savedCamBeforeDiveRef.current.targetZ
+          cam.zoom = savedCamBeforeDiveRef.current.zoom
+          cam.panOffsetX = savedCamBeforeDiveRef.current.panOffsetX
+          cam.panOffsetZ = savedCamBeforeDiveRef.current.panOffsetZ
+          cam.zoomMultiplier = savedCamBeforeDiveRef.current.zoomMultiplier
+        }
+      }
+
       const preset = CAMERA_PRESETS[currentMode] || CAMERA_PRESETS.OVERVIEW
-      const lerpFactor = 1 - Math.exp(-5 * dt)
-      cam.targetX += (preset.target[0] + cam.panOffsetX - cam.targetX) * lerpFactor
-      cam.targetZ += (preset.target[2] + cam.panOffsetZ - cam.targetZ) * lerpFactor
-      cam.zoom += (preset.zoom * cam.zoomMultiplier - cam.zoom) * lerpFactor
+      const lerpFactor = 1 - Math.exp(-(diving ? 6.5 : 5.0) * dt)
+      if (diving) {
+        cam.targetX += (0 - cam.targetX) * lerpFactor
+        cam.targetZ += (0 - cam.targetZ) * lerpFactor
+        cam.zoom += (68 - cam.zoom) * lerpFactor
+      } else {
+        cam.targetX += (preset.target[0] + cam.panOffsetX - cam.targetX) * lerpFactor
+        cam.targetZ += (preset.target[2] + cam.panOffsetZ - cam.targetZ) * lerpFactor
+        cam.zoom += (preset.zoom * cam.zoomMultiplier - cam.zoom) * lerpFactor
+      }
 
       const targetX = cam.targetX
       const targetZ = cam.targetZ
@@ -654,59 +749,57 @@ export default function OfficeCanvas2D({
 
       // 4B. Central Command Center ("The Brain") Core & Consoles
       enqueue(0, 0, 1.5, () => {
-        drawCylinder(0, 0.35, 0, 1.5, 1.9, 0.7, '#090d16', 24, 1, '#00e5ff')
-        drawGroundRing(0, 0.72, 0, 1.2, 1.45, '#00e5ff', 0.95)
-
-        const centerProj = project(0, 1.8, 0)
-        const pulse = 1 + Math.sin(elapsed * 2.5) * 0.1
-        const coreR = Math.max(8, 0.85 * zoom * pulse)
-
-        ctx.save()
-        const grad = ctx.createRadialGradient(
-          centerProj.px,
-          centerProj.py,
-          coreR * 0.15,
-          centerProj.px,
-          centerProj.py,
-          coreR * 2.4
+        const isCoreHovered = coreHoveredRef.current
+        drawCylinder(
+          0,
+          0.35,
+          0,
+          1.5,
+          1.9,
+          0.7,
+          '#090d16',
+          24,
+          1,
+          isCoreHovered ? '#ffffff' : '#00e5ff'
         )
-        grad.addColorStop(0, 'rgba(0, 229, 255, 0.95)')
-        grad.addColorStop(0.45, 'rgba(56, 189, 248, 0.45)')
-        grad.addColorStop(1, 'rgba(0, 229, 255, 0)')
-        ctx.fillStyle = grad
-        ctx.beginPath()
-        ctx.arc(centerProj.px, centerProj.py, coreR * 2.4, 0, Math.PI * 2)
-        ctx.fill()
+        drawGroundRing(
+          0,
+          0.72,
+          0,
+          1.2,
+          1.45,
+          isCoreHovered ? '#ffffff' : '#00e5ff',
+          0.95
+        )
 
-        ctx.fillStyle = '#38bdf8'
-        ctx.strokeStyle = '#00e5ff'
-        ctx.lineWidth = 1.8
-        ctx.beginPath()
-        ctx.arc(centerProj.px, centerProj.py, coreR * 0.62, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.stroke()
+        const centerProj = project(0, 1.9, 0)
+        const baseRadiusPx = Math.max(9, 0.92 * zoom)
+        const pillW = isCoreHovered ? 190 : 88
+        const pillH = 26
+        const pillX = centerProj.px - pillW * 0.5
+        const pillY = centerProj.py - baseRadiusPx * 1.55 - pillH
 
-        const rings = [
-          { r: 1.35 * zoom, rot: elapsed * 0.7, color: '#00e5ff' },
-          { r: 1.7 * zoom, rot: -elapsed * 0.55 + 1.0, color: '#38bdf8' },
-          { r: 2.05 * zoom, rot: elapsed * 0.4 + 2.1, color: '#67e8f9' },
-        ]
-        for (const rg of rings) {
-          ctx.strokeStyle = rg.color
-          ctx.lineWidth = 1.6
-          ctx.beginPath()
-          ctx.ellipse(
-            centerProj.px,
-            centerProj.py,
-            rg.r,
-            rg.r * 0.48,
-            rg.rot,
-            0,
-            Math.PI * 2
-          )
-          ctx.stroke()
+        coreScreenBoxRef.current = {
+          px: centerProj.px,
+          py: centerProj.py,
+          radius: Math.max(48, baseRadiusPx * 3.4),
+          pillRect: [pillX - 10, pillY - 10, pillW + 20, pillH + 20],
         }
-        ctx.restore()
+
+        drawArcReactor2D(
+          ctx,
+          centerProj.px,
+          centerProj.py,
+          baseRadiusPx,
+          elapsed,
+          {
+            state: coreStateRef.current,
+            size: 'office',
+            hovered: isCoreHovered,
+            showLabel: true,
+            isometricTilt: true,
+          }
+        )
       })
 
       for (const angle of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]) {
@@ -1247,13 +1340,25 @@ export default function OfficeCanvas2D({
         className="block h-full w-full cursor-grab active:cursor-grabbing"
       />
 
-      {/* Floating Viewport HUD Controls */}
-      <div className="pointer-events-none absolute bottom-4 left-4 z-30 flex items-center gap-2">
+      {/* Floating Bottom Viewport HUD Controls */}
+      <div className="pointer-events-none absolute bottom-4 left-4 z-30 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[11px] text-slate-300 shadow-xl backdrop-blur-md">
           <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
           <span className="tracking-wide text-slate-400">VIEWPORT (2D ISO):</span>
           <span className="font-bold text-cyan-300">{mode.replace('_', ' ')}</span>
         </div>
+
+        {onClickCore && (
+          <button
+            type="button"
+            data-testid="bottom-toolbar-jarvis-btn-2d"
+            onClick={onClickCore}
+            className="pointer-events-auto cursor-pointer flex items-center gap-1.5 rounded-lg border border-cyan-400/70 bg-cyan-950/90 px-3 py-1.5 font-mono text-[11px] font-bold text-cyan-200 shadow-[0_0_16px_rgba(0,229,255,0.28)] backdrop-blur-md transition-all hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
+          >
+            <span className="h-2 w-2 rounded-full bg-cyan-300 animate-ping" />
+            <span>JARVIS CORE [J]</span>
+          </button>
+        )}
 
         {onResetCamera && (
           <button
@@ -1273,11 +1378,11 @@ export default function OfficeCanvas2D({
 
       {/* Help tooltip */}
       <div className="pointer-events-none absolute bottom-4 right-4 z-30 hidden sm:flex items-center gap-1.5 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[10px] text-slate-400 shadow-xl backdrop-blur-md">
-        <span>Click Agent to Inspect & Route</span>
+        <span>Click Brain Core or Press J for JARVIS</span>
         <span>•</span>
-        <span>Drag to Pan</span>
+        <span>Click Agent to Route</span>
         <span>•</span>
-        <span>Scroll to Zoom</span>
+        <span>Drag / Scroll</span>
       </div>
     </div>
   )
