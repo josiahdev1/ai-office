@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/office/cron/learn",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
