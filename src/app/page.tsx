@@ -100,6 +100,44 @@ const DEFAULT_AGENTS: Agent[] = Object.values(AGENT_WORKSTATIONS_3D).map((ws) =>
   updated_at: new Date().toISOString(),
 }))
 
+const DEPARTMENT_TASK_CYCLES: Record<string, string[]> = {
+  ENGINEERING: [
+    'Architect & implement core changes for high-throughput streaming',
+    'Optimize distributed state cache & Realtime sync latency',
+    'Execute Playwright end-to-end integration tests & verify HUD',
+    'Harden PostgreSQL RLS policies & connection pool auto-scaling',
+    'Refactor Three.js canvas buffer geometry for 60 FPS isometric viewport',
+    'Implement automated CI/CD canary matrix in GitHub Actions',
+  ],
+  INTELLIGENCE: [
+    'Benchmark Gemini 3.1 Flash vs local SLM latency & throughput',
+    'Tune dynamic system prompt injections for autonomous agent decisions',
+    'Evaluate vector embeddings & collective brain knowledge retrieval',
+    'Synthesize executive telemetry digest & operational risk signals',
+  ],
+  'QA & SECOPS': [
+    'Audit API endpoints against OWASP Top 10 security standards',
+    'Execute synthetic load testing across 24 concurrent agent websockets',
+    'Verify zero secret leakage in client bundle & environment manifests',
+    'Regression test A* pathfinding walkability across office layout',
+  ],
+  COMMAND: [
+    'Orchestrate sprint priorities & unblock cross-functional agent pipelines',
+    'Review high-risk production go-signal approvals & audit logs',
+    'Align quarterly roadmap deliverables across Engineering and Intelligence',
+  ],
+  OPERATIONS: [
+    'Automate customer support ticket categorization & SLA routing',
+    'Synchronize Zapier CRM webhook leads & customer journey automations',
+    'Monitor infrastructure uptime & database resource saturation',
+  ],
+  GROWTH: [
+    'Analyze user engagement analytics & optimize conversion funnels',
+    'A/B test onboarding copy & product landing pages',
+    'Tune paid acquisition budget & creative RoAS attribution models',
+  ],
+}
+
 // Contextual non-looping engineering & operational milestones
 const CONTEXTUAL_EVENTS: {
   senderId: string
@@ -194,8 +232,11 @@ function HQCommandPage() {
   const [agents, setAgents] = useState<Agent[]>(DEFAULT_AGENTS)
   const [approvals, setApprovals] = useState<Approval[]>([])
   const [logs, setLogs] = useState<string[]>([])
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(DEFAULT_AGENTS[0])
   const [, setSupabaseActive] = useState<boolean>(false)
+  const [selectedAgentState, setSelectedAgent] = useState<Agent | null>(DEFAULT_AGENTS[0])
+  const selectedAgent =
+    (selectedAgentState ? agents.find((a) => a.id === selectedAgentState.id) : null) ||
+    selectedAgentState
   const [currentMode, setCurrentMode] = useState<DepartmentMode>('OVERVIEW')
   const [agentRouteOverrides, setAgentRouteOverrides] = useState<
     Record<string, DepartmentMode>
@@ -556,6 +597,96 @@ function HQCommandPage() {
       unsub()
       clearInterval(contextualTimer)
     }
+  }, [])
+
+  // 4. Real-time Autonomous Agent Progress & Task Completion Engine
+  useEffect(() => {
+    const progressTimer = setInterval(() => {
+      setAgents((prevAgents) => {
+        let changed = false
+        const updated = prevAgents.map((ag) => {
+          // Only advance agents who are actively working at their desks or stations
+          const isWorking =
+            ag.status === 'working' ||
+            ag.status === 'active' ||
+            ag.sub_state === 'typing' ||
+            ag.sub_state === 'seated'
+
+          if (!isWorking) return ag
+
+          const currentPct = typeof ag.progress_pct === 'number' ? ag.progress_pct : 0
+          // Advance progress by 2% - 5% per cycle
+          const increment = Math.floor(Math.random() * 4) + 2
+          const nextPct = currentPct + increment
+
+          if (nextPct >= 100) {
+            changed = true
+            const completedTask = ag.current_task || 'Assigned Sprint Objective'
+            const dept = (ag.department || 'ENGINEERING').toUpperCase()
+            const taskCycle =
+              DEPARTMENT_TASK_CYCLES[dept] || DEPARTMENT_TASK_CYCLES.ENGINEERING
+            const nextTaskIdx = Math.floor(Math.random() * taskCycle.length)
+            const nextTask = taskCycle[nextTaskIdx]
+
+            // 100% Completion Milestone Event
+            const completionLog = `${formatPHTTime()} [TASK_COMPLETE] ${ag.name} completed: "${completedTask}" (100% Milestone)`
+            setLogs((prev) =>
+              [completionLog, ...prev.filter((p) => p !== completionLog)].slice(0, 50)
+            )
+
+            // Log activity to Supabase
+            void officeSupabase.logActivity(
+              'TASK_COMPLETE',
+              `${ag.name} completed: "${completedTask}" -> Next: "${nextTask}"`,
+              { id: ag.id, name: ag.name },
+              'success'
+            )
+
+            // Save to Collective Brain Storage
+            void fetch('/api/office/brain', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: `${ag.name}: Task Completed`,
+                content: `Agent ${ag.name} (${dept}) completed task: "${completedTask}". Transitioned to: "${nextTask}".`,
+                category: 'task_completion',
+                agentName: ag.name,
+              }),
+            }).catch(() => {})
+
+            // Persist reset progress and next task to Supabase
+            void officeSupabase.updateAgent(ag.id, {
+              progress_pct: 0,
+              current_task: nextTask,
+            })
+
+            return {
+              ...ag,
+              progress_pct: 0,
+              current_task: nextTask,
+            }
+          }
+
+          changed = true
+          // Sync to Supabase at milestones (approx every 25%)
+          if (nextPct % 25 < increment) {
+            void officeSupabase.updateAgent(ag.id, {
+              progress_pct: nextPct,
+            })
+          }
+
+          return {
+            ...ag,
+            progress_pct: nextPct,
+          }
+        })
+
+        if (!changed) return prevAgents
+        return updated
+      })
+    }, 3200)
+
+    return () => clearInterval(progressTimer)
   }, [])
 
   // Handle Go-Signal Authorizations
@@ -1895,12 +2026,12 @@ function HQCommandPage() {
                   <div className="pt-1">
                     <div className="flex justify-between font-mono text-[9px] text-slate-400 pb-0.5">
                       <span>PROGRESS</span>
-                      <span>{selectedAgent.progress_pct || 78}%</span>
+                      <span>{selectedAgent.progress_pct ?? 0}%</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full transition-all duration-500"
-                        style={{ width: `${selectedAgent.progress_pct || 78}%` }}
+                        style={{ width: `${selectedAgent.progress_pct ?? 0}%` }}
                       />
                     </div>
                   </div>

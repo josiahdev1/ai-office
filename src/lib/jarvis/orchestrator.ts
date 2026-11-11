@@ -571,7 +571,7 @@ export function classifyJarvisIntent(
   }
 
   if (
-    /\b(status\s+report|telemetry|how\s+many\s+agents|who\s+is\s+(in|at|working|on\s+break)|what\s+tasks?\s+are\s+running|pending\s+approvals?|fleet\s+status|sitrep|active\s+agents|report\s+on\s+all|ai\s+model|what\s+model|which\s+model|assistant\s+model|assistants|24\s+assistants|model\s+or\s+agents|models\s+used|roster)\b/i.test(
+    /\b(status\s+report|telemetry|how\s+many\s+agents|who\s+is\s+(in|at|working|on\s+break)|what\s+tasks?\s+are\s+running|pending\s+approvals?|fleet\s+status|sitrep|active\s+agents|report\s+on\s+all|ai\s+model|what\s+model|which\s+model|assistant\s+model|assistants|24\s+assistants|model\s+or\s+agents|models\s+used|roster|progress|average\s+progress|stuck|percentage|78%|75%|completion|task\s+status)\b/i.test(
       lower
     )
   ) {
@@ -787,7 +787,7 @@ export function executeJarvisTool(
             currentTask: sanitizeUntrustedToolData(
               a.current_task || 'Standby'
             ),
-            progressPct: a.progress_pct ?? 78,
+            progressPct: typeof a.progress_pct === 'number' ? a.progress_pct : 0,
           })),
         },
       }
@@ -860,7 +860,7 @@ export function executeJarvisTool(
             department: sanitizeUntrustedToolData(a.department || 'ENGINEERING'),
             status: a.status,
             currentTask: sanitizeUntrustedToolData(a.current_task || 'Standby'),
-            progressPct: a.progress_pct ?? 78,
+            progressPct: typeof a.progress_pct === 'number' ? a.progress_pct : 0,
           })),
         },
       }
@@ -904,7 +904,7 @@ export function executeJarvisTool(
             currentTask: sanitizeUntrustedToolData(
               found.current_task || 'Standby'
             ),
-            progressPct: found.progress_pct ?? 78,
+            progressPct: typeof found.progress_pct === 'number' ? found.progress_pct : 0,
           },
         },
       }
@@ -1166,6 +1166,7 @@ SUPABASE & FLEET OPERATIONAL REALITY:
 - In Supabase \`office_agents\`, each of the 24 agents has an assigned AI model (Gemini 2.0/2.5 models and Hugging Face Local SLMs: gemini-2.0-flash, gemini-2.5-flash, gemini-2.5-pro, jarvis-local-slm-v1, hf-smollm2-135m, etc.).
 - You have real-time read and write access to Supabase (\`office_agents\`, \`office_tasks\`, \`office_approvals\`, \`office_logs\`, \`office_knowledge\`).
 - NEVER state that you do not have access to your personal data or agent models. You are the operational commander of this HQ; when asked about your 24 assistants, their models, or office status, call \`list_agents\` or \`get_agent\` to read the live database and answer accurately.
+- When asked about agent progress, average progress, percentages, or task completions, call \`get_office_status\`, \`list_tasks\`, or \`list_agents\` to inspect the live telemetry and report real dynamic numbers truthfully. Never give canned refusals.
 
 PERSONA & CONVERSATION RULES:
 1. Address the user naturally as "${operatorName}" (or occasionally "Sir" / "${operatorName}").

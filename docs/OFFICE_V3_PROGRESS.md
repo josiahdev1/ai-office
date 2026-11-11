@@ -175,5 +175,19 @@ Tracking progress for Office V3 architecture implementation across Phases 1 thro
 - [x] Created `/api/office/brain` REST endpoint for agent self-learning and Antigravity multi-agent coding synchronization.
 - [x] Zero-delay live AI responses tested against Google Gemini and Hugging Face Local SLMs without generic "no access to personal data" disclaimers.
 
-
-
+### Phase J10: Dynamic Real-Time Agent Progress & Task Completion Engine (Completed)
+- [x] **Root Cause of 78% Stuck Issue Eliminated**:
+  - Identified that newly seeded `office_agents` rows had `progress = 0`, causing hardcoded fallback expressions (`ag.progress_pct || 78` and `ag.progress_pct > 0 ? ag.progress_pct : 78`) in `JarvisInterior.tsx`, `page.tsx`, and `orchestrator.ts` to substitute `78%` across all agent cards, averages, and inspector views.
+  - Replaced all `78` fallbacks with honest, clamped values (`ag.progress_pct ?? 0`).
+  - Seeded realistic, varied progress across all 24 agents in Supabase `office_agents`.
+- [x] **Autonomous Real-Time Progress & Task Completion Engine**:
+  - Added a 3.2s interval simulation loop in `src/app/page.tsx` continuously advancing active agents' `progress_pct` by +2% to +5% per tick.
+  - When an agent reaches 100%:
+    - Emits a `[TASK_COMPLETE]` milestone event to the office event bus and logs.
+    - Asynchronously writes task completion telemetry to Supabase `office_logs`.
+    - Automatically archives milestone knowledge to the collective brain via `/api/office/brain`.
+    - Cycles to the next departmental objective from `DEPARTMENT_TASK_CYCLES` and resets progress to 0%, persisting to Supabase `office_agents`.
+  - Periodically synchronizes in-flight progress (~every 25%) to Supabase `office_agents.progress`.
+- [x] **JARVIS Progress Telemetry Grounding**:
+  - Added `progress`, `average progress`, `percentage`, `stuck`, `78%`, and `task status` to `classifyJarvisIntent` regex to ensure queries are classified as `STATUS` intent.
+  - Grounded JARVIS persona system prompt to inspect live telemetry and truthfully explain agent progress without canned refusals or safety filter timeouts.

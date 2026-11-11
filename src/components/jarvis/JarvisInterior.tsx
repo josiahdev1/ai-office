@@ -209,14 +209,14 @@ export default function JarvisInterior({
         tasksRunning++
       }
       const p =
-        typeof ag.progress_pct === 'number' && ag.progress_pct > 0
-          ? ag.progress_pct
-          : 78
+        typeof ag.progress_pct === 'number'
+          ? Math.max(0, Math.min(100, Math.round(ag.progress_pct)))
+          : 0
       totalProgress += p
     }
 
     const avgProgress =
-      agents.length > 0 ? Math.round(totalProgress / agents.length) : 78
+      agents.length > 0 ? Math.round(totalProgress / agents.length) : 0
     const pendingApprovals = approvals.filter(
       (a) => !a.status || a.status === 'pending'
     )
@@ -1186,9 +1186,9 @@ export default function JarvisInterior({
                   const stStyle = getCharacterStyle(ag.id, ag.name)
                   const stBadge = getAgentStatusBadge(ag.status, effMode)
                   const prog =
-                    typeof ag.progress_pct === 'number' && ag.progress_pct > 0
-                      ? ag.progress_pct
-                      : 78
+                    typeof ag.progress_pct === 'number'
+                      ? Math.max(0, Math.min(100, Math.round(ag.progress_pct)))
+                      : 0
 
                   return (
                     <button
