@@ -28,7 +28,9 @@ export interface JarvisChatMessage {
   intent?: 'QUESTION' | 'STATUS' | 'TASK' | 'OFFICE_COMMAND'
   provider?: string
   timestamp: string
-  citations?: string
+  toolsUsed?: string[]
+  errorReason?: string
+  retryPrompt?: string
   isStreaming?: boolean
   taskPlan?: JarvisTaskPlan
 }
@@ -409,10 +411,13 @@ export default function JarvisInterior({
       const userMsgId = `usr-${Date.now()}`
       const jarvisMsgId = `jrv-${Date.now() + 1}`
 
-      const historyPayload = messages.slice(-8).map((m) => ({
-        role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
-        content: m.text,
-      }))
+      const historyPayload = messages
+        .filter((m) => !m.errorReason && !m.isStreaming)
+        .slice(-20)
+        .map((m) => ({
+          role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+          content: m.text,
+        }))
 
       const userMsg: JarvisChatMessage = {
         id: userMsgId,
@@ -424,7 +429,7 @@ export default function JarvisInterior({
       const placeholderJarvisMsg: JarvisChatMessage = {
         id: jarvisMsgId,
         role: 'jarvis',
-        text: 'Synthesizing telemetry inside The Brain Core...',
+        text: 'JARVIS is thinking...',
         timestamp: `${nowStr} PHT`,
         isStreaming: true,
       }
@@ -454,6 +459,7 @@ export default function JarvisInterior({
         const decoder = new TextDecoder()
         let buffer = ''
         let completedTurn: JarvisTurnResult | null = null
+        let streamErrorMsg: string | null = null
 
         while (true) {
           const { done, value } = await reader.read()
@@ -501,7 +507,7 @@ export default function JarvisInterior({
               } else if (eventName === 'complete') {
                 completedTurn = payload as JarvisTurnResult
               } else if (eventName === 'error') {
-                throw new Error(payload.error || 'Stream error')
+                streamErrorMsg = payload.error || 'Gemini unreachable'
               }
             } catch {
               // Ignore partial chunk parse error
@@ -509,8 +515,11 @@ export default function JarvisInterior({
           }
         }
 
+        if (streamErrorMsg) {
+          throw new Error(streamErrorMsg)
+        }
+
         if (completedTurn) {
-          const snap = completedTurn.telemetrySnapshot
           setProviderStatus({
             provider: completedTurn.provider,
             modelLabel: completedTurn.modelLabel,
@@ -519,7 +528,10 @@ export default function JarvisInterior({
           setSessionTokens((prev) => prev + (completedTurn?.tokensUsed || 64))
 
           // Execute office command if returned
-          if (completedTurn.officeCommand?.type === 'mode' && completedTurn.officeCommand.mode) {
+          if (
+            completedTurn.officeCommand?.type === 'mode' &&
+            completedTurn.officeCommand.mode
+          ) {
             const targetMode = completedTurn.officeCommand.mode
             if (
               targetMode === 'OVERVIEW' ||
@@ -542,7 +554,9 @@ export default function JarvisInterior({
                     provider: completedTurn!.modelLabel,
                     isStreaming: false,
                     taskPlan: completedTurn!.taskPlan,
-                    citations: `Live Supabase: ${snap.activeAgents}/${snap.totalAgents} active (${snap.atDeskAgents} desk, ${snap.pantryAgents} pantry, ${snap.gymAgents} gym) • ${snap.runningTasks} tasks • ${snap.pendingApprovals} approvals`,
+                    toolsUsed: completedTurn!.toolsUsed || [],
+                    errorReason: undefined,
+                    retryPrompt: undefined,
                   }
                 : m
             )
@@ -551,14 +565,19 @@ export default function JarvisInterior({
           speakWithJarvisVoice(completedTurn.reply)
         }
       } catch (err) {
+        const rawErr = (err as Error).message || 'Connection timeout'
+        const formattedErr = rawErr.startsWith('Gemini unreachable:')
+          ? rawErr
+          : `Gemini unreachable: ${rawErr}`
         onCoreStateChange('error')
         setMessages((prev) =>
           prev.map((m) =>
             m.id === jarvisMsgId
               ? {
                   ...m,
-                  text: `Diagnostic alert, ${userName}: Unable to complete neural stream (${(err as Error).message}). Falling back to local HQ telemetry (${telemetry.agentsActive}/${telemetry.totalAgents} agents active).`,
-                  intent: 'STATUS',
+                  text: formattedErr,
+                  errorReason: formattedErr,
+                  retryPrompt: trimmed,
                   isStreaming: false,
                 }
               : m
@@ -581,8 +600,6 @@ export default function JarvisInterior({
       onCoreStateChange,
       onGlobalModeChange,
       speakWithJarvisVoice,
-      telemetry.agentsActive,
-      telemetry.totalAgents,
       userName,
     ]
   )
@@ -610,72 +627,72 @@ export default function JarvisInterior({
     }
 
     try {
-      let recognition = recognitionRef.current
-      if (!recognition) {
-        recognition = new SpeechRecCtor()
-        recognition.continuous = true
-        recognition.interimResults = true
-        recognition.lang = 'en-US'
-        recognitionRef.current = recognition
-      }
+      if (!recognitionRef.current) {
+        const instance = new SpeechRecCtor()
+        instance.continuous = true
+        instance.interimResults = true
+        instance.lang = 'en-US'
 
-      recognition.onresult = (event: SpeechRecognitionEventLike) => {
-        if (isSpeakingTtsRef.current) return
-        let interim = ''
-        let finalTranscript = ''
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const res = event.results[i]
-          if (res.isFinal) {
-            finalTranscript += res[0].transcript
-          } else {
-            interim += res[0].transcript
+        instance.onresult = (event: SpeechRecognitionEventLike) => {
+          if (isSpeakingTtsRef.current) return
+          let interim = ''
+          let finalTranscript = ''
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const res = event.results[i]
+            if (res.isFinal) {
+              finalTranscript += res[0].transcript
+            } else {
+              interim += res[0].transcript
+            }
+          }
+          if (interim) {
+            setCommandInput(interim)
+          }
+          if (finalTranscript.trim()) {
+            const spoken = finalTranscript.trim()
+            setCommandInput('')
+            setVoicePermissionStatus(
+              `Heard: "${spoken.slice(0, 42)}" • Always-On Mic Active`
+            )
+            void submitDirectiveRef.current(spoken)
           }
         }
-        if (interim) {
-          setCommandInput(interim)
-        }
-        if (finalTranscript.trim()) {
-          const spoken = finalTranscript.trim()
-          setCommandInput('')
-          setVoicePermissionStatus(
-            `Heard: "${spoken.slice(0, 42)}" • Always-On Mic Active`
-          )
-          void submitDirectiveRef.current(spoken)
-        }
-      }
 
-      recognition.onerror = (ev) => {
-        isRecognitionRunningRef.current = false
-        if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
-          setVoicePermissionStatus(
-            'Mic permission blocked by browser — allow microphone access to speak'
-          )
-          return
+        instance.onerror = (ev) => {
+          isRecognitionRunningRef.current = false
+          if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+            setVoicePermissionStatus(
+              'Mic permission blocked by browser — allow microphone access to speak'
+            )
+            return
+          }
         }
-      }
 
-      recognition.onend = () => {
-        isRecognitionRunningRef.current = false
-        // Automatically restart continuous listening whenever Mic is enabled and Jarvis isn't speaking TTS
-        if (voiceEnabledRef.current && !isSpeakingTtsRef.current) {
-          setTimeout(() => {
-            if (
-              voiceEnabledRef.current &&
-              !isSpeakingTtsRef.current &&
-              !isRecognitionRunningRef.current
-            ) {
-              try {
-                recognitionRef.current?.start()
-                isRecognitionRunningRef.current = true
-              } catch {
-                // Ignore if already started
+        instance.onend = () => {
+          isRecognitionRunningRef.current = false
+          // Automatically restart continuous listening whenever Mic is enabled and Jarvis isn't speaking TTS
+          if (voiceEnabledRef.current && !isSpeakingTtsRef.current) {
+            setTimeout(() => {
+              if (
+                voiceEnabledRef.current &&
+                !isSpeakingTtsRef.current &&
+                !isRecognitionRunningRef.current
+              ) {
+                try {
+                  recognitionRef.current?.start()
+                  isRecognitionRunningRef.current = true
+                } catch {
+                  // Ignore if already started
+                }
               }
-            }
-          }, 180)
+            }, 180)
+          }
         }
+
+        recognitionRef.current = instance
       }
 
-      recognition.start()
+      recognitionRef.current.start()
       isRecognitionRunningRef.current = true
       setVoicePermissionStatus('Always-On Mic Active • Speak anytime to JARVIS')
       onCoreStateChange('listening')
@@ -1264,16 +1281,26 @@ export default function JarvisInterior({
                 className={`rounded-xl border p-3 ${
                   m.role === 'user'
                     ? 'ml-4 border-slate-700 bg-slate-900/90 text-slate-100'
-                    : 'mr-1 border-cyan-500/40 bg-cyan-950/30 text-slate-100'
+                    : m.errorReason
+                      ? 'mr-1 border-rose-500/60 bg-rose-950/35 text-rose-100'
+                      : 'mr-1 border-cyan-500/40 bg-cyan-950/30 text-slate-100'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400">
-                  <span className="font-bold text-cyan-300 uppercase">
+                  <span
+                    className={`font-bold uppercase ${
+                      m.errorReason ? 'text-rose-300' : 'text-cyan-300'
+                    }`}
+                  >
                     {m.role === 'user' ? userName : 'J.A.R.V.I.S.'}
-                    {m.intent ? ` • ${m.intent}` : ''}
+                    {m.errorReason
+                      ? ' • ERROR'
+                      : m.intent
+                        ? ` • ${m.intent}`
+                        : ''}
                   </span>
                   <div className="flex items-center gap-1.5">
-                    {m.role === 'jarvis' && !m.isStreaming && (
+                    {m.role === 'jarvis' && !m.isStreaming && !m.errorReason && (
                       <button
                         type="button"
                         onClick={() => speakWithJarvisVoice(m.text, true)}
@@ -1287,6 +1314,24 @@ export default function JarvisInterior({
                   </div>
                 </div>
                 <p className="mt-1.5 leading-relaxed whitespace-pre-wrap">{m.text}</p>
+
+                {/* Visible Error Retry Button (never a fake canned reply) */}
+                {m.errorReason && m.retryPrompt && (
+                  <div className="mt-2 flex items-center justify-between gap-2 border-t border-rose-500/30 pt-2">
+                    <span className="text-[10px] text-rose-300">
+                      Live LLM request failed — no fake template shown.
+                    </span>
+                    <button
+                      type="button"
+                      data-testid="jarvis-retry-button"
+                      disabled={isTransmitting}
+                      onClick={() => void submitDirectiveText(m.retryPrompt!)}
+                      className="cursor-pointer rounded-lg border border-rose-400 bg-rose-500/20 px-2.5 py-1 font-mono text-[10px] font-bold text-rose-200 transition hover:bg-rose-500 hover:text-slate-950 disabled:opacity-50 whitespace-nowrap"
+                    >
+                      ↻ Retry
+                    </button>
+                  </div>
+                )}
 
                 {/* Structured Task Plan Confirm Card */}
                 {m.taskPlan && (
@@ -1331,10 +1376,26 @@ export default function JarvisInterior({
                   </div>
                 )}
 
-                {m.citations && (
-                  <div className="mt-1.5 border-t border-slate-800/80 pt-1 text-[9px] text-cyan-400/90">
-                    {m.citations}
-                  </div>
+                {/* Collapsible Sources footer ONLY when a tool was actually used */}
+                {m.toolsUsed && m.toolsUsed.length > 0 && (
+                  <details
+                    data-testid="jarvis-sources-footer"
+                    className="mt-2 border-t border-slate-800/80 pt-1.5 text-[9px] text-cyan-400/90"
+                  >
+                    <summary className="cursor-pointer font-semibold select-none hover:text-cyan-300">
+                      Sources ({m.toolsUsed.length} tool{m.toolsUsed.length > 1 ? 's' : ''})
+                    </summary>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {m.toolsUsed.map((toolName, idx) => (
+                        <span
+                          key={`${toolName}-${idx}`}
+                          className="rounded border border-cyan-500/30 bg-slate-950/80 px-1.5 py-0.5 font-mono text-[9px] text-cyan-300"
+                        >
+                          {toolName}()
+                        </span>
+                      ))}
+                    </div>
+                  </details>
                 )}
               </div>
             ))}

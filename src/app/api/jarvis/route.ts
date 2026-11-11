@@ -4,7 +4,9 @@ import {
   checkRateLimit,
   getFastOfficeState,
   getJarvisMessages,
+  getJarvisRollingMemory,
   saveJarvisMessage,
+  saveJarvisRollingMemory,
 } from '@/lib/storage'
 import {
   buildJarvisTelemetrySnapshot,
@@ -16,9 +18,10 @@ import {
 export async function GET() {
   try {
     const providerStatus = detectJarvisProviderStatus()
-    const [officeData, messages] = await Promise.all([
+    const [officeData, messages, memory] = await Promise.all([
       getFastOfficeState(),
       getJarvisMessages(20),
+      getJarvisRollingMemory(),
     ])
     const telemetrySnapshot = buildJarvisTelemetrySnapshot(officeData)
 
@@ -27,6 +30,7 @@ export async function GET() {
         ok: true,
         providerStatus,
         messages,
+        memory,
         telemetrySnapshot,
       },
       {
@@ -77,12 +81,18 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { prompt, operatorName, autonomyMode, history } = validation.data
+  const { prompt, operatorName, autonomyMode, history, rollingSummary } =
+    validation.data
   const wantsJson = req.headers.get('accept')?.includes('application/json')
 
   try {
-    // Ultra-fast cache-first read of live Supabase state (<5ms when warm)
-    const officeData = await getFastOfficeState()
+    const [officeData, storedMemory] = await Promise.all([
+      getFastOfficeState(),
+      getJarvisRollingMemory(),
+    ])
+
+    const effectiveRollingSummary =
+      rollingSummary ?? storedMemory.rollingSummary ?? ''
 
     // Non-blocking background persistence of operator message
     void Promise.allSettled([
@@ -110,6 +120,7 @@ export async function POST(req: NextRequest) {
         operatorName,
         autonomyMode,
         history,
+        rollingSummary: effectiveRollingSummary,
         officeData,
       })
 
@@ -123,6 +134,10 @@ export async function POST(req: NextRequest) {
           content: turn.reply,
           messageType: 'jarvis_assistant',
         }),
+        saveJarvisRollingMemory({
+          operatorName,
+          rollingSummary: turn.rollingSummary || effectiveRollingSummary,
+        }),
         addOfficeLog(
           `[JARVIS // ${turn.intent}] (${turn.provider}): "${turn.reply.slice(0, 110)}"`,
           'system',
@@ -135,13 +150,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, data: turn })
     }
 
-    // Stream Server-Sent Events (SSE) with zero artificial delay
+    // Stream Server-Sent Events (SSE)
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
         const sendEvent = (event: string, payload: unknown) => {
           controller.enqueue(
-            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`)
+            encoder.encode(
+              `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`
+            )
           )
         }
 
@@ -159,19 +176,27 @@ export async function POST(req: NextRequest) {
             operatorName,
             autonomyMode,
             history,
+            rollingSummary: effectiveRollingSummary,
             officeData,
           })
 
-          // Emit delta & complete immediately so text and TTS voice start with zero lag
-          sendEvent('delta', {
-            delta: turn.reply,
-            accumulated: turn.reply,
-            state: 'speaking',
-          })
+          // Stream progressive word chunks so the typing indicator transitions smoothly into live streaming text
+          const words = turn.reply.split(' ')
+          const chunkSize = Math.max(3, Math.ceil(words.length / 6))
+          let accumulated = ''
+          for (let i = 0; i < words.length; i += chunkSize) {
+            const slice = words.slice(i, i + chunkSize).join(' ')
+            accumulated = accumulated ? `${accumulated} ${slice}` : slice
+            sendEvent('delta', {
+              delta: slice,
+              accumulated,
+              state: 'speaking',
+            })
+          }
 
           sendEvent('complete', turn)
 
-          // Persist Jarvis response asynchronously without holding up the stream
+          // Persist Jarvis response and rolling memory asynchronously
           void Promise.allSettled([
             saveJarvisMessage({
               senderId: 'jarvis',
@@ -181,6 +206,10 @@ export async function POST(req: NextRequest) {
               recipientName: operatorName,
               content: turn.reply,
               messageType: 'jarvis_assistant',
+            }),
+            saveJarvisRollingMemory({
+              operatorName,
+              rollingSummary: turn.rollingSummary || effectiveRollingSummary,
             }),
             addOfficeLog(
               `[JARVIS // ${turn.intent}] (${turn.provider}): "${turn.reply.slice(0, 110)}"`,
@@ -192,7 +221,7 @@ export async function POST(req: NextRequest) {
           ])
         } catch (err: unknown) {
           sendEvent('error', {
-            error: (err as Error).message || 'Jarvis stream interrupted',
+            error: (err as Error).message || 'Gemini unreachable',
           })
         } finally {
           controller.close()
@@ -209,8 +238,8 @@ export async function POST(req: NextRequest) {
     })
   } catch (err: unknown) {
     return NextResponse.json(
-      { ok: false, error: (err as Error).message || 'Internal server error' },
-      { status: 500 }
+      { ok: false, error: (err as Error).message || 'Gemini unreachable' },
+      { status: 502 }
     )
   }
 }

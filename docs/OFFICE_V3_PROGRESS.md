@@ -142,3 +142,30 @@ Tracking progress for Office V3 architecture implementation across Phases 1 thro
 ### Phase J6: End-to-End Browser QA, Self-Review, and Pull Request (Pending)
 - [ ] Full Playwright E2E walkthrough across 3D, 2D, and mobile viewports with screenshots, self-review fixes, green CI, and PR creation.
 
+---
+
+## JARVIS FIX: Real Gemini Conversation + Live Voice Input + Spoken Replies (Phases J7 to J9)
+
+### Phase J7: Root Cause Diagnosis & Real Gemini Conversation with Native Function Calling (Completed)
+- [x] **Step 1 — Root Cause Diagnosis (`docs/JARVIS_DIAGNOSIS.md`)**:
+  - [x] Verified `GEMINI_API_KEY` is present (`true`) on the server without printing secret values.
+  - [x] Called Google Gemini `ListModels` endpoint (`GET /v1beta/models`) and uncovered why `gemini-2.5-flash` / `gemini-2.5-flash-lite` returned HTTP `404` for new users and why `gemini-flash-lite-latest` timed out without `thinkingConfig: { thinkingBudget: 0 }`.
+  - [x] Documented how the `try/catch` block in `src/lib/jarvis/orchestrator.ts` silently fell back to `buildGroundedFallbackReply()` (`conversationalReplies` template array returning `"Always listening, Josiah..."` and `"Indeed, Josiah..."`) and how `JarvisInterior.tsx` unconditionally appended `"Live Supabase: 24/24 active..."` to every message.
+- [x] **Step 2 — Removed Silent Fallbacks**:
+  - [x] Deleted `conversationalReplies` and `buildGroundedFallbackReply` templates.
+  - [x] Surfaced explicit `"Gemini unreachable: <reason>"` errors in chat with a clickable **Retry** button (`data-testid="jarvis-retry-button"`), and explicit `SIM MODE` labeling when no API key is configured.
+- [x] **Step 3 — Real LLM Conversation, Function-Calling Tools & 20-Turn Rolling Memory**:
+  - [x] Configurable `GEMINI_MODEL` (defaulting to `gemini-3.5-flash` with `thinkingConfig: { thinkingBudget: 0 }` and automatic failover to `gemini-3.1-flash-lite-preview` / `gemini-3.6-flash`).
+  - [x] Authentic British JARVIS persona system prompt (witty, concise 1–3 sentences, fluent in English & Taglish/Filipino, zero office context dumped unless a tool is called).
+  - [x] 7 server-side Zod-validated tools (`get_office_status`, `list_tasks`, `get_agent`, `list_approvals`, `recent_activity`, `dispatch_plan`, `office_command`) with prompt-injection data sanitization.
+  - [x] 20-turn memory window + rolling summary persisted in Supabase (`office_messages` channel `jarvis_memory`).
+  - [x] Collapsible `Sources` footer rendered **only** when `toolsUsed.length > 0`.
+  - [x] Vitest suite (`tests/jarvisOrchestrator.test.ts`) verifying all 6 required test cases.
+
+### Phase J8: Live Voice Input Transcription, Level Meter & Spoken Replies (Pending)
+- [ ] Live interim speech-to-text transcript inside input box, audio level meter, and seamless British TTS playback.
+
+### Phase J9: End-to-End Verification & Final QA (Pending)
+- [ ] Full Playwright E2E verification of live Gemini conversation, tool calls, and voice controls.
+
+

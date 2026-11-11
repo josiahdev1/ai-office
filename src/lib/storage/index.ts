@@ -657,3 +657,97 @@ export async function saveJarvisMessage(params: {
   }
 }
 
+export interface JarvisRollingMemory {
+  operatorName: string
+  preferences: string
+  rollingSummary: string
+  totalTurnsSummarized: number
+  updatedAt: string
+}
+
+let inMemoryRollingMemory: JarvisRollingMemory = {
+  operatorName: 'Josiah',
+  preferences: 'Prefers concise, witty British JARVIS replies; speaks English and Taglish/Filipino.',
+  rollingSummary: '',
+  totalTurnsSummarized: 0,
+  updatedAt: new Date().toISOString(),
+}
+
+/**
+ * Builds a deterministic rolling summary of older conversation turns (> 20 turns ago)
+ * and persists it in Supabase (`office_messages` with message_type = 'jarvis_memory').
+ */
+export function summarizeOlderTurns(
+  turns: Array<{ role: 'user' | 'assistant'; content: string }>,
+  existingSummary = ''
+): string {
+  if (!turns || turns.length === 0) return existingSummary
+  const snippets = turns.slice(-12).map((t) => {
+    const clean = t.content.replace(/\s+/g, ' ').trim().slice(0, 90)
+    return `${t.role === 'user' ? 'Operator' : 'JARVIS'}: ${clean}`
+  })
+  const combined = [existingSummary, ...snippets].filter(Boolean).join(' | ')
+  return combined.slice(-800)
+}
+
+export async function getJarvisRollingMemory(): Promise<JarvisRollingMemory> {
+  const supabase = getSupabase()
+  if (!supabase) return inMemoryRollingMemory
+
+  try {
+    const { data, error } = await supabase
+      .from('office_messages')
+      .select('*')
+      .eq('channel', 'jarvis_memory')
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (!error && data && data.length > 0) {
+      const row = data[0] as JarvisConversationRecord
+      const parsed = JSON.parse(row.content) as Partial<JarvisRollingMemory>
+      inMemoryRollingMemory = {
+        operatorName: parsed.operatorName || inMemoryRollingMemory.operatorName,
+        preferences: parsed.preferences || inMemoryRollingMemory.preferences,
+        rollingSummary: parsed.rollingSummary || '',
+        totalTurnsSummarized: parsed.totalTurnsSummarized || 0,
+        updatedAt: row.created_at || new Date().toISOString(),
+      }
+    }
+  } catch {
+    // Fallback to in-memory rolling summary
+  }
+
+  return inMemoryRollingMemory
+}
+
+export async function saveJarvisRollingMemory(
+  update: Partial<JarvisRollingMemory>
+): Promise<JarvisRollingMemory> {
+  inMemoryRollingMemory = {
+    ...inMemoryRollingMemory,
+    ...update,
+    updatedAt: new Date().toISOString(),
+  }
+
+  const supabase = getSupabase()
+  if (supabase) {
+    try {
+      await supabase.from('office_messages').insert({
+        sender_id: 'jarvis',
+        sender_name: 'J.A.R.V.I.S.',
+        sender_department: 'THE BRAIN',
+        recipient_id: inMemoryRollingMemory.operatorName.toLowerCase().replace(/\s+/g, '_'),
+        recipient_name: inMemoryRollingMemory.operatorName,
+        channel: 'jarvis_memory',
+        content: JSON.stringify(inMemoryRollingMemory),
+        message_type: 'jarvis_memory',
+      })
+    } catch {
+      // Ignore DB error if offline
+    }
+  }
+
+  return inMemoryRollingMemory
+}
+
+
