@@ -40,6 +40,7 @@ export interface OfficeCanvas2DProps {
   onResetCamera?: () => void
   coreState?: JarvisCoreState
   onClickCore?: () => void
+  isDivingToJarvis?: boolean
   className?: string
 }
 
@@ -77,6 +78,7 @@ export default function OfficeCanvas2D({
   onResetCamera,
   coreState = 'idle',
   onClickCore,
+  isDivingToJarvis = false,
   className = '',
 }: OfficeCanvas2DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -90,11 +92,18 @@ export default function OfficeCanvas2D({
   const onArriveRef = useRef(onArriveAgent)
   const coreStateRef = useRef<JarvisCoreState>(coreState)
   const onClickCoreRef = useRef(onClickCore)
+  const isDivingRef = useRef(isDivingToJarvis)
   const coreHoveredRef = useRef(false)
-  const coreScreenBoxRef = useRef<{ px: number; py: number; radius: number }>({
+  const coreScreenBoxRef = useRef<{
+    px: number
+    py: number
+    radius: number
+    pillRect: [number, number, number, number]
+  }>({
     px: 0,
     py: 0,
-    radius: 28,
+    radius: 36,
+    pillRect: [0, 0, 0, 0],
   })
 
   useEffect(() => {
@@ -129,6 +138,10 @@ export default function OfficeCanvas2D({
     onClickCoreRef.current = onClickCore
   }, [onClickCore])
 
+  useEffect(() => {
+    isDivingRef.current = isDivingToJarvis
+  }, [isDivingToJarvis])
+
   // Camera state (targetX, targetZ, zoom) + user pan/zoom offsets
   const camStateRef = useRef({
     targetX: CAMERA_PRESETS[mode].target[0],
@@ -139,6 +152,15 @@ export default function OfficeCanvas2D({
     zoomMultiplier: 1,
     lastMode: mode,
   })
+  const savedCamBeforeDiveRef = useRef<{
+    targetX: number
+    targetZ: number
+    zoom: number
+    panOffsetX: number
+    panOffsetZ: number
+    zoomMultiplier: number
+  } | null>(null)
+  const wasDiving2DRef = useRef(false)
 
   // Persistent A* navigation state per agent
   const agentNavMapRef = useRef<Record<string, AgentNavState>>({})
@@ -169,6 +191,14 @@ export default function OfficeCanvas2D({
     let dragStartY = 0
     let clickMoved = false
 
+    const isPointInCore = (x: number, y: number) => {
+      const coreBox = coreScreenBoxRef.current
+      const [rx, ry, rw, rh] = coreBox.pillRect
+      const inPill = x >= rx && x <= rx + rw && y >= ry && y <= ry + rh
+      const inCircle = Math.hypot(x - coreBox.px, y - coreBox.py) <= coreBox.radius
+      return inPill || inCircle
+    }
+
     const handlePointerDown = (e: PointerEvent) => {
       isDragging = true
       clickMoved = false
@@ -180,9 +210,7 @@ export default function OfficeCanvas2D({
       const rect = canvas.getBoundingClientRect()
       const mx = e.clientX - rect.left
       const my = e.clientY - rect.top
-      const coreBox = coreScreenBoxRef.current
-      const isOverCore =
-        Math.hypot(mx - coreBox.px, my - coreBox.py) <= coreBox.radius
+      const isOverCore = isPointInCore(mx, my)
       coreHoveredRef.current = isOverCore
       if (!isDragging) {
         canvas.style.cursor = isOverCore ? 'pointer' : 'grab'
@@ -212,8 +240,7 @@ export default function OfficeCanvas2D({
         const rect = canvas.getBoundingClientRect()
         const clickX = e.clientX - rect.left
         const clickY = e.clientY - rect.top
-        const coreBox = coreScreenBoxRef.current
-        if (Math.hypot(clickX - coreBox.px, clickY - coreBox.py) <= coreBox.radius) {
+        if (isPointInCore(clickX, clickY)) {
           onClickCoreRef.current?.()
           return
         }
@@ -277,11 +304,40 @@ export default function OfficeCanvas2D({
         cam.zoomMultiplier = 1
       }
 
+      const diving = isDivingRef.current
+      if (diving && !wasDiving2DRef.current) {
+        wasDiving2DRef.current = true
+        savedCamBeforeDiveRef.current = {
+          targetX: cam.targetX,
+          targetZ: cam.targetZ,
+          zoom: cam.zoom,
+          panOffsetX: cam.panOffsetX,
+          panOffsetZ: cam.panOffsetZ,
+          zoomMultiplier: cam.zoomMultiplier,
+        }
+      } else if (!diving && wasDiving2DRef.current) {
+        wasDiving2DRef.current = false
+        if (savedCamBeforeDiveRef.current) {
+          cam.targetX = savedCamBeforeDiveRef.current.targetX
+          cam.targetZ = savedCamBeforeDiveRef.current.targetZ
+          cam.zoom = savedCamBeforeDiveRef.current.zoom
+          cam.panOffsetX = savedCamBeforeDiveRef.current.panOffsetX
+          cam.panOffsetZ = savedCamBeforeDiveRef.current.panOffsetZ
+          cam.zoomMultiplier = savedCamBeforeDiveRef.current.zoomMultiplier
+        }
+      }
+
       const preset = CAMERA_PRESETS[currentMode] || CAMERA_PRESETS.OVERVIEW
-      const lerpFactor = 1 - Math.exp(-5 * dt)
-      cam.targetX += (preset.target[0] + cam.panOffsetX - cam.targetX) * lerpFactor
-      cam.targetZ += (preset.target[2] + cam.panOffsetZ - cam.targetZ) * lerpFactor
-      cam.zoom += (preset.zoom * cam.zoomMultiplier - cam.zoom) * lerpFactor
+      const lerpFactor = 1 - Math.exp(-(diving ? 6.5 : 5.0) * dt)
+      if (diving) {
+        cam.targetX += (0 - cam.targetX) * lerpFactor
+        cam.targetZ += (0 - cam.targetZ) * lerpFactor
+        cam.zoom += (68 - cam.zoom) * lerpFactor
+      } else {
+        cam.targetX += (preset.target[0] + cam.panOffsetX - cam.targetX) * lerpFactor
+        cam.targetZ += (preset.target[2] + cam.panOffsetZ - cam.targetZ) * lerpFactor
+        cam.zoom += (preset.zoom * cam.zoomMultiplier - cam.zoom) * lerpFactor
+      }
 
       const targetX = cam.targetX
       const targetZ = cam.targetZ
@@ -718,10 +774,16 @@ export default function OfficeCanvas2D({
 
         const centerProj = project(0, 1.9, 0)
         const baseRadiusPx = Math.max(9, 0.92 * zoom)
+        const pillW = isCoreHovered ? 190 : 88
+        const pillH = 26
+        const pillX = centerProj.px - pillW * 0.5
+        const pillY = centerProj.py - baseRadiusPx * 1.55 - pillH
+
         coreScreenBoxRef.current = {
           px: centerProj.px,
           py: centerProj.py,
-          radius: Math.max(24, baseRadiusPx * 2.2),
+          radius: Math.max(48, baseRadiusPx * 3.4),
+          pillRect: [pillX - 10, pillY - 10, pillW + 20, pillH + 20],
         }
 
         drawArcReactor2D(
@@ -734,7 +796,7 @@ export default function OfficeCanvas2D({
             state: coreStateRef.current,
             size: 'office',
             hovered: isCoreHovered,
-            showLabel: false,
+            showLabel: true,
             isometricTilt: true,
           }
         )
@@ -1278,13 +1340,25 @@ export default function OfficeCanvas2D({
         className="block h-full w-full cursor-grab active:cursor-grabbing"
       />
 
-      {/* Floating Viewport HUD Controls */}
-      <div className="pointer-events-none absolute bottom-4 left-4 z-30 flex items-center gap-2">
+      {/* Floating Bottom Viewport HUD Controls */}
+      <div className="pointer-events-none absolute bottom-4 left-4 z-30 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[11px] text-slate-300 shadow-xl backdrop-blur-md">
           <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
           <span className="tracking-wide text-slate-400">VIEWPORT (2D ISO):</span>
           <span className="font-bold text-cyan-300">{mode.replace('_', ' ')}</span>
         </div>
+
+        {onClickCore && (
+          <button
+            type="button"
+            data-testid="bottom-toolbar-jarvis-btn-2d"
+            onClick={onClickCore}
+            className="pointer-events-auto cursor-pointer flex items-center gap-1.5 rounded-lg border border-cyan-400/70 bg-cyan-950/90 px-3 py-1.5 font-mono text-[11px] font-bold text-cyan-200 shadow-[0_0_16px_rgba(0,229,255,0.28)] backdrop-blur-md transition-all hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
+          >
+            <span className="h-2 w-2 rounded-full bg-cyan-300 animate-ping" />
+            <span>JARVIS CORE [J]</span>
+          </button>
+        )}
 
         {onResetCamera && (
           <button
@@ -1304,11 +1378,11 @@ export default function OfficeCanvas2D({
 
       {/* Help tooltip */}
       <div className="pointer-events-none absolute bottom-4 right-4 z-30 hidden sm:flex items-center gap-1.5 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[10px] text-slate-400 shadow-xl backdrop-blur-md">
-        <span>Click Agent to Inspect & Route</span>
+        <span>Click Brain Core or Press J for JARVIS</span>
         <span>•</span>
-        <span>Drag to Pan</span>
+        <span>Click Agent to Route</span>
         <span>•</span>
-        <span>Scroll to Zoom</span>
+        <span>Drag / Scroll</span>
       </div>
     </div>
   )

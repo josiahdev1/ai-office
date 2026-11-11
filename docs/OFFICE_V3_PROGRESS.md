@@ -117,10 +117,10 @@ Tracking progress for Office V3 architecture implementation across Phases 1 thro
 - [x] Integrated shared `ArcReactor` into the 3D office Brain core ([`src/components/office/three/BrainCore.tsx`](../src/components/office/three/BrainCore.tsx)) and 2D office Brain core ([`src/components/office/OfficeCanvas2D.tsx`](../src/components/office/OfficeCanvas2D.tsx)) with hover highlight and `"JARVIS"` callout pill.
 - [x] Added Vitest unit tests (`tests/jarvisArcReactor.test.ts`) verifying all 6 states, size tiers, WCAG flash-rate safety (`< 3 Hz`), and 2D/3D parity.
 
-### Phase J2: Entry Points, Cinematic Fly-In/Out Transition, and Interior Chamber (Pending)
-- [ ] Entry points: clicking Brain core in 3D and 2D views, top bar & bottom toolbar `JARVIS` buttons, keyboard shortcut `J`, and `#jarvis` URL hash sync.
-- [ ] Cinematic 1.5s fly-in / fly-out camera transition (skippable on click, instant when `prefers-reduced-motion`), restoring exact camera coordinates on exit (`Exit JARVIS` button & `Esc`).
-- [ ] Spherical dark chamber with hex-grid backdrop, curved holographic glass panels (Left: live agent roster by department; Right: conversation & active plan; Bottom: command input + mic toggle; Top: live Supabase readouts).
+### Phase J2: Entry Points, Cinematic Fly-In/Out Transition, and Interior Chamber (Completed)
+- [x] Entry points: clicking Brain core (and floating `"JARVIS // CLICK TO ENTER"` callout) in both 3D (`/`) and 2D (`/?v=2`) views, top bar (`JARVIS [J]`) & bottom toolbar (`JARVIS CORE [J]`) buttons, keyboard shortcut `J` (ignored inside editable inputs), and plain `#jarvis` URL hash sync (`history.pushState` + `hashchange` listener).
+- [x] Cinematic ~1.45s fly-in / fly-out camera transition (skippable on click, instant `0ms` when `prefers-reduced-motion: reduce`), saving and restoring exact camera target, position, and zoom on exit (`← EXIT JARVIS [ESC]` button & `Esc` key) while the office keeps running in the background.
+- [x] Lazy-loaded spherical dark chamber ([`src/components/jarvis/JarvisInterior.tsx`](../src/components/jarvis/JarvisInterior.tsx)) with hex-grid backdrop, shared `ArcReactor` (`size="interior"`, 5 concentric rings, 36 radial ticks, 32-bar waveform ring, 84 orbital particles), and curved holographic glass panels (Left: live 24-agent roster by department with click-to-follow; Right: conversation & active plan, operator name setting, autonomy toggle, live approvals; Bottom: command input + mic/TTS toggles; Top: live Supabase readouts for `AGENTS ACTIVE`, `TASKS RUNNING`, `QUEUE`, `WAITING FOR YOU`, `TOKENS`, `SIM MODE`, quality & 3D/2D toggles).
 
 ### Phase J3: Streaming `/api/jarvis`, Provider Adapter, Intent Classifier & Live Q&A (Pending)
 - [ ] `POST /api/jarvis` streaming SSE endpoint with Zod validation and rate limiting.

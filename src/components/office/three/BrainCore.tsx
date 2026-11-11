@@ -31,14 +31,39 @@ export function BrainCore({ state = 'idle', onClickCore }: BrainCoreProps) {
 
   return (
     <group position={[0, 0, 0]} name="CommandCenterTheBrain">
-      {/* 1. Central Pedestal & Data Pillar */}
-      <mesh position={[0, 0.35, 0]} receiveShadow castShadow>
+      {/* 1. Central Pedestal & Data Pillar (Clickable to enter Jarvis) */}
+      <mesh
+        position={[0, 0.35, 0]}
+        receiveShadow
+        castShadow
+        onClick={(e) => {
+          e.stopPropagation()
+          onClickCore?.()
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation()
+          setHovered(true)
+          if (typeof document !== 'undefined') document.body.style.cursor = 'pointer'
+        }}
+        onPointerOut={(e) => {
+          e.stopPropagation()
+          setHovered(false)
+          if (typeof document !== 'undefined') document.body.style.cursor = 'auto'
+        }}
+      >
         <cylinderGeometry args={[1.5, 1.9, 0.7, 32]} />
         <meshStandardMaterial color="#090d16" metalness={0.9} roughness={0.3} />
       </mesh>
 
       {/* Pedestal Top Glowing Ring */}
-      <mesh position={[0, 0.71, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh
+        position={[0, 0.71, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        onClick={(e) => {
+          e.stopPropagation()
+          onClickCore?.()
+        }}
+      >
         <ringGeometry args={[1.2, 1.45, 32]} />
         <meshBasicMaterial
           ref={pedestalRingMatRef}
@@ -55,7 +80,8 @@ export function BrainCore({ state = 'idle', onClickCore }: BrainCoreProps) {
           state={state}
           size="office"
           scale={0.95}
-          showLabel={false}
+          hovered={hovered}
+          showLabel={true}
           onClick={onClickCore}
           onHoverChange={setHovered}
         />

@@ -361,11 +361,11 @@ function createJarvisBadgeTexture(
     ctx.fill()
 
     // Label text
-    ctx.font = 'bold 23px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+    ctx.font = 'bold 21px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
     ctx.fillStyle = '#f8fafc'
     ctx.textBaseline = 'middle'
     ctx.textAlign = 'left'
-    ctx.fillText(hovered ? 'JARVIS // ENTER CORE' : 'JARVIS', pillX + 44, dotY + 1)
+    ctx.fillText(hovered ? 'JARVIS // CLICK TO ENTER' : 'JARVIS', pillX + 42, dotY + 1)
   }
   const tex = new THREE.CanvasTexture(canvas)
   tex.needsUpdate = true
@@ -600,10 +600,10 @@ export function ArcReactor({
       onPointerOut={handlePointerOut}
       onClick={handleClick}
     >
-      {/* Invisible Interaction Hit Sphere for effortless clicking in 3D */}
-      <mesh visible={false}>
-        <sphereGeometry args={[size === 'interior' ? 2.9 : 2.2, 16, 16]} />
-        <meshBasicMaterial transparent opacity={0} />
+      {/* Transparent Interaction Hit Sphere for effortless 3D raycasting (must remain visible=true for THREE.Raycaster) */}
+      <mesh position={[0, 0.35, 0]}>
+        <sphereGeometry args={[size === 'interior' ? 3.1 : 2.6, 16, 16]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
       {/* 1. Bright Cyan-White Inner Energy Core */}
@@ -754,6 +754,9 @@ export function ArcReactor({
         <sprite
           position={[0, size === 'interior' ? 3.1 : 2.4, 0]}
           scale={isHovered ? [3.5, 0.82, 1] : [2.95, 0.7, 1]}
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
+          onClick={handleClick}
         >
           <spriteMaterial
             map={badgeTexture}

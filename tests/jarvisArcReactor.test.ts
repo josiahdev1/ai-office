@@ -128,4 +128,53 @@ describe('Phase J1: Shared ArcReactor (3D + 2D) State & Geometry Spec', () => {
       expect.any(Number)
     )
   })
+
+  it('Phase J2: renders expanded "JARVIS // CLICK TO ENTER" callout when hovered and suppresses label when showLabel is false', () => {
+    const fillTextCalls: string[] = []
+    const mockGrad = { addColorStop: vi.fn() }
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      translate: vi.fn(),
+      scale: vi.fn(),
+      beginPath: vi.fn(),
+      closePath: vi.fn(),
+      arc: vi.fn(),
+      ellipse: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      roundRect: vi.fn(),
+      fillText: vi.fn((text: string) => fillTextCalls.push(text)),
+      measureText: vi.fn(() => ({ width: 88 })),
+      createRadialGradient: vi.fn(() => mockGrad),
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 1,
+      lineCap: 'butt',
+      globalAlpha: 1,
+      font: '',
+      textAlign: 'left',
+      textBaseline: 'middle',
+    } as unknown as CanvasRenderingContext2D
+
+    drawArcReactor2D(mockCtx, 200, 150, 28, 1.2, {
+      state: 'idle',
+      size: 'office',
+      hovered: true,
+      showLabel: true,
+    })
+    expect(fillTextCalls).toContain('JARVIS // CLICK TO ENTER')
+
+    fillTextCalls.length = 0
+    drawArcReactor2D(mockCtx, 300, 200, 96, 1.2, {
+      state: 'idle',
+      size: 'interior',
+      hovered: false,
+      showLabel: false,
+    })
+    expect(fillTextCalls).toHaveLength(0)
+  })
 })
+
