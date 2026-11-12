@@ -118,7 +118,7 @@ async function run() {
       } else if (item.primary === 'office_departments') {
         insertData = { id: testId, name: 'Test Dept', color: '#6366f1', room_id: 'Engineering Core', kind: 'open_office' }
       } else if (item.primary === 'office_settings') {
-        const { data } = await client.from('office_settings').select('id').eq('id', 'default').single()
+        await client.from('office_settings').select('id').eq('id', 'default').single()
         console.log(`| ${item.feature} | ${tableStr} | ✓ PASS (Live) | ✓ PASS | **PASS** |`)
         continue
       } else {
@@ -150,7 +150,7 @@ async function run() {
       } else {
         console.log(`| ${item.feature} | ${tableStr} | ✓ PASS | ✓ PASS | **PASS** |`)
       }
-    } catch (err) {
+    } catch {
       console.log(`| ${item.feature} | ${tableStr} | ✗ ERROR | — | **ERROR** |`)
     }
   }

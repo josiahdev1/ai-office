@@ -112,7 +112,7 @@ export function IsometricOffice({
   logs = [],
   doneToday = [],
   supabaseActive = false,
-  tableCounts,
+  tableCounts: _tableCounts,
   onRefreshAgents,
 }: IsometricOfficeProps) {
   // Navigation & Viewport State
