@@ -143,10 +143,20 @@ export function BuildingArchitecture() {
         <boxGeometry args={[51.5, 1.15, 51.5]} />
         <meshStandardMaterial color="#334155" roughness={0.85} />
       </mesh>
+      {/* Wellness Wing Concrete Apron */}
+      <mesh position={[-34, -0.62, 0]} receiveShadow>
+        <boxGeometry args={[22, 1.15, 51.5]} />
+        <meshStandardMaterial color="#334155" roughness={0.85} />
+      </mesh>
 
       {/* Main Building Foundation Slab */}
       <mesh position={[0, -0.58, 0]} receiveShadow>
         <boxGeometry args={[47.6, 1.2, 47.6]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.9} />
+      </mesh>
+      {/* Wellness Wing Foundation Slab */}
+      <mesh position={[-34, -0.58, 0]} receiveShadow>
+        <boxGeometry args={[20, 1.2, 47.6]} />
         <meshStandardMaterial color="#0f172a" roughness={0.9} />
       </mesh>
 
@@ -249,7 +259,7 @@ export function BuildingArchitecture() {
       </group>
 
       {/* ===================================================================== */}
-      {/* 2. CHECKERED CORRIDORS (Connecting 3x3 Rooms)                         */}
+      {/* 2. CHECKERED CORRIDORS (Connecting 3x3 Rooms & Wellness Wing)          */}
       {/* ===================================================================== */}
       <group name="Corridors">
         <mesh position={[0, 0.02, -8]} receiveShadow>
@@ -266,6 +276,20 @@ export function BuildingArchitecture() {
         </mesh>
         <mesh position={[8, 0.02, 0]} receiveShadow>
           <boxGeometry args={[2.4, 0.02, 46]} />
+          <meshStandardMaterial color="#e2e8f0" roughness={0.7} />
+        </mesh>
+        {/* Wellness Wing Corridor Connectors */}
+        <mesh position={[-25.5, 0.02, -8]} receiveShadow>
+          <boxGeometry args={[5.0, 0.02, 2.4]} />
+          <meshStandardMaterial color="#cbd5e1" roughness={0.7} />
+        </mesh>
+        <mesh position={[-25.5, 0.02, 8]} receiveShadow>
+          <boxGeometry args={[5.0, 0.02, 2.4]} />
+          <meshStandardMaterial color="#cbd5e1" roughness={0.7} />
+        </mesh>
+        {/* Wellness Wing Main Corridor */}
+        <mesh position={[-27.5, 0.02, 0]} receiveShadow>
+          <boxGeometry args={[2.4, 0.02, 44]} />
           <meshStandardMaterial color="#e2e8f0" roughness={0.7} />
         </mesh>
       </group>
@@ -322,11 +346,17 @@ export function BuildingArchitecture() {
       {/* 4. EXTERIOR FULL BACK WALLS (North & West)                            */}
       {/* ===================================================================== */}
       <group name="BackWalls">
+        {/* Main Building North Wall */}
         <mesh position={[0, 1.4, -23.2]} castShadow receiveShadow>
           <boxGeometry args={[46.8, 2.8, 0.4]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
-        {[-16, 0, 16].map((x) => (
+        {/* Wellness Wing North Wall */}
+        <mesh position={[-33, 1.4, -23.2]} castShadow receiveShadow>
+          <boxGeometry args={[19.2, 2.8, 0.4]} />
+          <meshStandardMaterial color="#1e293b" roughness={0.8} />
+        </mesh>
+        {[-35, -16, 0, 16].map((x) => (
           <mesh key={`n-win-${x}`} position={[x, 1.6, -23.15]}>
             <planeGeometry args={[8, 1.6]} />
             <meshStandardMaterial
@@ -340,13 +370,28 @@ export function BuildingArchitecture() {
           </mesh>
         ))}
 
+        {/* Main Building West Wall (Divided into 3 segments with doorway openings at z = -8 and z = 8) */}
+        <mesh position={[-23.2, 1.4, -15.5]} castShadow receiveShadow>
+          <boxGeometry args={[0.4, 2.8, 15]} />
+          <meshStandardMaterial color="#1e293b" roughness={0.8} />
+        </mesh>
         <mesh position={[-23.2, 1.4, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.4, 2.8, 12]} />
+          <meshStandardMaterial color="#1e293b" roughness={0.8} />
+        </mesh>
+        <mesh position={[-23.2, 1.4, 15.5]} castShadow receiveShadow>
+          <boxGeometry args={[0.4, 2.8, 15]} />
+          <meshStandardMaterial color="#1e293b" roughness={0.8} />
+        </mesh>
+
+        {/* Wellness Wing West Exterior Wall */}
+        <mesh position={[-41.2, 1.4, 0]} castShadow receiveShadow>
           <boxGeometry args={[0.4, 2.8, 46.8]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
-        {[-16, 0, 16].map((z) => (
-          <mesh key={`w-win-${z}`} position={[-23.15, 1.6, z]} rotation={[0, Math.PI / 2, 0]}>
-            <planeGeometry args={[8, 1.6]} />
+        {[-16, -2, 6, 16].map((z) => (
+          <mesh key={`w-win-wellness-${z}`} position={[-41.15, 1.6, z]} rotation={[0, Math.PI / 2, 0]}>
+            <planeGeometry args={[6, 1.6]} />
             <meshStandardMaterial
               color="#38bdf8"
               emissive="#0284c7"
@@ -376,12 +421,21 @@ export function BuildingArchitecture() {
           <boxGeometry args={[21.8, 0.7, 0.4]} />
           <meshStandardMaterial color="#334155" roughness={0.8} />
         </mesh>
+        {/* Wellness Wing South Cutaway Front Wall */}
+        <mesh position={[-35, 0.35, 23.2]} castShadow receiveShadow>
+          <boxGeometry args={[12.4, 0.7, 0.4]} />
+          <meshStandardMaterial color="#334155" roughness={0.8} />
+        </mesh>
         <mesh position={[-12.5, 0.85, 23.2]}>
           <boxGeometry args={[21.8, 0.3, 0.1]} />
           <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
         </mesh>
         <mesh position={[12.5, 0.85, 23.2]}>
           <boxGeometry args={[21.8, 0.3, 0.1]} />
+          <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+        </mesh>
+        <mesh position={[-35, 0.85, 23.2]}>
+          <boxGeometry args={[12.4, 0.3, 0.1]} />
           <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
         </mesh>
 
@@ -403,6 +457,34 @@ export function BuildingArchitecture() {
         </mesh>
       </group>
 
+      {/* Floating Neon Room Signs above Wellness Wing Doors */}
+      <group name="WellnessFloatingSigns">
+        {[
+          { label: 'NAP ROOM', pos: [-28.8, 1.8, -16], color: '#818cf8', em: '#4f46e5' },
+          { label: 'COMFORT ROOM', pos: [-28.8, 1.8, -2], color: '#2dd4bf', em: '#0d9488' },
+          { label: 'FACILITIES', pos: [-28.8, 1.8, 6], color: '#94a3b8', em: '#475569' },
+          { label: 'GRAND CAFETERIA', pos: [-28.8, 1.8, 16], color: '#fb923c', em: '#ea580c' },
+        ].map((sign, idx) => (
+          <group key={`sign-${idx}`} position={sign.pos as [number, number, number]} rotation={[0, Math.PI / 2, 0]}>
+            {/* Sign Plate */}
+            <mesh>
+              <boxGeometry args={[2.2, 0.45, 0.06]} />
+              <meshStandardMaterial color="#090d16" roughness={0.3} metalness={0.7} />
+            </mesh>
+            {/* Glowing Accent Border */}
+            <mesh position={[0, 0, 0.035]}>
+              <planeGeometry args={[2.0, 0.35]} />
+              <meshStandardMaterial
+                color={sign.color}
+                emissive={sign.em}
+                emissiveIntensity={1.2}
+                roughness={0.2}
+              />
+            </mesh>
+          </group>
+        ))}
+      </group>
+
       {/* ===================================================================== */}
       {/* 6. LOW INTERIOR PARTITION HALF-WALLS WITH DOORWAY OPENINGS            */}
       {/* ===================================================================== */}
@@ -422,6 +504,42 @@ export function BuildingArchitecture() {
             <meshStandardMaterial color="#334155" roughness={0.8} />
           </mesh>
         ))}
+
+        {/* Wellness Wing Room Dividers */}
+        <mesh position={[-35, 0.5, -9]}>
+          <boxGeometry args={[12, 1.0, 0.3]} />
+          <meshStandardMaterial color="#334155" roughness={0.8} />
+        </mesh>
+        <mesh position={[-35, 0.5, 3]}>
+          <boxGeometry args={[12, 1.0, 0.3]} />
+          <meshStandardMaterial color="#334155" roughness={0.8} />
+        </mesh>
+        <mesh position={[-35, 0.5, 9]}>
+          <boxGeometry args={[12, 1.0, 0.3]} />
+          <meshStandardMaterial color="#334155" roughness={0.8} />
+        </mesh>
+
+        {/* Wellness Corridor East Partitions (with door openings at z = -16, -2, 6, 16) */}
+        <mesh position={[-28.9, 0.5, -20]}>
+          <boxGeometry args={[0.3, 1.0, 4]} />
+          <meshStandardMaterial color="#334155" roughness={0.8} />
+        </mesh>
+        <mesh position={[-28.9, 0.5, -10]}>
+          <boxGeometry args={[0.3, 1.0, 7]} />
+          <meshStandardMaterial color="#334155" roughness={0.8} />
+        </mesh>
+        <mesh position={[-28.9, 0.5, 2]}>
+          <boxGeometry args={[0.3, 1.0, 4]} />
+          <meshStandardMaterial color="#334155" roughness={0.8} />
+        </mesh>
+        <mesh position={[-28.9, 0.5, 11]}>
+          <boxGeometry args={[0.3, 1.0, 4]} />
+          <meshStandardMaterial color="#334155" roughness={0.8} />
+        </mesh>
+        <mesh position={[-28.9, 0.5, 20.5]}>
+          <boxGeometry args={[0.3, 1.0, 3]} />
+          <meshStandardMaterial color="#334155" roughness={0.8} />
+        </mesh>
       </group>
 
       {/* ===================================================================== */}
@@ -429,13 +547,13 @@ export function BuildingArchitecture() {
       {/* ===================================================================== */}
       <group name="ExteriorDecor">
         {[
-          [-28, -28],
+          [-45, -28],
           [-14, -28],
           [14, -28],
           [28, -28],
-          [-28, -14],
-          [-28, 14],
-          [-28, 25],
+          [-45, -14],
+          [-45, 14],
+          [-45, 25],
           [-14, 25.2],
           [14, 25.2],
         ].map(([tx, tz], idx) => (

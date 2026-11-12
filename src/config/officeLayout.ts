@@ -123,6 +123,46 @@ export const ROOMS_3D: Record<string, Room3DConfig> = {
     accentColor: '#14b8a6',
     description: 'LLM fine-tuning, computer vision pipelines, and prompt governance',
   },
+  NAP_ROOM: {
+    id: 'NAP_ROOM',
+    name: 'Nap Room & Sleep Pods',
+    center: [-35, 0, -16],
+    size: [12, 12],
+    floorColor: '#1e1b4b', // Deep night indigo
+    wallColor: '#0f172a',
+    accentColor: '#818cf8',
+    description: 'Quiet dark rest pods, bunk beds, dim ambient reading lamps, and Do Not Disturb lights',
+  },
+  COMFORT_ROOM: {
+    id: 'COMFORT_ROOM',
+    name: 'Comfort Room (CR)',
+    center: [-35, 0, -2],
+    size: [12, 10],
+    floorColor: '#0f766e', // Sanitary teal
+    wallColor: '#042f2e',
+    accentColor: '#2dd4bf',
+    description: '6 individual stalls with occupancy indicators, vanities, hand dryers, and mirrors',
+  },
+  FACILITIES: {
+    id: 'FACILITIES',
+    name: 'Facilities & Janitorial',
+    center: [-35, 0, 6],
+    size: [12, 6],
+    floorColor: '#334155', // Slate utilitarian
+    wallColor: '#1e293b',
+    accentColor: '#94a3b8',
+    description: 'Sanitation carts, high-capacity water jugs, mops, laundry bins, and janitorial supplies',
+  },
+  CAFETERIA: {
+    id: 'CAFETERIA',
+    name: 'Grand Cafeteria',
+    center: [-35, 0, 16],
+    size: [12, 12],
+    floorColor: '#9a3412', // Warm terracotta
+    wallColor: '#431407',
+    accentColor: '#f97316',
+    description: 'Full-service cafeteria, hot meal trays, microwaves, 24 dining seats, and recycling hub',
+  },
 }
 
 // Generate circular all-hands coordinates around The Brain at (0, 0, 0)
@@ -142,7 +182,7 @@ function computeCirclePositions(
   return result
 }
 
-const allHandsSlots = computeCirclePositions(24, 5.2, 0, 0)
+const allHandsSlots = computeCirclePositions(48, 5.4, 0, 0)
 
 // Generate structured Pantry & Canteen gathering slots around (-16, 0, 16)
 const pantrySlots: [number, number, number][] = [
@@ -174,6 +214,31 @@ const pantrySlots: [number, number, number][] = [
   [-15.5, 0, 18.4],
   [-17.2, 0, 14.6],
   [-12.2, 0, 14.8],
+  // Grand Cafeteria seating slots (24..47)
+  [-38.9, 0, 12],
+  [-37.1, 0, 12],
+  [-38, 0, 11.1],
+  [-38, 0, 12.9],
+  [-34.9, 0, 12],
+  [-33.1, 0, 12],
+  [-34, 0, 11.1],
+  [-34, 0, 12.9],
+  [-30.9, 0, 12],
+  [-29.1, 0, 12],
+  [-30, 0, 11.1],
+  [-30, 0, 12.9],
+  [-38.9, 0, 16],
+  [-37.1, 0, 16],
+  [-38, 0, 15.1],
+  [-38, 0, 16.9],
+  [-34.9, 0, 16],
+  [-33.1, 0, 16],
+  [-34, 0, 15.1],
+  [-34, 0, 16.9],
+  [-30.9, 0, 16],
+  [-29.1, 0, 16],
+  [-30, 0, 15.1],
+  [-30, 0, 16.9],
 ]
 
 // Generate structured Rec & Gym workout slots around (0, 0, 16)
@@ -206,6 +271,31 @@ const gymSlots: [number, number, number][] = [
   [1.5, 0, 12.8],
   [4.5, 0, 13.5],
   [0, 0, 17.2],
+  // Extra fitness & warm-up positions (24..47)
+  [-3.5, 0, 12.5],
+  [-2.0, 0, 12.5],
+  [-0.5, 0, 12.5],
+  [2.0, 0, 12.5],
+  [3.5, 0, 12.5],
+  [-5.5, 0, 15.0],
+  [-5.5, 0, 16.5],
+  [-5.5, 0, 18.0],
+  [5.5, 0, 14.5],
+  [5.5, 0, 16.0],
+  [5.5, 0, 18.5],
+  [5.5, 0, 20.0],
+  [-3.5, 0, 21.0],
+  [-2.0, 0, 21.0],
+  [-0.5, 0, 21.0],
+  [1.0, 0, 21.0],
+  [2.5, 0, 21.0],
+  [-1.0, 0, 14.5],
+  [1.0, 0, 14.5],
+  [-2.0, 0, 17.0],
+  [2.0, 0, 17.0],
+  [-1.0, 0, 18.5],
+  [1.0, 0, 18.5],
+  [0, 0, 19.0],
 ]
 
 /**
@@ -487,6 +577,41 @@ export const AGENT_WORKSTATIONS_3D: Record<string, AgentWorkstation3D> = {
     pantryPos: pantrySlots[23],
     gymPos: gymSlots[23],
   },
+
+  // 7. Command Center ("The Brain") & Facilities (New Residents)
+  boss: {
+    agentId: 'boss',
+    name: 'Boss',
+    department: 'COMMAND',
+    room: 'Command Center ("The Brain")',
+    deskPos: [3.5, 0, 2.5],
+    facing: 'NW',
+    allHandsPos: allHandsSlots[24],
+    pantryPos: pantrySlots[24],
+    gymPos: gymSlots[24],
+  },
+  cleaner_1: {
+    agentId: 'cleaner_1',
+    name: 'Cleaner 1',
+    department: 'FACILITIES_WELLNESS',
+    room: 'Facilities & Janitorial',
+    deskPos: [-33, 0, 5],
+    facing: 'SW',
+    allHandsPos: allHandsSlots[25],
+    pantryPos: pantrySlots[25],
+    gymPos: gymSlots[25],
+  },
+  cleaner_2: {
+    agentId: 'cleaner_2',
+    name: 'Cleaner 2',
+    department: 'FACILITIES_WELLNESS',
+    room: 'Facilities & Janitorial',
+    deskPos: [-37, 0, 5],
+    facing: 'SE',
+    allHandsPos: allHandsSlots[26],
+    pantryPos: pantrySlots[26],
+    gymPos: gymSlots[26],
+  },
 }
 
 export type DepartmentMode =
@@ -495,6 +620,9 @@ export type DepartmentMode =
   | 'ALL_HANDS'
   | 'PANTRY'
   | 'GYM'
+  | 'WELLNESS'
+  | 'CAFETERIA'
+  | 'NAP_ROOM'
 
 export interface CameraPreset {
   target: [number, number, number]
@@ -521,6 +649,18 @@ export const CAMERA_PRESETS: Record<DepartmentMode, CameraPreset> = {
   GYM: {
     target: [0, 0, 16],
     zoom: 32,
+  },
+  WELLNESS: {
+    target: [-34, 0, 0],
+    zoom: 22,
+  },
+  CAFETERIA: {
+    target: [-35, 0, 16],
+    zoom: 30,
+  },
+  NAP_ROOM: {
+    target: [-35, 0, -16],
+    zoom: 30,
   },
 }
 
@@ -642,9 +782,14 @@ export function getAgentTargetPosition(
     case 'ALL_HANDS':
       return ws.allHandsPos
     case 'PANTRY':
+    case 'CAFETERIA':
       return ws.pantryPos
     case 'GYM':
       return ws.gymPos
+    case 'NAP_ROOM':
+      return [-35, 0, -16]
+    case 'WELLNESS':
+      return [-34, 0, 0]
     case 'FOCUS_WORK':
     case 'OVERVIEW':
     default:

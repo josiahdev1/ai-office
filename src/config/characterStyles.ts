@@ -440,6 +440,49 @@ export const CHARACTER_STYLES: Record<string, CharacterStyleConfig> = {
     accessory: 'cap',
     accessoryColor: '#78350f',
   },
+
+  // ============================================================================
+  // 8. AUTONOMOUS FLEET: Boss (Chief of Staff) & Facilities Cleaners
+  // ============================================================================
+  boss: {
+    agentId: 'boss',
+    gender: 'male',
+    spriteKey: 'finance_director_suit',
+    hairStyle: 'parted',
+    hairColor: '#090d16',
+    outfitColor: '#00e5ff', // Cyan-400 Chief of Staff Blazer
+    sleeveColor: '#0891b2',
+    bottomColor: '#0f172a',
+    skinColor: '#fed7aa',
+    accessory: 'glasses',
+    accessoryColor: '#00e5ff',
+  },
+  cleaner_1: {
+    agentId: 'cleaner_1',
+    gender: 'male',
+    spriteKey: 'dev_male_1',
+    hairStyle: 'short',
+    hairColor: '#1e293b',
+    outfitColor: '#059669', // Emerald facilities overalls
+    sleeveColor: '#047857',
+    bottomColor: '#064e3b',
+    skinColor: '#fdba74',
+    accessory: 'cap',
+    accessoryColor: '#10b981',
+  },
+  cleaner_2: {
+    agentId: 'cleaner_2',
+    gender: 'female',
+    spriteKey: 'dev_female_1',
+    hairStyle: 'ponytail',
+    hairColor: '#451a03',
+    outfitColor: '#0d9488', // Teal facilities overalls
+    sleeveColor: '#0f766e',
+    bottomColor: '#134e4a',
+    skinColor: '#fed7aa',
+    accessory: 'cap',
+    accessoryColor: '#14b8a6',
+  },
 }
 
 const FALLBACK_PALETTES: Omit<CharacterStyleConfig, 'agentId'>[] = [

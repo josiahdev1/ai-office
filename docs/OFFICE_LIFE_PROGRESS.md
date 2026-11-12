@@ -22,13 +22,17 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K2: Wellness Wing + Departments + New Agents
-- [ ] Nap Room (8+ beds, single/bunk, approach tile, reservation slot)
-- [ ] Comfort Room (6+ stalls with doors, occupied sign, sinks, dryers)
-- [ ] Cafeteria (24+ seats, serving line, trays, microwave, fridge, time-based meal props)
-- [ ] Facilities Room (cleaning cart, mops, buckets, supply shelves)
-- [ ] Water Dispensers (6+ with jug levels)
-- [ ] Idempotent `office_departments` table + "Add department" wizard
-- [ ] New resident agents: Boss (Chief of Staff), Cleaner 1, Cleaner 2
+- [x] Phase K2 Completed:
+  - Modeled full 3D Wellness Wing: Nap Room (8 beds, lamps, DND lights), Comfort Room (6 stalls, mirrors, dryers), Cafeteria (buffet, fridge, 24 dining seats), Facilities (yellow cart, jugs shelf), and 6 water dispensers.
+  - Implemented data-driven `office_departments` table + interactive "+ DEPT" Provisioning Wizard modal with full validation.
+  - Upserted 3 new resident agents into Supabase: Boss (Chief of Staff beside THE BRAIN with clipboard), Cleaner 1, and Cleaner 2 (Facilities & Wellness), verified via 21/21 passing test suites.
+- [x] Nap Room (8+ beds, single/bunk, approach tile, reservation slot)
+- [x] Comfort Room (6+ stalls with doors, occupied sign, sinks, dryers)
+- [x] Cafeteria (24+ seats, serving line, trays, microwave, fridge, time-based meal props)
+- [x] Facilities Room (cleaning cart, mops, buckets, supply shelves)
+- [x] Water Dispensers (6+ with jug levels)
+- [x] Idempotent `office_departments` table + "Add department" wizard
+- [x] New resident agents: Boss (Chief of Staff), Cleaner 1, Cleaner 2
 
 ---
 

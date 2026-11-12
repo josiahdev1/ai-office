@@ -11,9 +11,15 @@
  * - Phase 3 ('sitting_down', 300ms -> 'seated' / 'standing'): Arrives at unique slot and persists to Supabase
  */
 
-export const GRID_MIN = -23
-export const GRID_MAX = 23
-export const GRID_SIZE = GRID_MAX - GRID_MIN + 1 // 47x47 1m tiles
+export const GRID_MIN_X = -44
+export const GRID_MAX_X = 23
+export const GRID_MIN_Z = -23
+export const GRID_MAX_Z = 23
+export const GRID_MIN = GRID_MIN_X
+export const GRID_MAX = GRID_MAX_X
+export const GRID_SIZE_X = GRID_MAX_X - GRID_MIN_X + 1 // 68
+export const GRID_SIZE_Z = GRID_MAX_Z - GRID_MIN_Z + 1 // 47
+export const GRID_SIZE = Math.max(GRID_SIZE_X, GRID_SIZE_Z)
 
 export type NavigationSubState =
   | 'seated'
@@ -56,7 +62,7 @@ function isDoorwayCoord(c: number): boolean {
  * Checks whether a 1m x 1m world tile (gx, gz) is walkable or blocked by walls/pedestal.
  */
 export function isWorldTileWalkable(gx: number, gz: number): boolean {
-  if (gx < GRID_MIN || gx > GRID_MAX || gz < GRID_MIN || gz > GRID_MAX) {
+  if (gx < GRID_MIN_X || gx > GRID_MAX_X || gz < GRID_MIN_Z || gz > GRID_MAX_Z) {
     return false
   }
 
@@ -72,24 +78,78 @@ export function isWorldTileWalkable(gx: number, gz: number): boolean {
     if (!inBrainDoorway) return false
   }
 
-  // 3. Horizontal interior partition walls separating N/Center/S rows (at z = -9, -8, 8, 9)
-  if (Math.abs(gz) === 9) {
-    if (!isDoorwayCoord(gx)) {
-      return false
+  // 3. Main Building partitions (for gx >= -23)
+  if (gx >= -23) {
+    // Horizontal interior partition walls separating N/Center/S rows (at z = -9, -8, 8, 9)
+    if (Math.abs(gz) === 9) {
+      if (!isDoorwayCoord(gx)) {
+        return false
+      }
     }
-  }
-  if (Math.abs(gz) === 8) {
-    const absX = Math.abs(gx)
-    if ((absX >= 10 && absX <= 14) || (absX >= 19 && absX <= 23)) {
-      return false
+    if (Math.abs(gz) === 8) {
+      const absX = Math.abs(gx)
+      if ((absX >= 10 && absX <= 14) || (absX >= 19 && absX <= 23)) {
+        return false
+      }
+    }
+
+    // Vertical interior partition walls separating W/Center/E columns (at x = -9, 9)
+    if (Math.abs(gx) === 9) {
+      if (!isDoorwayCoord(gz)) {
+        return false
+      }
     }
   }
 
-  // 4. Vertical interior partition walls separating W/Center/E columns (at x = -9, 9)
-  if (Math.abs(gx) === 9) {
-    if (!isDoorwayCoord(gz)) {
+  // 4. Boundary between Main Building and Wellness Wing at x = -23
+  if (gx === -23) {
+    // Only North (-8) and South (8) corridor exits are passable
+    const isCorridorExit = (gz >= -9 && gz <= -7) || (gz >= 7 && gz <= 9)
+    if (!isCorridorExit) return false
+  }
+
+  // 5. Wellness Wing (for gx < -23)
+  if (gx < -23) {
+    // Corridor connectors from main building (x between -26 and -23)
+    if (gx > -27) {
+      const isConnector = (gz >= -9 && gz <= -7) || (gz >= 7 && gz <= 9)
+      if (!isConnector) return false
+    }
+
+    // Outer boundary of wellness wing
+    if (gx < -41 || gz < -21 || gz > 21) {
       return false
     }
+
+    // Main north-south corridor of wellness wing runs along x in [-28, -26]
+    const inWellnessCorridor = gx >= -28 && gx <= -26 && gz >= -20 && gz <= 20
+    if (inWellnessCorridor) {
+      return true
+    }
+
+    // Partition between Wellness Corridor and Rooms at gx = -29
+    if (gx === -29) {
+      // Doorways into the 4 rooms:
+      // Nap Room door: z in [-17, -15]
+      // CR door: z in [-3, -1]
+      // Facilities door: z in [5, 7]
+      // Cafeteria door: z in [15, 17]
+      const isNapDoor = gz >= -17 && gz <= -15
+      const isCrDoor = gz >= -3 && gz <= -1
+      const isFacDoor = gz >= 5 && gz <= 7
+      const isCafeDoor = gz >= 15 && gz <= 17
+      if (!isNapDoor && !isCrDoor && !isFacDoor && !isCafeDoor) {
+        return false
+      }
+    }
+
+    // Interior dividing walls between rooms in Wellness Wing (for gx <= -29):
+    // Wall between Nap Room and CR at gz = -9
+    if (gz === -9 && gx <= -29) return false
+    // Wall between CR and Facilities at gz = 3
+    if (gz === 3 && gx <= -29) return false
+    // Wall between Facilities and Cafeteria at gz = 9
+    if (gz === 9 && gx <= -29) return false
   }
 
   return true
@@ -111,16 +171,16 @@ export function findPath(
     return [[targetX, 0, targetZ]]
   }
 
-  const sx = Math.max(GRID_MIN, Math.min(GRID_MAX, Math.round(startX)))
-  const sz = Math.max(GRID_MIN, Math.min(GRID_MAX, Math.round(startZ)))
-  const tx = Math.max(GRID_MIN, Math.min(GRID_MAX, Math.round(targetX)))
-  const tz = Math.max(GRID_MIN, Math.min(GRID_MAX, Math.round(targetZ)))
+  const sx = Math.max(GRID_MIN_X, Math.min(GRID_MAX_X, Math.round(startX)))
+  const sz = Math.max(GRID_MIN_Z, Math.min(GRID_MAX_Z, Math.round(startZ)))
+  const tx = Math.max(GRID_MIN_X, Math.min(GRID_MAX_X, Math.round(targetX)))
+  const tz = Math.max(GRID_MIN_Z, Math.min(GRID_MAX_Z, Math.round(targetZ)))
 
   if (sx === tx && sz === tz) {
     return [[targetX, 0, targetZ]]
   }
 
-  const key = (x: number, z: number) => (x - GRID_MIN) * GRID_SIZE + (z - GRID_MIN)
+  const key = (x: number, z: number) => (x - GRID_MIN_X) * GRID_SIZE_Z + (z - GRID_MIN_Z)
   const startKey = key(sx, sz)
   const targetKey = key(tx, tz)
 
@@ -145,7 +205,7 @@ export function findPath(
   let iterations = 0
   let reachedKey = -1
 
-  while (openSet.length > 0 && iterations < 2500) {
+  while (openSet.length > 0 && iterations < 3500) {
     iterations++
     let bestIdx = 0
     let bestF = fScore.get(openSet[0]) ?? Infinity
@@ -167,13 +227,13 @@ export function findPath(
     }
 
     closed.add(current)
-    const cx = Math.floor(current / GRID_SIZE) + GRID_MIN
-    const cz = (current % GRID_SIZE) + GRID_MIN
+    const cx = Math.floor(current / GRID_SIZE_Z) + GRID_MIN_X
+    const cz = (current % GRID_SIZE_Z) + GRID_MIN_Z
 
     for (const [dx, dz, stepCost] of dirs) {
       const nx = cx + dx
       const nz = cz + dz
-      if (nx < GRID_MIN || nx > GRID_MAX || nz < GRID_MIN || nz > GRID_MAX) {
+      if (nx < GRID_MIN_X || nx > GRID_MAX_X || nz < GRID_MIN_Z || nz > GRID_MAX_Z) {
         continue
       }
 
@@ -191,12 +251,13 @@ export function findPath(
         }
       }
 
-      // Strongly prefer walking along the checkered hallways (|x| = 7..8 or |z| = 7..8)
+      // Strongly prefer walking along corridors (main building |x|=7..8, |z|=7..8, and wellness wing corridor)
       const isCorridor =
         Math.abs(nx) === 8 ||
         Math.abs(nz) === 8 ||
         Math.abs(nx) === 7 ||
-        Math.abs(nz) === 7
+        Math.abs(nz) === 7 ||
+        (nx >= -28 && nx <= -26)
       const weightedStep = isCorridor ? stepCost * 0.68 : stepCost
       const tentativeG = (gScore.get(current) ?? Infinity) + weightedStep
 
@@ -233,8 +294,8 @@ export function findPath(
   const rawPoints: [number, number][] = []
   let curr: number | undefined = reachedKey
   while (curr !== undefined && curr !== startKey) {
-    const px = Math.floor(curr / GRID_SIZE) + GRID_MIN
-    const pz = (curr % GRID_SIZE) + GRID_MIN
+    const px = Math.floor(curr / GRID_SIZE_Z) + GRID_MIN_X
+    const pz = (curr % GRID_SIZE_Z) + GRID_MIN_Z
     rawPoints.push([px, pz])
     curr = cameFrom.get(curr)
   }

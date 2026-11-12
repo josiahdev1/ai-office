@@ -26,6 +26,7 @@ import { formatPHTTime } from '@/lib/office/db-map'
 import { formatIloiloClock } from '@/lib/office/clock'
 import type { JarvisCoreState } from '@/components/jarvis/ArcReactor'
 import { AVAILABLE_MODELS } from '@/lib/jarvis/orchestrator'
+import { AddDepartmentModal } from '@/components/office/AddDepartmentModal'
 
 const STORAGE_MODE_KEY = 'easyup_hq_mode_v3'
 const STORAGE_OVERRIDES_KEY = 'easyup_hq_overrides_v3'
@@ -55,6 +56,9 @@ const DEFAULT_AGENT_MODELS: Record<string, string> = {
   blaze: 'hf-smollm2-135m',
   ferwin: 'jarvis-local-slm-v1',
   mary_grace: 'hf-smollm2-360m',
+  boss: 'gemini-2.5-pro',
+  cleaner_1: 'hf-smollm2-360m',
+  cleaner_2: 'hf-smollm2-360m',
 }
 
 function modeToRoomName(mode: DepartmentMode, defaultRoom: string): string {
@@ -63,6 +67,12 @@ function modeToRoomName(mode: DepartmentMode, defaultRoom: string): string {
       return 'Rec & Gym'
     case 'PANTRY':
       return 'Pantry & Canteen'
+    case 'CAFETERIA':
+      return 'Grand Cafeteria'
+    case 'NAP_ROOM':
+      return 'Nap Room & Sleep Pods'
+    case 'WELLNESS':
+      return 'Wellness Wing & CR'
     case 'ALL_HANDS':
       return 'Command Center ("The Brain")'
     case 'FOCUS_WORK':
@@ -210,6 +220,7 @@ function HQCommandPage() {
   const [isRosterOpen, setIsRosterOpen] = useState<boolean>(false)
   const [rosterSearch, setRosterSearch] = useState<string>('')
   const [rosterDeptFilter, setRosterDeptFilter] = useState<string>('ALL')
+  const [isAddDeptModalOpen, setIsAddDeptModalOpen] = useState<boolean>(false)
 
   // JARVIS Orchestrator State & Cinematic Transition Phase
   const [jarvisPhase, setJarvisPhase] = useState<JarvisTransitionPhase>('closed')
@@ -932,7 +943,9 @@ function HQCommandPage() {
     { mode: 'OVERVIEW', label: 'OVERVIEW' },
     { mode: 'FOCUS_WORK', label: 'FOCUS WORK' },
     { mode: 'ALL_HANDS', label: 'ALL HANDS' },
-    { mode: 'PANTRY', label: 'PANTRY & CANTEEN' },
+    { mode: 'PANTRY', label: 'PANTRY' },
+    { mode: 'CAFETERIA', label: 'CAFETERIA' },
+    { mode: 'NAP_ROOM', label: 'NAP ROOM' },
     { mode: 'GYM', label: 'REC & GYM' },
   ]
 
@@ -1074,6 +1087,15 @@ function HQCommandPage() {
               </button>
             )
           })}
+          <div className="h-4 w-px bg-slate-800 mx-0.5" />
+          <button
+            type="button"
+            data-testid="add-dept-button"
+            onClick={() => setIsAddDeptModalOpen(true)}
+            className="cursor-pointer rounded-lg px-2 py-1 font-mono text-[10px] font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all whitespace-nowrap"
+          >
+            + DEPT
+          </button>
         </div>
 
         {/* Right: Real-time PHT Clock, Live Badge & Instant 3D / 2D Viewport Switcher */}
@@ -2107,6 +2129,16 @@ function HQCommandPage() {
           </div>
         </aside>
       </div>
+
+      {/* Add Department Wizard Modal */}
+      <AddDepartmentModal
+        isOpen={isAddDeptModalOpen}
+        onClose={() => setIsAddDeptModalOpen(false)}
+        onDepartmentCreated={(dept) => {
+          const logLine = `${formatPHTTime()} [DEPT WIZARD] Department "${dept.name}" (${dept.id}) registered.`
+          setLogs((prev) => [logLine, ...prev].slice(0, 50))
+        }}
+      />
     </main>
   )
 }
