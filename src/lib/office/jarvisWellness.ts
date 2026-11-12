@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { Agent } from '@/components/office/types'
 import { needsManager } from './needsEngine'
 import { officeSupabase } from '../supabase/officeService'
+import { brainLearningManager } from './brainLearningEngine'
 
 export type AutonomyMode = 'ASK_FOR_ALL' | 'STANDING_POLICY' | 'OFF'
 export type AgentPinStatus = 'NORMAL' | 'NEVER_REST' | 'MUST_REST'
@@ -202,29 +203,39 @@ export function mapTaskToBestAgent(
     return { agent: ag, needs, isSleeping, isCritical, isBusy }
   })
 
-  // Priority 1: Available agents who are not sleeping and have healthy energy (> 35)
-  const healthyAvailable = candidatesWithNeeds
-    .filter((c) => !c.isSleeping && !c.isCritical && !c.isBusy)
-    .sort((a, b) => b.needs.energy - a.needs.energy)
+  // Priority 1: Available agents scored by energy + matching learned Brain insights
+  const taskKeywords = task.title.toLowerCase().split(/\s+/)
+  const healthyAvailable = candidatesWithNeeds.filter(
+    (c) => !c.isSleeping && !c.isCritical && !c.isBusy
+  )
 
-  if (healthyAvailable.length > 0) {
-    const best = healthyAvailable[0]
+  const candidateInsightScores = healthyAvailable
+    .map((c) => {
+      const insights = brainLearningManager.getAgentInsights(c.agent.id)
+      const matchingInsight = insights.find(
+        (ins) =>
+          ins.kind === 'strength' &&
+          taskKeywords.some((kw) => kw.length >= 4 && ins.text.toLowerCase().includes(kw))
+      )
+      return {
+        ...c,
+        matchingInsight,
+        score: c.needs.energy + (matchingInsight ? 45 : 0),
+      }
+    })
+    .sort((a, b) => b.score - a.score)
+
+  if (candidateInsightScores.length > 0) {
+    const best = candidateInsightScores[0]
+    if (best.matchingInsight) {
+      return {
+        chosenAgent: best.agent,
+        reason: `${best.matchingInsight.text} (Energy: ${Math.round(best.needs.energy)}%, Morale: ${Math.round(best.needs.morale)}%).`,
+      }
+    }
     return {
       chosenAgent: best.agent,
       reason: `Selected ${best.agent.name} (Energy: ${Math.round(best.needs.energy)}%, Morale: ${Math.round(best.needs.morale)}%, status: available).`,
-    }
-  }
-
-  // Priority 2: Available agents with moderate energy (20 - 35)
-  const moderateAvailable = candidatesWithNeeds
-    .filter((c) => !c.isSleeping && !c.isCritical && !c.isBusy)
-    .sort((a, b) => b.needs.energy - a.needs.energy)
-
-  if (moderateAvailable.length > 0) {
-    const best = moderateAvailable[0]
-    return {
-      chosenAgent: best.agent,
-      reason: `Selected ${best.agent.name} (Energy: ${Math.round(best.needs.energy)}%, available).`,
     }
   }
 

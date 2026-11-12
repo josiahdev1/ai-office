@@ -28,6 +28,8 @@ import type { JarvisCoreState } from '@/components/jarvis/ArcReactor'
 import { AVAILABLE_MODELS } from '@/lib/jarvis/orchestrator'
 import { AddDepartmentModal } from '@/components/office/AddDepartmentModal'
 import { AgentLogDrawer } from '@/components/office/AgentLogDrawer'
+import { BrainLogDrawer } from '@/components/office/BrainLogDrawer'
+import { brainLearningManager } from '@/lib/office/brainLearningEngine'
 import {
   needsManager,
   getTirednessVisualState,
@@ -238,6 +240,7 @@ function HQCommandPage() {
   const [rosterDeptFilter, setRosterDeptFilter] = useState<string>('ALL')
   const [isAddDeptModalOpen, setIsAddDeptModalOpen] = useState<boolean>(false)
   const [isAgentLogDrawerOpen, setIsAgentLogDrawerOpen] = useState<boolean>(false)
+  const [isBrainLogOpen, setIsBrainLogOpen] = useState<boolean>(false)
   const [rosterTab, setRosterTab] = useState<'roster' | 'wellness'>('roster')
   const [wellnessSort, setWellnessSort] = useState<'lowest_energy' | 'lowest_morale' | 'name'>('lowest_energy')
   const [agentPins, setAgentPins] = useState<Record<string, AgentPinStatus>>({})
@@ -1175,6 +1178,15 @@ function HQCommandPage() {
             className="cursor-pointer rounded-lg px-2 py-1 font-mono text-[10px] font-bold text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all whitespace-nowrap"
           >
             AGENT LOG
+          </button>
+          <button
+            type="button"
+            data-testid="open-brain-log-button"
+            onClick={() => setIsBrainLogOpen(true)}
+            className="cursor-pointer rounded-lg px-2 py-1 font-mono text-[10px] font-bold text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/20 transition-all whitespace-nowrap flex items-center gap-1"
+          >
+            <span>🧠</span>
+            <span>BRAIN LOG</span>
           </button>
         </div>
 
@@ -2168,6 +2180,27 @@ function HQCommandPage() {
               </span>
             </div>
 
+            {/* The Brain Latest Insight Hover Chip */}
+            {(() => {
+              const last = brainLearningManager.getLastLearnedInsight()
+              if (!last) return null
+              return (
+                <div
+                  title={`Latest Learned: ${last.text}`}
+                  onClick={() => setIsBrainLogOpen(true)}
+                  className="cursor-pointer mb-2 flex items-center justify-between gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-950/20 px-2 py-1 text-[10px] font-mono text-cyan-300 hover:bg-cyan-900/30 transition-colors"
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span>🧠</span>
+                    <span className="truncate">LAST LEARNED: {last.text}</span>
+                  </div>
+                  <span className="shrink-0 text-[8px] text-cyan-400 font-bold hover:underline">
+                    VIEW LOG →
+                  </span>
+                </div>
+              )
+            })()}
+
             <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
               {approvals.length === 0 ? (
                 <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-2.5 text-center">
@@ -3001,6 +3034,16 @@ function HQCommandPage() {
         onClose={() => setIsAgentLogDrawerOpen(false)}
         initialAgentId={selectedAgent?.id}
         agentList={agents.map((a) => ({ id: a.id, name: a.name }))}
+      />
+
+      {/* The Brain Learning Log & Collective Insights Drawer */}
+      <BrainLogDrawer
+        isOpen={isBrainLogOpen}
+        onClose={() => setIsBrainLogOpen(false)}
+        onGatherTriggered={(count) => {
+          const logLine = `${formatPHTTime()} [BOSS GATHER] Boss delivered ${count} new collective insights into THE BRAIN core.`
+          setLogs((prev) => [logLine, ...prev].slice(0, 50))
+        }}
       />
     </main>
   )

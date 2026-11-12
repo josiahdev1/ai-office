@@ -85,9 +85,13 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K7: Boss Gathering + Brain Learning Log
-- [ ] Boss Gather job (delta scan, statistics, structured insights)
-- [ ] `office_gather_runs`, `office_brain_learning_log`, and `office_agent_insights`
-- [ ] Brain log UI panel in Jarvis dashboard & 3D delivery animation
+- [x] Phase K7 Completed:
+  - Idempotent schema migration 0014: `office_gather_runs`, `office_brain_learning_log`, `office_agent_insights`, and `office_jarvis_memory` with permissive RLS, indexes, and Realtime publication.
+  - Built `BrainLearningManager` engine with secret sanitization/rejection filter, deterministic statistics, semantic deduplication (`kind: 'duplicate'`), daily token cap, and RFC-4180 CSV export.
+  - Delivered Brain Learning Log drawer, HUD Last Learned chip, task-to-agent mapping booster (+45 boost citing learned insights in assignment reason), and JARVIS tools (`trigger_boss_gather`, `get_brain_learning_log`, `manage_brain_insight`).
+- [x] Boss Gather job (delta scan, statistics, structured insights)
+- [x] `office_gather_runs`, `office_brain_learning_log`, and `office_agent_insights`
+- [x] Brain log UI panel in Jarvis dashboard & 3D delivery animation
 
 ---
 
