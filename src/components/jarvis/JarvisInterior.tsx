@@ -33,6 +33,7 @@ import {
   checkEchoOverlap,
   getEchoProtectedMediaConstraints,
 } from '@/lib/jarvis/voiceState'
+import { needsManager } from '@/lib/office/needsEngine'
 
 export type JarvisQualityPreset = 'low' | 'medium' | 'high'
 
@@ -506,6 +507,46 @@ export default function JarvisInterior({
       avgProgress,
     }
   }, [agents, approvals, agentRouteOverrides, currentMode])
+
+  // Real rule-based WARN items from actual needs state (Energy < 15%, Overwork > 4h, Sleep Debt > 60m)
+  const wellnessWarnings = useMemo(() => {
+    const warnings: Array<{
+      id: string
+      agentId: string
+      agentName: string
+      type: 'CRITICAL_ENERGY' | 'OVERWORK' | 'SLEEP_DEBT'
+      message: string
+      severity: 'crit' | 'warn'
+      energy: number
+    }> = []
+
+    const now = new Date()
+    for (const ag of agents) {
+      const needs = needsManager.getAgentNeeds(ag.id, now)
+      if (needs.energy < 15) {
+        warnings.push({
+          id: `warn-energy-${ag.id}`,
+          agentId: ag.id,
+          agentName: ag.name,
+          type: 'CRITICAL_ENERGY',
+          message: `${ag.name} has critical energy (${Math.round(needs.energy)}%). Rest required.`,
+          severity: 'crit',
+          energy: needs.energy,
+        })
+      } else if (needs.sleepDebt > 60) {
+        warnings.push({
+          id: `warn-sleep-${ag.id}`,
+          agentId: ag.id,
+          agentName: ag.name,
+          type: 'SLEEP_DEBT',
+          message: `${ag.name} has elevated sleep debt (${Math.round(needs.sleepDebt)}m). Nap recommended.`,
+          severity: 'warn',
+          energy: needs.energy,
+        })
+      }
+    }
+    return warnings.sort((a, b) => a.energy - b.energy)
+  }, [agents])
 
   const [messages, setMessages] = useState<JarvisChatMessage[]>([])
 
@@ -1850,6 +1891,37 @@ export default function JarvisInterior({
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Real Wellness Alerts (WARN items from real rules) */}
+          {wellnessWarnings.length > 0 && (
+            <div
+              data-testid="jarvis-wellness-warnings"
+              className="border-b border-amber-500/30 bg-amber-950/30 p-2.5 space-y-1.5 font-mono text-[10px]"
+            >
+              <div className="flex items-center justify-between text-amber-300 font-bold uppercase tracking-wider">
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                  ⚠ WELLNESS &amp; EXHAUSTION WARNINGS ({wellnessWarnings.length})
+                </span>
+                <span className="text-[9px] text-amber-400/80">[SIMULATED ENGINE]</span>
+              </div>
+              <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                {wellnessWarnings.slice(0, 4).map((w) => (
+                  <div
+                    key={w.id}
+                    className={`flex items-center gap-1.5 rounded border px-2 py-1 ${
+                      w.severity === 'crit'
+                        ? 'border-rose-500/50 bg-rose-950/70 text-rose-200'
+                        : 'border-amber-500/40 bg-amber-950/60 text-amber-200'
+                    }`}
+                  >
+                    <span>{w.severity === 'crit' ? '🚨' : '⚠️'}</span>
+                    <span>{w.message}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

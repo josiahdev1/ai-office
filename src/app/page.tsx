@@ -33,6 +33,11 @@ import {
   getTirednessVisualState,
   evaluateNextAction,
 } from '@/lib/office/needsEngine'
+import {
+  jarvisWellnessManager,
+  AutonomyMode,
+  AgentPinStatus,
+} from '@/lib/office/jarvisWellness'
 
 const STORAGE_MODE_KEY = 'easyup_hq_mode_v3'
 const STORAGE_OVERRIDES_KEY = 'easyup_hq_overrides_v3'
@@ -228,6 +233,12 @@ function HQCommandPage() {
   const [rosterDeptFilter, setRosterDeptFilter] = useState<string>('ALL')
   const [isAddDeptModalOpen, setIsAddDeptModalOpen] = useState<boolean>(false)
   const [isAgentLogDrawerOpen, setIsAgentLogDrawerOpen] = useState<boolean>(false)
+  const [rosterTab, setRosterTab] = useState<'roster' | 'wellness'>('roster')
+  const [wellnessSort, setWellnessSort] = useState<'lowest_energy' | 'lowest_morale' | 'name'>('lowest_energy')
+  const [agentPins, setAgentPins] = useState<Record<string, AgentPinStatus>>({})
+  const [editingApprovalId, setEditingApprovalId] = useState<string | null>(null)
+  const [approvalInstruction, setApprovalInstruction] = useState<string>('')
+  const [autonomyMode, setAutonomyMode] = useState<AutonomyMode>('STANDING_POLICY')
 
   // JARVIS Orchestrator State & Cinematic Transition Phase
   const [jarvisPhase, setJarvisPhase] = useState<JarvisTransitionPhase>('closed')
@@ -662,8 +673,12 @@ function HQCommandPage() {
     return () => clearInterval(progressTimer)
   }, [])
 
-  // Handle Go-Signal Authorizations
-  const handleGoSignal = async (approvalId: string, action: 'approve' | 'reject') => {
+  // Handle Go-Signal Authorizations (Approve, Hold, Deny, Edit)
+  const handleGoSignal = async (
+    approvalId: string,
+    action: 'approve' | 'reject' | 'hold' | 'instruct',
+    instruction?: string
+  ) => {
     try {
       if (action === 'approve') {
         sfx?.playApproval?.()
@@ -675,22 +690,43 @@ function HQCommandPage() {
     const item = approvals.find((a) => a.id === approvalId)
     setApprovals((prev) => prev.filter((a) => a.id !== approvalId))
 
-    const goLog = `${formatPHTTime()} [HUMAN_GO] Go-Signal ${action === 'approve' ? 'AUTHORIZED' : 'REJECTED'} by Josiah for ${item?.title || approvalId}`
+    const actionLabel =
+      action === 'approve'
+        ? 'AUTHORIZED'
+        : action === 'hold'
+          ? 'HELD'
+          : action === 'instruct'
+            ? 'EDITED & INSTRUCTED'
+            : 'REJECTED'
+    const goLog = `${formatPHTTime()} [HUMAN_GO] Go-Signal ${actionLabel} by Josiah for ${item?.title || approvalId}${instruction ? ` • Notes: ${instruction}` : ''}`
     setLogs((prev) => [goLog, ...prev].slice(0, 50))
 
-    void officeSupabase.resolveApproval(approvalId, action, 'Josiah (Lead Architect)')
+    void officeSupabase.resolveApproval(
+      approvalId,
+      action === 'approve' ? 'approve' : 'reject',
+      'Josiah (Lead Architect)'
+    )
     void officeSupabase.logActivity(
       'HUMAN_GO',
-      `Go-Signal ${action === 'approve' ? 'AUTHORIZED' : 'REJECTED'} by Josiah for ${item?.title || approvalId}`,
+      goLog,
       { id: 'josiah', name: 'Josiah' },
-      action === 'approve' ? 'success' : 'warn'
+      action === 'approve' ? 'success' : action === 'hold' ? 'info' : 'warn'
     )
+
+    // Remember operator decision preference for JARVIS
+    void jarvisWellnessManager.recordPreference({
+      action: action,
+      category: item?.type || 'approval',
+      agentId: item?.agent_id,
+      reason: item?.title || 'Operator Go-Signal decision',
+      instruction,
+    })
 
     try {
       const res = await fetch('/api/office/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approvalId, action }),
+        body: JSON.stringify({ approvalId, action, instruction }),
       })
       const data = await res.json()
       if (data.ok && data.remaining) {
@@ -1406,8 +1442,148 @@ function HQCommandPage() {
               </button>
             </div>
 
+            {/* Tab Selector: Roster vs Wellness */}
+            <div className="flex border-b border-slate-800 bg-slate-950/90 font-mono text-xs shrink-0">
+              <button
+                type="button"
+                onClick={() => setRosterTab('roster')}
+                className={`flex-1 py-2 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${
+                  rosterTab === 'roster'
+                    ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                ROSTER DIRECTORY
+              </button>
+              <button
+                type="button"
+                onClick={() => setRosterTab('wellness')}
+                className={`flex-1 py-2 font-bold text-center border-b-2 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                  rosterTab === 'wellness'
+                    ? 'border-emerald-400 text-emerald-300 bg-emerald-950/20'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>WELLNESS &amp; VITALS</span>
+                <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
+                  SIMULATED
+                </span>
+              </button>
+            </div>
+
+            {/* Department Team Averages & Heat Strip (Visible in Wellness Tab) */}
+            {rosterTab === 'wellness' && (
+              <div className="border-b border-slate-800/80 bg-slate-950/70 p-3 space-y-2 shrink-0">
+                <div className="flex items-center justify-between text-[10px] font-mono font-bold text-slate-300">
+                  <span>DEPARTMENT VITALS HEAT STRIP</span>
+                  <span className="text-emerald-400">HQ AVERAGE</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 font-mono text-[9px]">
+                  {['ENGINEERING', 'QA', 'GROWTH', 'INTELLIGENCE', 'OPERATIONS', 'COMMAND'].map(
+                    (dept) => {
+                      const deptAgents = agents.filter(
+                        (a) => (a.department || '').toUpperCase() === dept
+                      )
+                      const avgEnergy =
+                        deptAgents.length > 0
+                          ? Math.round(
+                              deptAgents.reduce(
+                                (acc, ag) =>
+                                  acc + needsManager.getAgentNeeds(ag.id).energy,
+                                0
+                              ) / deptAgents.length
+                            )
+                          : 80
+                      return (
+                        <div
+                          key={dept}
+                          className="rounded border border-slate-800 bg-slate-900/60 p-1.5"
+                        >
+                          <div className="flex justify-between text-slate-400 pb-0.5">
+                            <span className="truncate">{dept}</span>
+                            <span className="font-bold text-slate-200">
+                              {avgEnergy}%
+                            </span>
+                          </div>
+                          <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                avgEnergy > 60
+                                  ? 'bg-emerald-400'
+                                  : avgEnergy > 30
+                                    ? 'bg-yellow-400'
+                                    : 'bg-rose-400'
+                              }`}
+                              style={{ width: `${avgEnergy}%` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    }
+                  )}
+                </div>
+
+                {/* Autonomy Policy Selector */}
+                <div className="flex items-center justify-between pb-1 border-b border-slate-800 font-mono text-[10px]">
+                  <span className="text-slate-400">Jarvis Autonomy:</span>
+                  <div className="flex items-center gap-1">
+                    {(
+                      [
+                        { id: 'STANDING_POLICY', label: 'Standing Policy' },
+                        { id: 'ASK_FOR_ALL', label: 'Ask for All' },
+                        { id: 'OFF', label: 'Off' },
+                      ] as const
+                    ).map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          setAutonomyMode(m.id)
+                          jarvisWellnessManager.updatePolicy({ mode: m.id })
+                        }}
+                        className={`rounded px-1.5 py-0.5 font-bold transition-colors whitespace-nowrap ${
+                          autonomyMode === m.id
+                            ? 'bg-cyan-500 text-slate-950'
+                            : 'bg-slate-900 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Wellness Sort Selector */}
+                <div className="flex items-center justify-between pt-1 font-mono text-[10px]">
+                  <span className="text-slate-400">Sort By:</span>
+                  <div className="flex items-center gap-1">
+                    {(
+                      [
+                        { id: 'lowest_energy', label: 'Lowest Energy ⚡' },
+                        { id: 'lowest_morale', label: 'Lowest Morale 🧠' },
+                        { id: 'name', label: 'Name (A-Z)' },
+                      ] as const
+                    ).map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setWellnessSort(s.id)}
+                        className={`rounded px-1.5 py-0.5 font-bold transition-colors whitespace-nowrap ${
+                          wellnessSort === s.id
+                            ? 'bg-emerald-500 text-slate-950'
+                            : 'bg-slate-900 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Search & Department Filter Bar */}
-            <div className="border-b border-slate-800/80 p-3 space-y-2 bg-slate-950/60">
+            <div className="border-b border-slate-800/80 p-3 space-y-2 bg-slate-950/60 shrink-0">
               <input
                 type="text"
                 value={rosterSearch}
@@ -1508,88 +1684,238 @@ function HQCommandPage() {
                         </div>
                       </div>
 
+                      {/* Wellness Tab Details (Vitals bars, next action, pin controls) */}
+                      {rosterTab === 'wellness' && (() => {
+                        const needs = needsManager.getAgentNeeds(ag.id)
+                        const nextAction = needsManager.evaluateNextAction(ag.id)
+                        const currentPin = agentPins[ag.id] || 'NORMAL'
+                        return (
+                          <div className="mt-2 space-y-2 border-t border-slate-800/80 pt-2 font-mono text-[9px]">
+                            {/* Pin Status & Current Activity */}
+                            <div className="flex items-center justify-between text-slate-300">
+                              <span className="text-slate-400">STATE: <strong className="text-cyan-300 uppercase">{needs.state}</strong></span>
+                              <span className={`px-1.5 py-0.2 rounded font-bold uppercase ${
+                                currentPin === 'NEVER_REST'
+                                  ? 'bg-rose-950/80 text-rose-300 border border-rose-600/40'
+                                  : currentPin === 'MUST_REST'
+                                    ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-600/40'
+                                    : 'bg-slate-900 text-slate-400 border border-slate-800'
+                              }`}>
+                                PIN: {currentPin}
+                              </span>
+                            </div>
+
+                            {/* 6 Vitals Bars */}
+                            <div className="grid grid-cols-3 gap-1.5">
+                              <div>
+                                <div className="flex justify-between text-[8px] text-slate-400">
+                                  <span>ENERGY</span>
+                                  <span className="font-bold text-slate-200">{Math.round(needs.energy)}%</span>
+                                </div>
+                                <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${
+                                      needs.energy > 60 ? 'bg-emerald-400' : needs.energy > 30 ? 'bg-yellow-400' : 'bg-rose-400'
+                                    }`}
+                                    style={{ width: `${needs.energy}%` }}
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <div className="flex justify-between text-[8px] text-slate-400">
+                                  <span>HUNGER</span>
+                                  <span className="font-bold text-slate-200">{Math.round(needs.hunger)}%</span>
+                                </div>
+                                <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
+                                  <div className="h-full rounded-full bg-amber-400" style={{ width: `${needs.hunger}%` }} />
+                                </div>
+                              </div>
+                              <div>
+                                <div className="flex justify-between text-[8px] text-slate-400">
+                                  <span>THIRST</span>
+                                  <span className="font-bold text-slate-200">{Math.round(needs.thirst)}%</span>
+                                </div>
+                                <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
+                                  <div className="h-full rounded-full bg-cyan-400" style={{ width: `${needs.thirst}%` }} />
+                                </div>
+                              </div>
+                              <div>
+                                <div className="flex justify-between text-[8px] text-slate-400">
+                                  <span>BLADDER</span>
+                                  <span className="font-bold text-slate-200">{Math.round(needs.bladder)}%</span>
+                                </div>
+                                <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
+                                  <div className="h-full rounded-full bg-purple-400" style={{ width: `${needs.bladder}%` }} />
+                                </div>
+                              </div>
+                              <div>
+                                <div className="flex justify-between text-[8px] text-slate-400">
+                                  <span>HEALTH</span>
+                                  <span className="font-bold text-slate-200">{Math.round(needs.health)}%</span>
+                                </div>
+                                <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
+                                  <div className="h-full rounded-full bg-emerald-400" style={{ width: `${needs.health}%` }} />
+                                </div>
+                              </div>
+                              <div>
+                                <div className="flex justify-between text-[8px] text-slate-400">
+                                  <span>MORALE</span>
+                                  <span className="font-bold text-slate-200">{Math.round(needs.morale)}%</span>
+                                </div>
+                                <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
+                                  <div className="h-full rounded-full bg-pink-400" style={{ width: `${needs.morale}%` }} />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* NEXT Action */}
+                            <div className="rounded bg-slate-950/80 p-1 text-[9px] text-slate-300">
+                              <span className="text-slate-400 font-bold uppercase">NEXT: </span>
+                              <span className="text-emerald-300 font-bold">{nextAction.kind.toUpperCase()}</span>
+                              <span className="text-slate-400"> — {nextAction.reason}</span>
+                            </div>
+
+                            {/* Wellness Quick Action Buttons */}
+                            <div className="flex flex-wrap items-center gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedAgent(ag)
+                                  handleRouteIndividualAgent(ag, 'NAP_ROOM', 'resting', 'Scheduled recovery rest in Nap Room')
+                                }}
+                                className="cursor-pointer rounded bg-cyan-950/60 border border-cyan-500/40 px-2 py-0.5 font-bold text-cyan-200 hover:bg-cyan-900 whitespace-nowrap"
+                              >
+                                Send to Rest 💤
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedAgent(ag)
+                                  handleRouteIndividualAgent(ag, 'FOCUS_WORK', 'working', 'Returned to workstation')
+                                }}
+                                className="cursor-pointer rounded bg-slate-900 border border-slate-700 px-2 py-0.5 font-bold text-slate-300 hover:bg-slate-800 whitespace-nowrap"
+                              >
+                                Wake Up ☀️
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextPin: AgentPinStatus = currentPin === 'NEVER_REST' ? 'NORMAL' : 'NEVER_REST'
+                                  setAgentPins((prev) => ({ ...prev, [ag.id]: nextPin }))
+                                  jarvisWellnessManager.setAgentPin(ag.id, nextPin)
+                                }}
+                                className={`cursor-pointer rounded px-2 py-0.5 font-bold whitespace-nowrap ${
+                                  currentPin === 'NEVER_REST'
+                                    ? 'bg-rose-500 text-slate-950'
+                                    : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                {currentPin === 'NEVER_REST' ? 'Locked Never Rest 🔒' : 'Pin Never Rest'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextPin: AgentPinStatus = currentPin === 'MUST_REST' ? 'NORMAL' : 'MUST_REST'
+                                  setAgentPins((prev) => ({ ...prev, [ag.id]: nextPin }))
+                                  jarvisWellnessManager.setAgentPin(ag.id, nextPin)
+                                }}
+                                className={`cursor-pointer rounded px-2 py-0.5 font-bold whitespace-nowrap ${
+                                  currentPin === 'MUST_REST'
+                                    ? 'bg-emerald-500 text-slate-950'
+                                    : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                {currentPin === 'MUST_REST' ? 'Locked Must Rest 🛡️' : 'Pin Must Rest'}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })()}
+
                       {/* Quick 1-Click Route Buttons inside Roster Card */}
-                      <div
-                        className="mt-2 grid grid-cols-4 gap-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedAgent(ag)
-                            handleRouteIndividualAgent(
-                              ag,
-                              'FOCUS_WORK',
-                              'working',
-                              `Executing sprint tasks at ${ag.room || 'Workstation'}`
-                            )
-                          }}
-                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
-                            effMode === 'FOCUS_WORK' || effMode === 'OVERVIEW'
-                              ? 'border-emerald-500/60 bg-emerald-950/60 text-emerald-300'
-                              : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                          }`}
+                      {rosterTab === 'roster' && (
+                        <div
+                          className="mt-2 grid grid-cols-4 gap-1"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          💻 Desk
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedAgent(ag)
-                            handleRouteIndividualAgent(
-                              ag,
-                              'PANTRY',
-                              'on_break',
-                              'Recharging at Espresso Bar & Pantry Lounge'
-                            )
-                          }}
-                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
-                            effMode === 'PANTRY'
-                              ? 'border-yellow-500/60 bg-yellow-950/60 text-yellow-300'
-                              : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                          }`}
-                        >
-                          ☕ Pantry
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedAgent(ag)
-                            handleRouteIndividualAgent(
-                              ag,
-                              'GYM',
-                              'at_gym',
-                              'Active recovery workout in Rec & Gym'
-                            )
-                          }}
-                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
-                            effMode === 'GYM'
-                              ? 'border-pink-500/60 bg-pink-950/60 text-pink-300'
-                              : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                          }`}
-                        >
-                          🏋️ Gym
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedAgent(ag)
-                            handleRouteIndividualAgent(
-                              ag,
-                              'ALL_HANDS',
-                              'in_meeting',
-                              'Joining Architecture Standup at The Brain'
-                            )
-                          }}
-                          className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
-                            effMode === 'ALL_HANDS'
-                              ? 'border-blue-500/60 bg-blue-950/60 text-blue-300'
-                              : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                          }`}
-                        >
-                          🧠 Brain
-                        </button>
-                      </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedAgent(ag)
+                              handleRouteIndividualAgent(
+                                ag,
+                                'FOCUS_WORK',
+                                'working',
+                                `Executing sprint tasks at ${ag.room || 'Workstation'}`
+                              )
+                            }}
+                            className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
+                              effMode === 'FOCUS_WORK' || effMode === 'OVERVIEW'
+                                ? 'border-emerald-500/60 bg-emerald-950/60 text-emerald-300'
+                                : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                            }`}
+                          >
+                            💻 Desk
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedAgent(ag)
+                              handleRouteIndividualAgent(
+                                ag,
+                                'PANTRY',
+                                'on_break',
+                                'Recharging at Espresso Bar & Pantry Lounge'
+                              )
+                            }}
+                            className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
+                              effMode === 'PANTRY'
+                                ? 'border-yellow-500/60 bg-yellow-950/60 text-yellow-300'
+                                : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                            }`}
+                          >
+                            ☕ Pantry
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedAgent(ag)
+                              handleRouteIndividualAgent(
+                                ag,
+                                'GYM',
+                                'at_gym',
+                                'Active recovery workout in Rec & Gym'
+                              )
+                            }}
+                            className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
+                              effMode === 'GYM'
+                                ? 'border-pink-500/60 bg-pink-950/60 text-pink-300'
+                                : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                            }`}
+                          >
+                            🏋️ Gym
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedAgent(ag)
+                              handleRouteIndividualAgent(
+                                ag,
+                                'ALL_HANDS',
+                                'in_meeting',
+                                'Joining Architecture Standup at The Brain'
+                              )
+                            }}
+                            className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
+                              effMode === 'ALL_HANDS'
+                                ? 'border-blue-500/60 bg-blue-950/60 text-blue-300'
+                                : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                            }`}
+                          >
+                            🧠 Brain
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -1842,21 +2168,77 @@ function HQCommandPage() {
                     <p className="font-mono text-[11px] text-slate-400 line-clamp-2 mt-0.5">
                       {item.summary}
                     </p>
-                    <div className="mt-2 flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleGoSignal(item.id, 'reject')}
-                        className="cursor-pointer rounded bg-rose-950/60 border border-rose-600/40 px-2.5 py-1 font-mono text-[10px] font-bold text-rose-300 hover:bg-rose-900 transition-colors whitespace-nowrap"
-                      >
-                        Reject ✕
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleGoSignal(item.id, 'approve')}
-                        className="cursor-pointer rounded bg-emerald-500 px-3 py-1 font-mono text-[10px] font-bold text-slate-950 hover:bg-emerald-400 transition-colors shadow-sm shadow-emerald-500/30 whitespace-nowrap"
-                      >
-                        Grant Go-Signal ✓
-                      </button>
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      {editingApprovalId === item.id ? (
+                        <div className="flex flex-col gap-1.5 bg-slate-950/80 p-2 rounded border border-amber-500/40">
+                          <input
+                            type="text"
+                            placeholder="Add custom instructions or edit..."
+                            value={approvalInstruction}
+                            onChange={(e) => setApprovalInstruction(e.target.value)}
+                            className="w-full rounded bg-slate-900 border border-slate-700 px-2 py-1 font-mono text-[10px] text-slate-100 focus:outline-none focus:border-amber-400"
+                          />
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingApprovalId(null)
+                                setApprovalInstruction('')
+                              }}
+                              className="rounded border border-slate-700 px-2 py-0.5 font-mono text-[9px] text-slate-400 hover:text-white"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleGoSignal(item.id, 'instruct', approvalInstruction)
+                                setEditingApprovalId(null)
+                                setApprovalInstruction('')
+                              }}
+                              className="rounded bg-amber-500 px-2 py-0.5 font-mono text-[9px] font-bold text-slate-950 hover:bg-amber-400"
+                            >
+                              Submit Edit ✓
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingApprovalId(item.id)
+                              setApprovalInstruction(item.summary || '')
+                            }}
+                            className="cursor-pointer rounded bg-slate-900 border border-slate-700 px-2 py-1 font-mono text-[10px] font-bold text-slate-300 hover:bg-slate-800 transition-colors whitespace-nowrap"
+                            title="Edit or add custom instructions"
+                          >
+                            Edit ✎
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleGoSignal(item.id, 'hold')}
+                            className="cursor-pointer rounded bg-amber-950/60 border border-amber-600/40 px-2 py-1 font-mono text-[10px] font-bold text-amber-300 hover:bg-amber-900 transition-colors whitespace-nowrap"
+                            title="Hold approval for later"
+                          >
+                            Hold ⏸
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleGoSignal(item.id, 'reject')}
+                            className="cursor-pointer rounded bg-rose-950/60 border border-rose-600/40 px-2 py-1 font-mono text-[10px] font-bold text-rose-300 hover:bg-rose-900 transition-colors whitespace-nowrap"
+                          >
+                            Deny ✕
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleGoSignal(item.id, 'approve')}
+                            className="cursor-pointer rounded bg-emerald-500 px-2.5 py-1 font-mono text-[10px] font-bold text-slate-950 hover:bg-emerald-400 transition-colors shadow-sm shadow-emerald-500/30 whitespace-nowrap"
+                          >
+                            Approve ✓
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))
@@ -2223,6 +2605,70 @@ function HQCommandPage() {
                         <span>Caffeine: {needs.caffeine}%</span>
                         <span>Sleep Debt: {needs.sleepDebt}%</span>
                         <span>Speed: {tiredness.walkSpeedMultiplier}x</span>
+                      </div>
+
+                      {/* Quick Wellness & Pin Control Buttons */}
+                      <div className="flex flex-wrap items-center gap-1 pt-1.5 border-t border-slate-800/80 font-mono text-[9px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleRouteIndividualAgent(
+                              selectedAgent,
+                              'NAP_ROOM',
+                              'resting',
+                              'Scheduled recovery rest in Nap Room'
+                            )
+                          }}
+                          className="cursor-pointer rounded bg-cyan-950/60 border border-cyan-500/40 px-2 py-0.5 font-bold text-cyan-200 hover:bg-cyan-900 whitespace-nowrap"
+                        >
+                          Send to Rest 💤
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleRouteIndividualAgent(
+                              selectedAgent,
+                              'FOCUS_WORK',
+                              'working',
+                              'Returned to workstation'
+                            )
+                          }}
+                          className="cursor-pointer rounded bg-slate-900 border border-slate-700 px-2 py-0.5 font-bold text-slate-300 hover:bg-slate-800 whitespace-nowrap"
+                        >
+                          Wake Up ☀️
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = agentPins[selectedAgent.id] || 'NORMAL'
+                            const nextPin: AgentPinStatus = cur === 'NEVER_REST' ? 'NORMAL' : 'NEVER_REST'
+                            setAgentPins((prev) => ({ ...prev, [selectedAgent.id]: nextPin }))
+                            jarvisWellnessManager.setAgentPin(selectedAgent.id, nextPin)
+                          }}
+                          className={`cursor-pointer rounded px-2 py-0.5 font-bold whitespace-nowrap ${
+                            agentPins[selectedAgent.id] === 'NEVER_REST'
+                              ? 'bg-rose-500 text-slate-950'
+                              : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {agentPins[selectedAgent.id] === 'NEVER_REST' ? 'Locked Never Rest 🔒' : 'Pin Never Rest'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = agentPins[selectedAgent.id] || 'NORMAL'
+                            const nextPin: AgentPinStatus = cur === 'MUST_REST' ? 'NORMAL' : 'MUST_REST'
+                            setAgentPins((prev) => ({ ...prev, [selectedAgent.id]: nextPin }))
+                            jarvisWellnessManager.setAgentPin(selectedAgent.id, nextPin)
+                          }}
+                          className={`cursor-pointer rounded px-2 py-0.5 font-bold whitespace-nowrap ${
+                            agentPins[selectedAgent.id] === 'MUST_REST'
+                              ? 'bg-emerald-500 text-slate-950'
+                              : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {agentPins[selectedAgent.id] === 'MUST_REST' ? 'Locked Must Rest 🛡️' : 'Pin Must Rest'}
+                        </button>
                       </div>
                     </div>
                   )

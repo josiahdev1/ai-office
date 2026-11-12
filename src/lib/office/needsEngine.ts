@@ -783,12 +783,63 @@ class AgentNeedsManager {
     return computeCurrentNeeds(rec, now)
   }
 
+  public getAgentNeeds(agentId: string, now: Date = new Date()): AgentNeeds & { state: ActivityKind } {
+    const rec = this.getNeedsRecord(agentId, now)
+    const current = computeCurrentNeeds(rec, now)
+    return {
+      ...current,
+      state: rec.state,
+    }
+  }
+
   public getPlan(agentId: string): AgentPlanRecord | null {
     return this.plans.get(agentId) || null
   }
 
+  public evaluateNextAction(agentId: string, now: Date = new Date()) {
+    const current = this.getCurrentNeeds(agentId, now)
+    const plan = this.getPlan(agentId)
+    const res = evaluateNextAction(agentId, current, plan, now)
+    return {
+      kind: res.nextKind,
+      reason: res.reason,
+      shouldRequestBreak: res.shouldRequestBreak,
+      breakKind: res.breakKind,
+    }
+  }
+
   public setPlan(plan: AgentPlanRecord) {
     this.plans.set(plan.agentId, plan)
+  }
+
+  public recordActivityLog(params: {
+    agentId: string
+    kind: ActivityKind
+    phase: ActivityPhase
+    reason: string
+    decidedBy: DecidedBy
+    durationS?: number
+  }) {
+    const now = new Date()
+    const pht = getPHTParts(now)
+    const phtStr = `${pht.hour % 12 || 12}:${pht.minute.toString().padStart(2, '0')} ${pht.hour >= 12 ? 'PM' : 'AM'} PHT`
+    const current = this.getCurrentNeeds(params.agentId, now)
+
+    const logEntry: AgentActivityLogRecord = {
+      id: `act_${Date.now()}_${params.agentId}`,
+      ts: now.toISOString(),
+      tsPht: phtStr,
+      agentId: params.agentId,
+      kind: params.kind,
+      phase: params.phase,
+      reason: params.reason,
+      decidedBy: params.decidedBy,
+      needsBefore: { ...current },
+      needsAfter: { ...current },
+      durationS: params.durationS || 0,
+      demo: false,
+    }
+    this.addActivityLog(logEntry)
   }
 
   public addActivityLog(log: AgentActivityLogRecord) {

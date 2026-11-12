@@ -61,11 +61,15 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K5: Jarvis Wellness Manager + Policy + Approvals + Wellness UI
-- [ ] Autonomy policy in Supabase (Ask me for everything, Standing policy, Off)
-- [ ] Daily schedule planning & exception proposals in WAITING FOR YOU
-- [ ] Work protection & task-to-agent mapping with needs
-- [ ] Jarvis function-calling wellness tools
-- [ ] Wellness tab in AGENTS and inspector card
+- [x] Phase K5 Completed:
+  - Stored Jarvis Autonomy policy in Supabase (Ask me for everything, Standing policy, Off), with 30% department cap, work protection, pins (Never rest, Must rest), and remembered operator decisions.
+  - Implemented 7 Zod-validated function calling tools in Jarvis (`get_wellness`, `propose_break`, `list_resting`, `wake_agent`, `set_policy`, `get_agent_log`, `what_should_agent_do_next`).
+  - Delivered Wellness & Vitals UI with `[SIMULATED]` badges, department vitals heat strip, sorting, quick action buttons, approval cards with Edit/Hold/Deny/Approve, and real needs WARN alerts in Jarvis.
+- [x] Autonomy policy in Supabase (Ask me for everything, Standing policy, Off)
+- [x] Daily schedule planning & exception proposals in WAITING FOR YOU
+- [x] Work protection & task-to-agent mapping with needs
+- [x] Jarvis function-calling wellness tools
+- [x] Wellness tab in AGENTS and inspector card
 
 ---
 
@@ -97,8 +101,15 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 - [ ] Data Health panel in Settings and Jarvis dashboard
 - [ ] Hardcoded data scan enforcement test
 
+
 ---
 
 ### Phase K10: Final QA
 - [ ] Full end-to-end verification checklist (a through q)
 - [ ] Visual screenshots, self-review defects & fixes, PR merge update
+- [ ] Server Room + resident Server Room agent (PC work + periodic server rack inspection loop)
+- [ ] Men's & Women's Comfort Rooms (separated/labeled stalls, sinks, dryers, routing)
+- [ ] Roaming Boss & roaming Cleaner 1 / Cleaner 2 (no desk-bound idle; continuous patrol & cleaning)
+- [ ] 2D (`?v=2`) vs 3D mode parity audit and sync/banner fix
+- [ ] Move `brain/`, `bridge/`, and `design-ref/` into `docs/` organized + consolidate `.agent/` and `.agents/` skills
+- [ ] Root `tickets/TEMPLATE.md` + chronological milestone tickets (`tickets/ticket-01-<short-task-name>.md` onward from first Antigravity chat to K10)
