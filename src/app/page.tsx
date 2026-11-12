@@ -38,6 +38,11 @@ import {
   AutonomyMode,
   AgentPinStatus,
 } from '@/lib/office/jarvisWellness'
+import {
+  facilitiesManager,
+  type CleaningTaskKind,
+  ROOM_DISPLAY_NAMES,
+} from '@/lib/office/facilitiesEngine'
 
 const STORAGE_MODE_KEY = 'easyup_hq_mode_v3'
 const STORAGE_OVERRIDES_KEY = 'easyup_hq_overrides_v3'
@@ -239,6 +244,9 @@ function HQCommandPage() {
   const [editingApprovalId, setEditingApprovalId] = useState<string | null>(null)
   const [approvalInstruction, setApprovalInstruction] = useState<string>('')
   const [autonomyMode, setAutonomyMode] = useState<AutonomyMode>('STANDING_POLICY')
+  const [cleaningRoomSelection, setCleaningRoomSelection] = useState<string>('CAFETERIA')
+  const [cleaningKindSelection, setCleaningKindSelection] = useState<CleaningTaskKind>('wipe_tables')
+  const [, setFacilityTick] = useState<number>(0)
 
   // JARVIS Orchestrator State & Cinematic Transition Phase
   const [jarvisPhase, setJarvisPhase] = useState<JarvisTransitionPhase>('closed')
@@ -949,6 +957,25 @@ function HQCommandPage() {
     } finally {
       setIsDispatching(false)
     }
+  }
+
+  const handleRequestCleaning = (
+    roomId: string,
+    kind: CleaningTaskKind = 'mop'
+  ) => {
+    try {
+      sfx?.playTrigger?.()
+    } catch {}
+    facilitiesManager.requestCleaning(
+      roomId,
+      kind,
+      'operator',
+      'high',
+      `Manual directive from Josiah for ${ROOM_DISPLAY_NAMES[roomId] || roomId}`
+    )
+    const logLine = `${formatPHTTime()} [FACILITIES] Cleaners task dispatched: ${kind.replace('_', ' ').toUpperCase()} in ${ROOM_DISPLAY_NAMES[roomId] || roomId}`
+    setLogs((prev) => [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50))
+    setFacilityTick((t) => t + 1)
   }
 
   const handleUpdateAgentModel = (
@@ -2246,6 +2273,144 @@ function HQCommandPage() {
             </div>
           </div>
 
+          {/* Section: HQ Facilities & Cleanliness (Phase K6) */}
+          <div className="border-b border-slate-800/80 p-3 shrink-0 bg-slate-900/20">
+            {(() => {
+              const hqScore = facilitiesManager.getHQCleanlinessAverage()
+              const roomReports = facilitiesManager.getAllRoomReports()
+              const pendingTasks = facilitiesManager.getPendingTasks()
+              const dispensers = facilitiesManager
+                .getRecords()
+                .filter((r) => r.kind === 'water_jug')
+              const lowDispensers = dispensers.filter((d) => d.suppliesLevel <= 20)
+              const wetRooms = roomReports.filter((r) => r.isWetFloor)
+
+              const getScoreColor = (sc: number) =>
+                sc >= 80 ? 'text-emerald-400' : sc >= 60 ? 'text-amber-400' : 'text-rose-400'
+              const getScoreBarColor = (sc: number) =>
+                sc >= 80 ? 'bg-emerald-400' : sc >= 60 ? 'bg-amber-400' : 'bg-rose-500'
+
+              return (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
+                        FACILITIES & CLEANLINESS
+                      </span>
+                      <span className="rounded bg-cyan-950/80 border border-cyan-500/40 px-1 py-0.5 font-mono text-[8px] font-bold text-cyan-300">
+                        SIMULATED
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-mono text-xs font-black">
+                      <span className="text-slate-400 text-[10px]">HQ AVG:</span>
+                      <span className={getScoreColor(hqScore)}>{hqScore}%</span>
+                    </div>
+                  </div>
+
+                  {/* Active Alerts (Wet Floor & Depleted Water Jugs) */}
+                  {wetRooms.length > 0 && (
+                    <div className="flex items-center gap-1.5 rounded border border-amber-500/40 bg-amber-950/30 px-2 py-1 text-[10px] font-mono text-amber-300">
+                      <span className="animate-pulse">⚠️</span>
+                      <span>
+                        WET FLOOR: Mopping in {wetRooms.map((w) => w.roomName).join(', ')}
+                      </span>
+                    </div>
+                  )}
+
+                  {lowDispensers.length > 0 && (
+                    <div className="flex items-center gap-1.5 rounded border border-cyan-500/40 bg-cyan-950/30 px-2 py-1 text-[10px] font-mono text-cyan-300">
+                      <span>💧</span>
+                      <span>
+                        WATER DEPLETION: {lowDispensers.length} jug(s) require replacement
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Top Rooms Cleanliness Metrics */}
+                  <div className="space-y-1.5 rounded-lg border border-slate-800/80 bg-slate-950/60 p-2">
+                    <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 pb-0.5">
+                      <span>ROOM / SECTOR</span>
+                      <span>CLEANLINESS</span>
+                    </div>
+                    {roomReports.slice(0, 4).map((r) => (
+                      <div key={r.roomId} className="space-y-0.5">
+                        <div className="flex items-center justify-between text-[10px] font-mono">
+                          <span className="text-slate-300 truncate max-w-[140px]">{r.roomName}</span>
+                          <span className={`font-bold ${getScoreColor(r.score)}`}>{r.score}%</span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-slate-800/80 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${getScoreBarColor(r.score)}`}
+                            style={{ width: `${r.score}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Water Dispensers Quick Status */}
+                  <div className="flex items-center justify-between rounded border border-slate-800/80 bg-slate-950/50 px-2 py-1 font-mono text-[9px] text-slate-300">
+                    <span className="flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                      <span>6 Dispensers (5-gal Jugs)</span>
+                    </span>
+                    <span className="text-cyan-400 font-bold">
+                      {dispensers.length - lowDispensers.length}/{dispensers.length} NOMINAL
+                    </span>
+                  </div>
+
+                  {/* Manual Cleaning Directive Controls */}
+                  <div className="rounded border border-slate-800/70 bg-slate-950/40 p-2 space-y-1.5">
+                    <span className="block font-mono text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      DIRECT CLEANING DISPATCH
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        aria-label="Select facility room"
+                        value={cleaningRoomSelection}
+                        onChange={(e) => setCleaningRoomSelection(e.target.value)}
+                        className="w-1/2 rounded border border-slate-700 bg-slate-900 px-1.5 py-1 font-mono text-[10px] text-slate-200 focus:outline-none"
+                      >
+                        <option value="CAFETERIA">Cafeteria</option>
+                        <option value="COMFORT_ROOM">Comfort Room</option>
+                        <option value="GYM">Rec & Gym</option>
+                        <option value="PANTRY">Pantry</option>
+                        <option value="CORRIDORS">Corridors</option>
+                        <option value="ENGINEERING">Engineering</option>
+                        <option value="QA">QA NOC</option>
+                      </select>
+                      <select
+                        aria-label="Select cleaning task"
+                        value={cleaningKindSelection}
+                        onChange={(e) => setCleaningKindSelection(e.target.value as CleaningTaskKind)}
+                        className="w-1/2 rounded border border-slate-700 bg-slate-900 px-1.5 py-1 font-mono text-[10px] text-slate-200 focus:outline-none"
+                      >
+                        <option value="wipe_tables">Wipe Tables</option>
+                        <option value="mop">Mop Floor</option>
+                        <option value="clean_cr">Sanitize CR</option>
+                        <option value="replace_water_jug">Replace Jug</option>
+                        <option value="empty_bins">Empty Bins</option>
+                        <option value="restock_pantry">Restock Supplies</option>
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRequestCleaning(cleaningRoomSelection, cleaningKindSelection)}
+                      className="cursor-pointer w-full flex items-center justify-center gap-1.5 rounded border border-emerald-500/50 bg-emerald-950/40 px-2 py-1 font-mono text-[10px] font-bold text-emerald-300 hover:bg-emerald-900/60 transition-colors whitespace-nowrap"
+                    >
+                      <span>Dispatch Cleaner 🧹</span>
+                      {pendingTasks.length > 0 && (
+                        <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 font-mono text-[8px] text-emerald-300">
+                          {pendingTasks.length} queued
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+
           {/* Section B: Interactive Individual Agent Dispatch Drawer */}
           <div className="border-b border-slate-800/80 p-3 shrink-0 bg-slate-900/30">
             <div className="flex items-center justify-between pb-2">
@@ -2469,6 +2634,46 @@ function HQCommandPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* Specialized Cleaner Patrol & Direct Servicing Controls */}
+                {selectedAgent.id.startsWith('cleaner_') && (
+                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-2 space-y-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-mono font-bold text-emerald-300">
+                      <span>CLEANER DIRECT DISPATCH</span>
+                      <span className="text-[9px] text-emerald-400/80">FACILITIES</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 font-mono text-[9px]">
+                      <button
+                        type="button"
+                        onClick={() => handleRequestCleaning('CAFETERIA', 'wipe_tables')}
+                        className="cursor-pointer flex items-center justify-center gap-1 rounded border border-emerald-500/40 bg-emerald-950/50 px-2 py-1 text-emerald-200 hover:bg-emerald-900/60 whitespace-nowrap"
+                      >
+                        <span>🍽️ Clean Cafeteria</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRequestCleaning('COMFORT_ROOM', 'clean_cr')}
+                        className="cursor-pointer flex items-center justify-center gap-1 rounded border border-emerald-500/40 bg-emerald-950/50 px-2 py-1 text-emerald-200 hover:bg-emerald-900/60 whitespace-nowrap"
+                      >
+                        <span>🚻 Sanitize CR</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRequestCleaning('CORRIDORS', 'replace_water_jug')}
+                        className="cursor-pointer flex items-center justify-center gap-1 rounded border border-cyan-500/40 bg-cyan-950/50 px-2 py-1 text-cyan-200 hover:bg-cyan-900/60 whitespace-nowrap"
+                      >
+                        <span>💧 Replace Water Jug</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRequestCleaning('GYM', 'mop')}
+                        className="cursor-pointer flex items-center justify-center gap-1 rounded border border-amber-500/40 bg-amber-950/50 px-2 py-1 text-amber-200 hover:bg-amber-900/60 whitespace-nowrap"
+                      >
+                        <span>🧹 Mop Rec & Gym</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Human-Like Agent Needs & Next Plan (Simulated Layer) */}
                 {(() => {

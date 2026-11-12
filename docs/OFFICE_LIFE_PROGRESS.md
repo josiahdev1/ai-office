@@ -74,9 +74,13 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K6: Cleaners and Facilities
-- [ ] Idempotent `office_facility_state` (dirt, bin levels, water jug levels, supplies)
-- [ ] Cleaners queue and maintenance animations
-- [ ] Cleanliness score per room and CLEANING counter
+- [x] Phase K6 Completed:
+  - Added idempotent tables in migration 0013: office_facility_state (dirt, fill_level, supplies_level, water jugs) and office_cleaning_requests.
+  - Implemented real-use event-driven dirt accumulation (meals, CR, sweat, coffee), 6 water dispenser jug tracking/replacement (-4% per drink), and cleaners priority queue with break protection.
+  - Delivered HQ Facilities & Cleanliness UI card, wet-floor sign tracking, manual cleaning dispatch dropdown, cleaner direct tasking controls, and JARVIS tools (`get_facility_status`, `request_cleaning`) verified with 25/25 passing test suites.
+- [x] Idempotent `office_facility_state` (dirt, bin levels, water jug levels, supplies)
+- [x] Cleaners queue and maintenance animations
+- [x] Cleanliness score per room and CLEANING counter
 
 ---
 

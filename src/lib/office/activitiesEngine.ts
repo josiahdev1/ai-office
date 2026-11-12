@@ -12,6 +12,7 @@
 
 import { ActivityKind } from './needsEngine'
 import { officeSupabase } from '../supabase/officeService'
+import { facilitiesManager } from './facilitiesEngine'
 
 export interface FacilitySlot {
   id: string
@@ -202,9 +203,24 @@ export class ActivitySlotManager {
       return false
     }
 
+    const occupant = slot.occupiedBy
     slot.occupiedBy = null
     slot.occupiedSince = null
     this.slots.set(slot.id, slot)
+
+    if (occupant) {
+      if (slot.kind === 'dining_chair') {
+        facilitiesManager.recordActivityImpression(occupant, 'eat', slot.roomId, slot.id)
+      } else if (slot.kind === 'water_dispenser') {
+        facilitiesManager.recordActivityImpression(occupant, 'drink', slot.roomId, slot.id)
+      } else if (slot.kind === 'cr_stall') {
+        facilitiesManager.recordActivityImpression(occupant, 'cr', slot.roomId, slot.id)
+      } else if (slot.kind === 'gym_spot') {
+        facilitiesManager.recordActivityImpression(occupant, 'gym', slot.roomId, slot.id)
+      } else if (slot.kind === 'coffee_spot') {
+        facilitiesManager.recordActivityImpression(occupant, 'coffee', slot.roomId, slot.id)
+      }
+    }
 
     // Promote next in queue
     const queue = this.queues.get(slot.kind)
