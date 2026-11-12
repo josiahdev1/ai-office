@@ -12,6 +12,7 @@ import {
   CLEANER_1_PATROL_ROUTE,
   CLEANER_2_PATROL_ROUTE,
   SERVER_ADMIN_PATROL_ROUTE,
+  COACH_MIGUEL_PATROL_ROUTE,
 } from '@/config/officeLayout'
 import {
   getCharacterStyle,
@@ -179,6 +180,7 @@ export function ProceduralAgent3D({
     if (agent.id === 'cleaner_1') return CLEANER_1_PATROL_ROUTE
     if (agent.id === 'cleaner_2') return CLEANER_2_PATROL_ROUTE
     if (agent.id === 'server_admin') return SERVER_ADMIN_PATROL_ROUTE
+    if (agent.id === 'coach_miguel') return COACH_MIGUEL_PATROL_ROUTE
     return null
   }, [agent.id])
 
@@ -251,16 +253,18 @@ export function ProceduralAgent3D({
     }
     const staggerIdx = isGroupModeSwitch ? agentIndex : 0
 
-    // Autonomous Roaming Patrol Loop for Boss, Cleaners, and Server Admin
+    // Autonomous Roaming Patrol Loop for Boss, Cleaners, Server Admin, and Coach Miguel
     if (roamRoute && (effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK')) {
       roamStateRef.current.elapsed += dt
-      // Rex spends 25s at PC desk, 12s inspecting racks. Boss spends 18s at each dept. Cleaners spend 15s cleaning each room.
+      // Rex spends 25s at PC desk, 12s inspecting racks. Boss spends 18s at each dept. Cleaners spend 15s cleaning each room. Coach Miguel spends 12s per gym station.
       const intervalSec =
         agent.id === 'server_admin'
           ? (roamStateRef.current.index === 0 ? 25 : 12)
           : agent.id === 'boss'
             ? 18
-            : 15
+            : agent.id === 'coach_miguel'
+              ? 12
+              : 15
 
       if (roamStateRef.current.elapsed >= intervalSec) {
         roamStateRef.current.elapsed = 0
@@ -274,7 +278,7 @@ export function ProceduralAgent3D({
         : null
 
     const effectiveTargetPos = currentRoamTarget || targetPos
-    // Boss and Cleaners never sit desk-bound in an idle loop! Server admin only sits when at PC desk (roam index 0).
+    // Boss, Cleaners, and Coach Miguel never sit desk-bound in an idle loop! Server admin only sits when at PC desk (roam index 0).
     const effectiveIsDeskMode =
       isDeskMode && (!roamRoute || (agent.id === 'server_admin' && roamStateRef.current.index === 0))
 
@@ -295,6 +299,21 @@ export function ProceduralAgent3D({
     const isWalking = nav.subState === 'walking'
     const isSeated = nav.subState === 'seated'
     const isSleeping = !isWalking && effectiveMode === 'NAP_ROOM'
+    const isPushups =
+      !isWalking &&
+      effectiveMode === 'GYM' &&
+      agentIndex % 3 === 1 &&
+      agent.id !== 'coach_miguel'
+    const isTreadmill =
+      !isWalking &&
+      effectiveMode === 'GYM' &&
+      (agentIndex % 3 === 0 || nav.currentPos[2] <= 14.8) &&
+      agent.id !== 'coach_miguel'
+    const isDumbbells =
+      !isWalking &&
+      effectiveMode === 'GYM' &&
+      agentIndex % 3 === 2 &&
+      agent.id !== 'coach_miguel'
 
     if (groupRef.current) {
       if (isSleeping) {
@@ -304,6 +323,15 @@ export function ProceduralAgent3D({
           nav.currentPos[2]
         )
         groupRef.current.rotation.x = -Math.PI / 2
+        groupRef.current.rotation.y = nav.rotationY
+      } else if (isPushups) {
+        const pushupBob = Math.abs(Math.sin(t * 3.5)) * 0.12
+        groupRef.current.position.set(
+          nav.currentPos[0],
+          0.22 + pushupBob,
+          nav.currentPos[2]
+        )
+        groupRef.current.rotation.x = -Math.PI / 3
         groupRef.current.rotation.y = nav.rotationY
       } else {
         groupRef.current.position.set(
@@ -321,6 +349,10 @@ export function ProceduralAgent3D({
       if (isWalking) {
         leftLegRef.current.rotation.x = Math.sin(nav.walkPhase) * 0.55
         rightLegRef.current.rotation.x = -Math.sin(nav.walkPhase) * 0.55
+      } else if (isTreadmill) {
+        // High-knee running stride on treadmill
+        leftLegRef.current.rotation.x = Math.sin(t * 12) * 0.7
+        rightLegRef.current.rotation.x = -Math.sin(t * 12) * 0.7
       } else {
         leftLegRef.current.rotation.x = 0
         rightLegRef.current.rotation.x = 0
@@ -331,6 +363,22 @@ export function ProceduralAgent3D({
       if (isWalking) {
         leftArmRef.current.rotation.x = -Math.sin(nav.walkPhase) * 0.45
         rightArmRef.current.rotation.x = Math.sin(nav.walkPhase) * 0.45
+      } else if (agent.id === 'coach_miguel') {
+        // Coach Miguel: pacing trainer, coaching gestures & whistle cues
+        leftArmRef.current.rotation.x = 0.5 + Math.sin(t * 2) * 0.15
+        rightArmRef.current.rotation.x = 0.85 + Math.cos(t * 2.8) * 0.25
+      } else if (isTreadmill) {
+        // Running arm swing
+        leftArmRef.current.rotation.x = -Math.sin(t * 12) * 0.6
+        rightArmRef.current.rotation.x = Math.sin(t * 12) * 0.6
+      } else if (isPushups) {
+        // Prone push-up arm press
+        leftArmRef.current.rotation.x = 1.05 + Math.sin(t * 3.5) * 0.25
+        rightArmRef.current.rotation.x = 1.05 + Math.sin(t * 3.5) * 0.25
+      } else if (isDumbbells) {
+        // Dumbbell bicep curls
+        leftArmRef.current.rotation.x = 0.75 + Math.sin(t * 3.8) * 0.45
+        rightArmRef.current.rotation.x = 0.75 + Math.cos(t * 3.8) * 0.45
       } else if (agent.id === 'cleaner_1' || agent.id === 'cleaner_2') {
         // Continuous cleaning & sanitizing arm animation
         leftArmRef.current.rotation.x = 0.55 + Math.sin(t * 5) * 0.2
@@ -390,7 +438,8 @@ export function ProceduralAgent3D({
     agent.id === 'cleaner_2' ||
     agent.id === 'server_admin' ||
     agent.id === 'chef_maria' ||
-    agent.id === 'barista_ken'
+    agent.id === 'barista_ken' ||
+    agent.id === 'coach_miguel'
 
   return (
     <group>
@@ -787,6 +836,46 @@ export function ProceduralAgent3D({
             <mesh position={[0, 0.28, -0.06]} rotation={[0.25, 0, 0]}>
               <cylinderGeometry args={[0.012, 0.012, 0.6, 6]} />
               <meshStandardMaterial color="#cbd5e1" metalness={0.8} />
+            </mesh>
+          </group>
+        )}
+
+        {/* Gym Dumbbell Props */}
+        {effectiveMode === 'GYM' && agentIndex % 3 === 2 && agent.id !== 'coach_miguel' && (
+          <group position={[0, 0.36, 0.24]}>
+            <mesh position={[-0.24, 0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[0.02, 0.02, 0.22, 8]} />
+              <meshStandardMaterial color="#64748b" metalness={0.8} />
+            </mesh>
+            <mesh position={[-0.24, 0, -0.09]} castShadow>
+              <cylinderGeometry args={[0.055, 0.055, 0.04, 10]} />
+              <meshStandardMaterial color="#0f172a" />
+            </mesh>
+            <mesh position={[-0.24, 0, 0.09]} castShadow>
+              <cylinderGeometry args={[0.055, 0.055, 0.04, 10]} />
+              <meshStandardMaterial color="#0f172a" />
+            </mesh>
+            <mesh position={[0.24, 0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[0.02, 0.02, 0.22, 8]} />
+              <meshStandardMaterial color="#64748b" metalness={0.8} />
+            </mesh>
+            <mesh position={[0.24, 0, -0.09]} castShadow>
+              <cylinderGeometry args={[0.055, 0.055, 0.04, 10]} />
+              <meshStandardMaterial color="#0f172a" />
+            </mesh>
+            <mesh position={[0.24, 0, 0.09]} castShadow>
+              <cylinderGeometry args={[0.055, 0.055, 0.04, 10]} />
+              <meshStandardMaterial color="#0f172a" />
+            </mesh>
+          </group>
+        )}
+
+        {/* Coach Whistle & Lanyard Prop */}
+        {agent.id === 'coach_miguel' && (
+          <group position={[0, 0.44, 0.16]}>
+            <mesh castShadow>
+              <boxGeometry args={[0.04, 0.03, 0.06]} />
+              <meshStandardMaterial color="#cbd5e1" metalness={0.9} />
             </mesh>
           </group>
         )}

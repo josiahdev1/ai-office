@@ -667,13 +667,13 @@ export default function OfficeCanvas2D({
       // LAYER 3: Exterior Full Back Walls (North & West) + Swaying Trees
       // =========================================================================
       const treeCoords: [number, number][] = [
-        [-28, -28],
+        [-48, -26],
         [-14, -28],
         [14, -28],
         [28, -28],
-        [-28, -14],
-        [-28, 14],
-        [-28, 25],
+        [-48, 0],
+        [-48, 14],
+        [-48, 25],
         [-14, 25.2],
         [14, 25.2],
       ]
@@ -761,6 +761,20 @@ export default function OfficeCanvas2D({
         [12, 0.5, -8, 6, 1.0, 0.3],
         [20, 0.5, 8, 6, 1.0, 0.3],
         [12, 0.5, 8, 6, 1.0, 0.3],
+        // West Wing Dividing Walls (Nap Room, Men's CR, Women's CR, Server Room, Facilities, Cafeteria)
+        [-35, 1.0, -11, 12, 2.0, 0.3],
+        [-35, 1.0, -5, 12, 2.0, 0.3],
+        [-35, 1.0, 1, 12, 2.0, 0.3],
+        [-35, 1.0, 6, 12, 2.0, 0.3],
+        [-35, 1.0, 11, 12, 2.0, 0.3],
+        // West Wing East Corridor Wall with 6 Doorways
+        [-28.9, 1.0, -19.5, 0.3, 2.0, 5.0],
+        [-28.9, 1.0, -12, 0.3, 2.0, 6.0],
+        [-28.9, 1.0, -5, 0.3, 2.0, 4.0],
+        [-28.9, 1.0, 0.75, 0.3, 2.0, 3.5],
+        [-28.9, 1.0, 6, 0.3, 2.0, 3.0],
+        [-28.9, 1.0, 12.25, 0.3, 2.0, 5.5],
+        [-28.9, 1.0, 19.5, 0.3, 2.0, 5.0],
       ]
       for (const [px, py, pz, pw, ph, pd] of partitions) {
         enqueue(px, pz, py, () => {
@@ -1194,7 +1208,8 @@ export default function OfficeCanvas2D({
           agent.id === 'cleaner_2' ||
           agent.id === 'server_admin' ||
           agent.id === 'chef_maria' ||
-          agent.id === 'barista_ken'
+          agent.id === 'barista_ken' ||
+          agent.id === 'coach_miguel'
 
         if (!hasDedicatedFurniture) {
           // Permanent Chair at Home Desk
@@ -1363,7 +1378,16 @@ export default function OfficeCanvas2D({
             drawGroundRing(ax, ay + 0.05, az, 0.9, 1.1, '#00e5ff', 0.95)
           }
 
-          const legStride = isWalking ? Math.sin(nav.walkPhase) * 0.22 : 0
+          const isGymRunner =
+            !isWalking &&
+            mode === 'GYM' &&
+            (idx % 3 === 0 || az <= 14.8) &&
+            agent.id !== 'coach_miguel'
+          const legStride = isWalking
+            ? Math.sin(nav.walkPhase) * 0.22
+            : isGymRunner
+              ? Math.sin(elapsed * 12) * 0.28
+              : 0
           const [lg1x, lg1y, lg1z] = toAgentWorld(
             -0.14,
             0.35,

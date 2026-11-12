@@ -376,38 +376,38 @@ export const cafeteriaSlots: [number, number, number][] = [
 
 // 32 Dedicated Individual Rest Beds & Pods in Nap Room ([-35, 0, -16])
 export const napBedSlots: [number, number, number][] = [
-  [-38.5, 0, -18.2], // Bed 1 approach
-  [-35.5, 0, -18.2], // Bed 2 approach
-  [-32.5, 0, -18.2], // Bed 3 approach
-  [-29.8, 0, -18.2], // Bed 4 approach
-  [-37.2, 0, -16],   // Bed 5 & 6 bunk approach
-  [-37.2, 0, -13],   // Bed 7 & 8 bunk approach
-  [-32.3, 0, -16],   // Bed 9 & 10 bunk approach
-  [-32.3, 0, -13],   // Bed 11 & 12 bunk approach
-  [-37.0, 0, -12.3], // Sleep Pod 13
-  [-34.5, 0, -12.3], // Sleep Pod 14
-  [-32.0, 0, -12.3], // Sleep Pod 15
-  [-29.8, 0, -12.3], // Sleep Pod 16
-  [-38.0, 0, -14.5], // Extra resting slot 17
-  [-35.0, 0, -14.5], // Extra resting slot 18
-  [-32.0, 0, -14.5], // Extra resting slot 19
-  [-30.0, 0, -14.5], // Extra resting slot 20
-  [-38.5, 0, -19.5],
-  [-35.5, 0, -19.5],
-  [-32.5, 0, -19.5],
-  [-29.8, 0, -19.5],
-  [-37, 0, -11],
-  [-34.5, 0, -11],
-  [-32, 0, -11],
-  [-29.8, 0, -11],
-  [-38.5, 0, -16],
-  [-38.5, 0, -13],
-  [-31, 0, -16],
-  [-31, 0, -13],
-  [-33, 0, -18],
-  [-33, 0, -14],
-  [-37, 0, -18],
-  [-37, 0, -14],
+  [-38.5, 0, -18.0], // Bed 1 approach
+  [-35.5, 0, -18.0], // Bed 2 approach
+  [-32.5, 0, -18.0], // Bed 3 approach
+  [-30.2, 0, -18.0], // Bed 4 approach
+  [-38.5, 0, -14.5], // Bunk 1 (Bed 5/6) approach
+  [-35.5, 0, -14.5], // Bunk 2 (Bed 7/8) approach
+  [-32.5, 0, -14.5], // Bunk 3 (Bed 9/10) approach
+  [-38.5, 0, -14.0], // Bunk 4 (Bed 11/12) approach
+  [-36.2, 0, -14.0], // Sleep Pod 13
+  [-34.5, 0, -14.0], // Sleep Pod 14
+  [-32.8, 0, -14.0], // Sleep Pod 15
+  [-31.0, 0, -14.0], // Sleep Pod 16
+  [-38.5, 0, -17.0], // Resting aisle slot 17
+  [-35.5, 0, -17.0], // Resting aisle slot 18
+  [-32.5, 0, -17.0], // Resting aisle slot 19
+  [-30.2, 0, -17.0], // Resting aisle slot 20
+  [-38.5, 0, -13.5], // Resting aisle slot 21
+  [-35.5, 0, -13.5], // Resting aisle slot 22
+  [-32.8, 0, -13.5], // Resting aisle slot 23
+  [-31.0, 0, -13.5], // Resting aisle slot 24
+  [-38.5, 0, -19.0],
+  [-35.5, 0, -19.0],
+  [-32.5, 0, -19.0],
+  [-30.2, 0, -19.0],
+  [-37.0, 0, -15.0],
+  [-34.0, 0, -15.0],
+  [-32.0, 0, -15.0],
+  [-30.0, 0, -15.0],
+  [-36.0, 0, -13.0],
+  [-34.0, 0, -13.0],
+  [-32.0, 0, -13.0],
+  [-30.5, 0, -13.0],
 ]
 
 export const CANTEEN_BUFFET_QUEUE_WAYPOINTS: [number, number, number][] = [
@@ -767,6 +767,19 @@ export const AGENT_WORKSTATIONS_3D: Record<string, AgentWorkstation3D> = {
     cafeteriaPos: cafeteriaSlots[29],
     napBedPos: napBedSlots[29],
   },
+  coach_miguel: {
+    agentId: 'coach_miguel',
+    name: 'Coach Miguel',
+    department: 'FACILITIES_WELLNESS',
+    room: 'Rec & Gym',
+    deskPos: [0, 0, 16.5],
+    facing: 'SW',
+    allHandsPos: allHandsSlots[30],
+    pantryPos: pantrySlots[30],
+    gymPos: [0, 0, 16.5],
+    cafeteriaPos: cafeteriaSlots[30],
+    napBedPos: napBedSlots[30],
+  },
 }
 
 export type DepartmentMode =
@@ -1058,4 +1071,12 @@ export const SERVER_ADMIN_PATROL_ROUTE: [number, number, number][] = [
   [-36, 0, 4.5], // Database Storage Array 02
   [-35, 0, 4.0], // Inference Accelerator 03
 ]
+
+export const COACH_MIGUEL_PATROL_ROUTE: [number, number, number][] = [
+  [0, 0, 16.5], // Coach station
+  [-3.5, 0, 14.5], // Treadmill coaching line
+  [3.5, 0, 14.5], // Free weights & dumbbell area
+  [0, 0, 19.0], // Floor mat conditioning area
+]
+
 

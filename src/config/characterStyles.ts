@@ -522,6 +522,19 @@ export const CHARACTER_STYLES: Record<string, CharacterStyleConfig> = {
     accessory: 'cap',
     accessoryColor: '#b45309',
   },
+  coach_miguel: {
+    agentId: 'coach_miguel',
+    gender: 'male',
+    spriteKey: 'dev_male_1',
+    hairStyle: 'spiky',
+    hairColor: '#1e293b',
+    outfitColor: '#ef4444', // Red athletic track jacket
+    sleeveColor: '#dc2626',
+    bottomColor: '#0f172a',
+    skinColor: '#fed7aa',
+    accessory: 'headphones',
+    accessoryColor: '#f87171',
+  },
 }
 
 const FALLBACK_PALETTES: Omit<CharacterStyleConfig, 'agentId'>[] = [

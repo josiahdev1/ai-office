@@ -250,6 +250,7 @@ function HQCommandPage() {
   const [isBrainLogOpen, setIsBrainLogOpen] = useState<boolean>(false)
   const [isRemindersOpen, setIsRemindersOpen] = useState<boolean>(false)
   const [, setReminderTick] = useState<number>(0)
+  const [, setFacilityTick] = useState<number>(0)
   const [rosterTab, setRosterTab] = useState<'roster' | 'wellness'>('roster')
   const [wellnessSort, setWellnessSort] = useState<'lowest_energy' | 'lowest_morale' | 'name'>('lowest_energy')
   const [agentPins, setAgentPins] = useState<Record<string, AgentPinStatus>>({})
@@ -258,7 +259,21 @@ function HQCommandPage() {
   const [autonomyMode, setAutonomyMode] = useState<AutonomyMode>('STANDING_POLICY')
   const [cleaningRoomSelection, setCleaningRoomSelection] = useState<string>('CAFETERIA')
   const [cleaningKindSelection, setCleaningKindSelection] = useState<CleaningTaskKind>('wipe_tables')
-  const [_facilityTick, setFacilityTick] = useState<number>(0)
+  const [isNavMenuOpen, setIsNavMenuOpen] = useState<boolean>(false)
+  const navMenuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (navMenuRef.current && !navMenuRef.current.contains(event.target as Node)) {
+        setIsNavMenuOpen(false)
+      }
+    }
+    if (isNavMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isNavMenuOpen])
+
   const hasMounted = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -1121,93 +1136,144 @@ function HQCommandPage() {
           </div>
         </div>
 
-        {/* Center: Department Mode Pills (Shared Across Both 3D & 2D Views) */}
-        <div className="hidden lg:flex items-center gap-1 rounded-xl border border-slate-800/80 bg-slate-950/80 p-1 backdrop-blur-md shrink-0">
-          {modeButtons.map((btn) => {
-            const isActive = currentMode === btn.mode
-            return (
-              <button
-                key={btn.mode}
-                type="button"
-                onClick={() => handleGlobalModeChange(btn.mode)}
-                className={`cursor-pointer rounded-lg px-2.5 py-1 font-mono text-[11px] font-bold tracking-tight transition-all whitespace-nowrap ${
-                  isActive
-                    ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                    : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
-                }`}
-              >
-                {btn.label}
-              </button>
-            )
-          })}
-          <div className="h-4 w-px bg-slate-800 mx-0.5" />
-          <button
-            type="button"
-            data-testid="add-dept-button"
-            onClick={() => setIsAddDeptModalOpen(true)}
-            className="cursor-pointer rounded-lg px-2 py-1 font-mono text-[10px] font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all whitespace-nowrap"
-          >
-            + DEPT
-          </button>
-          <button
-            type="button"
-            data-testid="open-agent-log-button"
-            onClick={() => setIsAgentLogDrawerOpen(true)}
-            className="cursor-pointer rounded-lg px-2 py-1 font-mono text-[10px] font-bold text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all whitespace-nowrap"
-          >
-            AGENT LOG
-          </button>
-          <button
-            type="button"
-            data-testid="open-brain-log-button"
-            onClick={() => setIsBrainLogOpen(true)}
-            className="cursor-pointer rounded-lg px-2 py-1 font-mono text-[10px] font-bold text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/20 transition-all whitespace-nowrap flex items-center gap-1"
-          >
-            <span>🧠</span>
-            <span>BRAIN LOG</span>
-          </button>
-          <button
-            type="button"
-            data-testid="open-reminders-button"
-            onClick={() => setIsRemindersOpen(true)}
-            className="cursor-pointer rounded-lg px-2 py-1 font-mono text-[10px] font-bold text-amber-300 border border-amber-500/40 hover:bg-amber-500/20 transition-all whitespace-nowrap flex items-center gap-1"
-          >
-            <span>⏰</span>
-            <span>REMINDERS</span>
-            {reminderManager.getUnacknowledgedMissed().length > 0 && (
-              <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
-            )}
-          </button>
-        </div>
-
-        {/* Right: Real-time PHT Clock, Live Badge & Instant 3D / 2D Viewport Switcher */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right: Digital Clock, Menu Popover, Roster Button, 3D/2D Switcher */}
+        <div className="flex items-center gap-2.5 shrink-0">
           {/* Digital Clock (Asia/Manila) */}
-          <div className="hidden xl:flex flex-col items-end whitespace-nowrap">
+          <div className="hidden md:flex flex-col items-end whitespace-nowrap">
             <span className="font-mono text-xs font-bold text-slate-200 tracking-wider whitespace-nowrap">
               {phtTime || '00:00:00 AM PHT'}
             </span>
             <span className="font-mono text-[9px] text-slate-500 font-semibold tracking-wider whitespace-nowrap">
-              1X REAL-TIME WORK PACE
+              PHT • 1X WORK PACE
             </span>
           </div>
 
-          {/* Top-Bar JARVIS Core Entry Button */}
-          <button
-            type="button"
-            data-testid="top-bar-jarvis-btn"
-            onClick={enterJarvis}
-            className="cursor-pointer flex items-center gap-1.5 rounded-lg border border-cyan-400/70 bg-cyan-950/80 px-3 py-1 font-mono text-xs font-bold text-cyan-200 shadow-[0_0_15px_rgba(0,229,255,0.25)] transition-all hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
-          >
-            <span className="h-2 w-2 rounded-full bg-cyan-300 animate-pulse" />
-            <span>JARVIS [J]</span>
-          </button>
+          {/* Clean Menu Popover (Camera & Rooms + Operations & Logs) */}
+          <div className="relative" ref={navMenuRef}>
+            <button
+              type="button"
+              data-testid="nav-menu-button"
+              onClick={() => setIsNavMenuOpen((prev) => !prev)}
+              className={`cursor-pointer flex items-center gap-1.5 rounded-lg border px-3 py-1.5 font-mono text-xs font-bold tracking-tight transition-all whitespace-nowrap ${
+                isNavMenuOpen
+                  ? 'border-cyan-400 bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                  : 'border-slate-800 bg-slate-950/80 text-slate-200 hover:bg-slate-900 hover:border-slate-700'
+              }`}
+            >
+              <span>☰</span>
+              <span>MENU</span>
+              <span className="text-[10px] opacity-70">▾</span>
+              {reminderManager.getUnacknowledgedMissed().length > 0 && (
+                <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+              )}
+            </button>
 
-          {/* Clickable Live Roster Button (24 Agents Online) */}
+            {/* Popover Dropdown Menu */}
+            {isNavMenuOpen && (
+              <div
+                data-testid="nav-menu-popover"
+                className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-slate-800 bg-[#0d121f] p-3 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 duration-100"
+              >
+                {/* Section 1: Camera & Rooms */}
+                <div className="pb-2.5 mb-2.5 border-b border-slate-800/80">
+                  <div className="font-mono text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <span>CAMERA & ROOMS</span>
+                    <span className="text-[9px] text-cyan-400 font-semibold">{currentMode}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {modeButtons.map((btn) => {
+                      const isActive = currentMode === btn.mode
+                      return (
+                        <button
+                          key={btn.mode}
+                          type="button"
+                          onClick={() => {
+                            handleGlobalModeChange(btn.mode)
+                            setIsNavMenuOpen(false)
+                          }}
+                          className={`cursor-pointer rounded-lg px-2.5 py-1.5 font-mono text-[11px] font-bold tracking-tight text-left transition-all whitespace-nowrap ${
+                            isActive
+                              ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                              : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
+                          }`}
+                        >
+                          {btn.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Section 2: Operations & Logs */}
+                <div>
+                  <div className="font-mono text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                    OPERATIONS & LOGS
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <button
+                      type="button"
+                      data-testid="add-dept-button"
+                      onClick={() => {
+                        setIsAddDeptModalOpen(true)
+                        setIsNavMenuOpen(false)
+                      }}
+                      className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all whitespace-nowrap"
+                    >
+                      <span>+ ADD DEPARTMENT</span>
+                      <span className="text-[10px] text-cyan-500">NEW</span>
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="open-agent-log-button"
+                      onClick={() => {
+                        setIsAgentLogDrawerOpen(true)
+                        setIsNavMenuOpen(false)
+                      }}
+                      className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all whitespace-nowrap"
+                    >
+                      <span>AGENT ACTIVITY LOG</span>
+                      <span>📋</span>
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="open-brain-log-button"
+                      onClick={() => {
+                        setIsBrainLogOpen(true)
+                        setIsNavMenuOpen(false)
+                      }}
+                      className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/20 transition-all whitespace-nowrap"
+                    >
+                      <span>THE BRAIN LEARNING LOG</span>
+                      <span>🧠</span>
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="open-reminders-button"
+                      onClick={() => {
+                        setIsRemindersOpen(true)
+                        setIsNavMenuOpen(false)
+                      }}
+                      className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-amber-300 border border-amber-500/40 hover:bg-amber-500/20 transition-all whitespace-nowrap"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span>OFFICE REMINDERS</span>
+                        {reminderManager.getUnacknowledgedMissed().length > 0 && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
+                        )}
+                      </span>
+                      <span>⏰</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Clickable Live Roster Button */}
           <button
             type="button"
             onClick={() => setIsRosterOpen((prev) => !prev)}
-            className={`cursor-pointer flex items-center gap-2 rounded-lg border px-3 py-1 font-mono text-xs font-bold transition-all whitespace-nowrap ${
+            className={`cursor-pointer flex items-center gap-2 rounded-lg border px-3 py-1.5 font-mono text-xs font-bold transition-all whitespace-nowrap ${
               isRosterOpen
                 ? 'border-cyan-400 bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
                 : 'border-emerald-500/40 bg-emerald-950/50 text-emerald-400 hover:bg-emerald-900/60 hover:border-emerald-400'
@@ -1219,7 +1285,7 @@ function HQCommandPage() {
               }`}
             />
             <span className="whitespace-nowrap">
-              {agents.length > 0 ? `${agents.length} AGENTS ROSTER` : '24 AGENTS ROSTER'} ▾
+              {agents.length > 0 ? `${agents.length} AGENTS ROSTER` : '30+ AGENTS ROSTER'} ▾
             </span>
           </button>
 

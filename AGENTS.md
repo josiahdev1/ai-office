@@ -90,6 +90,20 @@ This project uses Supabase (project ref: `spacfnutrnhzxxbkjrji`) with installed 
 - Whenever `supabase/migrations/*.sql` or `supabase/seed.sql` is created or modified, immediately apply it to project `spacfnutrnhzxxbkjrji` using the Supabase MCP tools (`apply_migration` for schema migrations and `execute_sql` for `supabase/seed.sql`).
 - After applying any migration or seed update, verify row counts and table integrity via `execute_sql` (e.g., confirming all 8 tables and 23 agents exist in `public.agents`) before marking the task complete.
 
+## Mandatory Playwright End-to-End Verification & Visual QA
+
+Before marking any ticket `COMPLETED` or pushing changes to `office-v3`, agents **must** run Playwright against the live application to verify everything works end-to-end and visually looks right:
+
+### 1. Live Browser Verification Gate
+- Start or target the local Next.js server (`http://localhost:3000`) and run Playwright checks (`npx playwright test` or a headless Playwright verification script) covering:
+  - **Zero Runtime & Hydration Errors**: Assert zero `console.error`, uncaught page errors, or React hydration mismatch warnings on initial load and reload.
+  - **3D & 2D (`?v=2`) Parity & Framing**: Verify both 3D view and 2D view render cleanly at 100% viewport zoom (`1440x900` and `1280x800`) without clipping rooms, overlapping HUD chrome, or requiring manual zoom-out.
+  - **Interactive User Flows**: Click and verify all modified UI controls, drawers/menus, room views, and agent action triggers (such as Cafeteria buffet queues, Pantry coffee breaks, Gym workouts, Bedroom rest, and Jarvis controls) end-to-end.
+- Confirm UI layout quality visually before concluding (never leave untracked screenshot junk files in the repo).
+
+### 2. Fix-Before-Ship Rule
+- If Playwright detects any layout overlap, broken interaction, hydration warning, or console error, **fix the defect and re-run Playwright** until all checks pass 100%. Record the Playwright test command and pass summary in `4. Verification & Quality Gates` of the active ticket.
+
 <!-- BEGIN:nextjs-agent-feedback -->
 
 ## Report Next.js feedback

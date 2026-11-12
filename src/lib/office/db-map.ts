@@ -240,6 +240,25 @@ export const DEFAULT_BARISTA_KEN_AGENT: OfficeAgentRow = {
   progress: 88,
 }
 
+export const DEFAULT_COACH_MIGUEL_AGENT: OfficeAgentRow = {
+  id: 'coach_miguel',
+  name: 'Coach Miguel',
+  role: 'Head Athletic Trainer & Ergonomics Coach',
+  department: 'FACILITIES_WELLNESS',
+  desk_x: 20,
+  desk_y: 28,
+  current_x: 20,
+  current_y: 28,
+  status: 'active',
+  current_task: 'Leading functional conditioning circuits, treadmill runs, and desk ergonomics',
+  current_room: 'Rec & Gym',
+  model: 'gemini-2.0-flash',
+  color: '#ef4444',
+  kind: 'resident',
+  sub_state: 'working',
+  progress: 92,
+}
+
 // =============================================================================
 // 3. Status Converters
 // =============================================================================
