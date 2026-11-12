@@ -1,6 +1,13 @@
 'use client'
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+  useReducer,
+} from 'react'
 import { Agent, Approval } from '@/components/office/types'
 import { DepartmentMode } from '@/config/officeLayout'
 import {
@@ -19,6 +26,12 @@ import {
   type JarvisTaskPlan,
   type JarvisTurnResult,
 } from '@/lib/jarvis/orchestrator'
+import {
+  voiceStateReducer,
+  INITIAL_VOICE_STATE,
+  checkBargeInCondition,
+  getEchoProtectedMediaConstraints,
+} from '@/lib/jarvis/voiceState'
 
 export type JarvisQualityPreset = 'low' | 'medium' | 'high'
 
@@ -173,6 +186,145 @@ export default function JarvisInterior({
   const startRecognitionFnRef = useRef<() => void>(() => {})
   const ttsMutedRef = useRef<boolean>(ttsMuted)
 
+  const [voiceMachine, dispatchVoice] = useReducer(voiceStateReducer, {
+    ...INITIAL_VOICE_STATE,
+    current: coreState,
+  })
+  const [beatPulse, setBeatPulse] = useState<number>(0)
+  const voiceMachineRef = useRef(voiceMachine)
+
+  useEffect(() => {
+    voiceMachineRef.current = voiceMachine
+    if (voiceMachine.current !== coreState) {
+      onCoreStateChange(voiceMachine.current)
+    }
+  }, [voiceMachine, coreState, onCoreStateChange])
+
+  // Smooth decay for beat pulse
+  useEffect(() => {
+    if (beatPulse <= 0.01) return
+    const id = requestAnimationFrame(() => {
+      setBeatPulse((prev) => Math.max(0, prev - 0.04))
+    })
+    return () => cancelAnimationFrame(id)
+  }, [beatPulse])
+
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const micStreamRef = useRef<MediaStream | null>(null)
+
+  // Hardware echo-protected Web Audio AnalyserNode setup
+  useEffect(() => {
+    if (typeof window === 'undefined' || !navigator.mediaDevices?.getUserMedia) return
+    if (!voiceEnabled) {
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach((t) => t.stop())
+        micStreamRef.current = null
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        void audioContextRef.current.close()
+        audioContextRef.current = null
+      }
+      return
+    }
+
+    let isCancelled = false
+    let animId = 0
+    let consecutiveHighVolumeMs = 0
+    let lastTime = performance.now()
+
+    navigator.mediaDevices
+      .getUserMedia(getEchoProtectedMediaConstraints())
+      .then((stream) => {
+        if (isCancelled) {
+          stream.getTracks().forEach((t) => t.stop())
+          return
+        }
+        micStreamRef.current = stream
+        const AudioCtx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+        if (!AudioCtx) return
+
+        const ctx = new AudioCtx()
+        audioContextRef.current = ctx
+        const source = ctx.createMediaStreamSource(stream)
+        const analyser = ctx.createAnalyser()
+        analyser.fftSize = 128
+        analyser.smoothingTimeConstant = 0.4
+        source.connect(analyser)
+        analyserRef.current = analyser
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount)
+
+        const checkVolume = () => {
+          const now = performance.now()
+          const delta = now - lastTime
+          lastTime = now
+
+          analyser.getByteFrequencyData(dataArray)
+          let sum = 0
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i]
+          }
+          const level = sum / dataArray.length / 255
+
+          if (voiceMachineRef.current.current === 'listening') {
+            setLiveAudioLevel(Math.max(0.15, level * 1.5))
+            if (level > 0.35) {
+              setBeatPulse((prev) => Math.max(prev, Math.min(1.0, level * 1.8)))
+            }
+          }
+
+          // Volume duration barge-in check when speaking (300ms threshold)
+          if (voiceMachineRef.current.current === 'speaking' || isSpeakingTtsRef.current) {
+            if (level > 0.32) {
+              consecutiveHighVolumeMs += delta
+            } else {
+              consecutiveHighVolumeMs = Math.max(0, consecutiveHighVolumeMs - delta * 2)
+            }
+            const isBargingIn = checkBargeInCondition({
+              isSpeaking: true,
+              micVolumeExceededDurationMs: consecutiveHighVolumeMs,
+              volumeThresholdMs: 300,
+            })
+            if (isBargingIn) {
+              // Mic level above threshold for 300ms -> Instant Barge-in!
+              if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel()
+              }
+              isSpeakingTtsRef.current = false
+              dispatchVoice({ type: 'BARGE_IN', reason: 'mic_threshold' })
+              onCoreStateChange('listening')
+              setBeatPulse(1.0)
+              consecutiveHighVolumeMs = 0
+            }
+          } else {
+            consecutiveHighVolumeMs = 0
+          }
+
+          animId = requestAnimationFrame(checkVolume)
+        }
+        animId = requestAnimationFrame(checkVolume)
+      })
+      .catch(() => {
+        // Fallback gracefully if getUserMedia unavailable
+      })
+
+    return () => {
+      isCancelled = true
+      if (animId) cancelAnimationFrame(animId)
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach((t) => t.stop())
+        micStreamRef.current = null
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        void audioContextRef.current.close()
+        audioContextRef.current = null
+      }
+    }
+  }, [voiceEnabled, onCoreStateChange])
+
   useEffect(() => {
     voiceEnabledRef.current = voiceEnabled
   }, [voiceEnabled])
@@ -285,7 +437,9 @@ export default function JarvisInterior({
           clearTimeout(safetyTimer)
           isSpeakingTtsRef.current = false
           setLiveAudioLevel(0.45)
+          dispatchVoice({ type: 'SPEECH_END' })
           if (voiceEnabledRef.current) {
+            dispatchVoice({ type: 'MIC_OPEN' })
             onCoreStateChange('listening')
             setTimeout(() => {
               if (voiceEnabledRef.current && !isSpeakingTtsRef.current) {
@@ -293,6 +447,7 @@ export default function JarvisInterior({
               }
             }, 150)
           } else {
+            dispatchVoice({ type: 'RESET' })
             onCoreStateChange('idle')
           }
         }
@@ -300,11 +455,17 @@ export default function JarvisInterior({
         const safetyTimer = setTimeout(resumeListeningAfterSpeech, 9000)
 
         utterance.onstart = () => {
+          isSpeakingTtsRef.current = true
+          dispatchVoice({ type: 'SPEECH_START' })
           onCoreStateChange('speaking')
-          setLiveAudioLevel(0.88)
+          setLiveAudioLevel(0.85)
+          setBeatPulse(0.8)
         }
-        utterance.onboundary = () => {
-          setLiveAudioLevel(0.55 + Math.random() * 0.4)
+        utterance.onboundary = (ev) => {
+          // Fire pulse per word boundary, with larger pulse on sentence boundary
+          const isSentence = ev.name === 'sentence'
+          setBeatPulse(isSentence ? 1.0 : 0.65)
+          setLiveAudioLevel(isSentence ? 0.9 : 0.6 + Math.random() * 0.3)
         }
         utterance.onend = resumeListeningAfterSpeech
         utterance.onerror = resumeListeningAfterSpeech
@@ -312,6 +473,7 @@ export default function JarvisInterior({
         window.speechSynthesis.speak(utterance)
       } catch {
         isSpeakingTtsRef.current = false
+        dispatchVoice({ type: 'SPEECH_END' })
       }
     },
     [onCoreStateChange, onVoiceTranscription]
@@ -513,6 +675,7 @@ export default function JarvisInterior({
               const payload = JSON.parse(rawJson)
 
               if (eventName === 'status') {
+                dispatchVoice({ type: 'TRANSCRIPT_FINALIZED', transcript: trimmed })
                 onCoreStateChange('thinking')
                 if (payload.modelLabel) {
                   setProviderStatus({
@@ -522,7 +685,8 @@ export default function JarvisInterior({
                   })
                 }
               } else if (eventName === 'delta') {
-                onCoreStateChange('speaking')
+                // Streamed token chunk arrival: fire pulse in thinking state
+                setBeatPulse(0.9)
                 setLiveAudioLevel(0.6 + Math.random() * 0.35)
                 setMessages((prev) =>
                   prev.map((m) =>
@@ -568,7 +732,7 @@ export default function JarvisInterior({
           setApiTokens((prev) => prev + turnApiTokens)
           setLocalSlmTokens((prev) => prev + turnLocalTokens)
 
-          // Execute office command if returned (either global mode OR individual agent route!)
+          // Execute office command if returned
           if (completedTurn.officeCommand) {
             if (
               completedTurn.officeCommand.type === 'mode' &&
@@ -597,6 +761,12 @@ export default function JarvisInterior({
             }
           }
 
+          if (completedTurn.taskPlan) {
+            dispatchVoice({ type: 'EXECUTION_START' })
+            onCoreStateChange('executing')
+            setBeatPulse(0.85)
+          }
+
           setMessages((prev) =>
             prev.map((m) =>
               m.id === jarvisMsgId
@@ -615,6 +785,7 @@ export default function JarvisInterior({
             )
           )
 
+          dispatchVoice({ type: 'REPLY_READY' })
           speakWithJarvisVoice(completedTurn.reply)
         }
       } catch (err) {
@@ -622,6 +793,7 @@ export default function JarvisInterior({
         const formattedErr = rawErr.startsWith('Gemini unreachable:')
           ? rawErr
           : `Gemini unreachable: ${rawErr}`
+        dispatchVoice({ type: 'ERROR', error: formattedErr })
         onCoreStateChange('error')
         setMessages((prev) =>
           prev.map((m) =>
@@ -639,10 +811,13 @@ export default function JarvisInterior({
       } finally {
         setIsTransmitting(false)
         setLiveAudioLevel(0.45)
-        if (!isSpeakingTtsRef.current) {
-          setTimeout(() => {
-            onCoreStateChange(voiceEnabledRef.current ? 'listening' : 'idle')
-          }, 300)
+        if (
+          !isSpeakingTtsRef.current &&
+          voiceMachineRef.current.current !== 'speaking' &&
+          voiceMachineRef.current.current !== 'executing'
+        ) {
+          dispatchVoice({ type: voiceEnabledRef.current ? 'MIC_OPEN' : 'RESET' })
+          onCoreStateChange(voiceEnabledRef.current ? 'listening' : 'idle')
         }
       }
     },
@@ -701,7 +876,32 @@ export default function JarvisInterior({
       instance.lang = 'en-US'
 
       instance.onresult = (event: SpeechRecognitionEventLike) => {
-        if (isSpeakingTtsRef.current) return
+        // 1. Instant Barge-In detection while speaking
+        if (voiceMachineRef.current.current === 'speaking' || isSpeakingTtsRef.current) {
+          let wordsSpoken = ''
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            wordsSpoken += event.results[i][0].transcript + ' '
+          }
+          const isBargingIn = checkBargeInCondition({
+            isSpeaking: true,
+            interimTranscript: wordsSpoken,
+            minInterimWords: 2,
+          })
+          if (isBargingIn) {
+            if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+              window.speechSynthesis.cancel()
+            }
+            isSpeakingTtsRef.current = false
+            dispatchVoice({ type: 'BARGE_IN', reason: 'interim_words' })
+            onCoreStateChange('listening')
+            setLiveAudioLevel(0.85)
+            setBeatPulse(1.0)
+            return
+          }
+          return
+        }
+
+        // 2. Normal live listening handling
         let interim = ''
         let finalTranscript = ''
         for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -713,10 +913,13 @@ export default function JarvisInterior({
           }
         }
         if (interim) {
+          dispatchVoice({ type: 'INTERIM_TRANSCRIPT', transcript: interim })
           setCommandInput(interim)
+          setBeatPulse(0.75) // Syllable burst ripple
         }
         if (finalTranscript.trim()) {
           const spoken = finalTranscript.trim()
+          dispatchVoice({ type: 'TRANSCRIPT_FINALIZED', transcript: spoken })
           setCommandInput('')
           setVoicePermissionStatus(
             `Heard: "${spoken.slice(0, 42)}" • Always-On Mic Active`
@@ -769,6 +972,7 @@ export default function JarvisInterior({
       recognitionRef.current.start()
       isRecognitionRunningRef.current = true
       setVoicePermissionStatus('Always-On Mic Active • Speak anytime to JARVIS')
+      dispatchVoice({ type: 'MIC_OPEN' })
       onCoreStateChange('listening')
       onVoiceStateChange?.(true, true)
     } catch {
@@ -819,7 +1023,9 @@ export default function JarvisInterior({
 
   const handleDispatchPlan = async (plan: JarvisTaskPlan) => {
     setDispatchedPlanIds((prev) => ({ ...prev, [plan.id]: true }))
+    dispatchVoice({ type: 'EXECUTION_START' })
     onCoreStateChange('executing')
+    setBeatPulse(0.9)
     try {
       await Promise.allSettled(
         plan.subtasks.map((sub) =>
@@ -836,12 +1042,27 @@ export default function JarvisInterior({
       )
     } finally {
       setTimeout(() => {
-        onCoreStateChange(voiceEnabledRef.current ? 'listening' : 'idle')
+        if (!isSpeakingTtsRef.current) {
+          dispatchVoice({ type: voiceEnabledRef.current ? 'MIC_OPEN' : 'RESET' })
+          onCoreStateChange(voiceEnabledRef.current ? 'listening' : 'idle')
+        }
       }, 1200)
     }
   }
 
   const handleToggleVoice = () => {
+    // If speaking, tapping mic interrupts immediately (Barge-In)
+    if (voiceMachineRef.current.current === 'speaking' || isSpeakingTtsRef.current) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel()
+      }
+      isSpeakingTtsRef.current = false
+      dispatchVoice({ type: 'BARGE_IN', reason: 'interim_words' })
+      onCoreStateChange('listening')
+      setBeatPulse(1.0)
+      return
+    }
+
     if (voiceEnabled) {
       voiceEnabledRef.current = false
       setVoiceEnabled(false)
@@ -852,13 +1073,15 @@ export default function JarvisInterior({
       } catch {
         // Ignore stop errors
       }
-      if (coreState === 'listening') onCoreStateChange('idle')
+      dispatchVoice({ type: 'RESET' })
+      onCoreStateChange('idle')
       return
     }
 
     voiceEnabledRef.current = true
     setVoiceEnabled(true)
     setTtsMuted(false)
+    dispatchVoice({ type: 'MIC_OPEN' })
     startContinuousRecognition()
   }
 
@@ -1283,7 +1506,12 @@ export default function JarvisInterior({
               size="interior"
               renderMode={quality === 'low' ? '2d' : renderMode}
               progress={telemetry.avgProgress}
-              audioLevel={coreState === 'speaking' ? liveAudioLevel : 0.45}
+              audioLevel={
+                coreState === 'speaking' || coreState === 'listening'
+                  ? liveAudioLevel
+                  : 0.45
+              }
+              beatPulse={beatPulse}
               showLabel={false}
               reducedMotion={reducedMotion}
               enableOrbit={renderMode === '3d'}
@@ -1583,23 +1811,61 @@ export default function JarvisInterior({
       {/* 3. BOTTOM HOLOGRAPHIC COMMAND BAR WITH MIC & MUTE TOGGLES             */}
       {/* ===================================================================== */}
       <footer className="relative z-20 border-t border-cyan-500/25 bg-[#050b16]/95 px-4 py-3 backdrop-blur-xl">
+        {/* Live 'You are saying' syllable & transcript ripple banner */}
+        {voiceMachine.current === 'listening' && (
+          <div
+            data-testid="jarvis-live-transcript-banner"
+            className="mx-auto mb-2 flex max-w-5xl items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-950/60 px-3 py-1.5 font-mono text-xs text-cyan-200"
+          >
+            <span className="inline-block h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
+            <span className="font-bold uppercase tracking-wider text-cyan-400 text-[10px]">
+              You are saying:
+            </span>
+            <span className="truncate italic text-cyan-100">
+              {voiceMachine.interimTranscript || commandInput || 'Listening for your voice...'}
+            </span>
+          </div>
+        )}
+
         <form
           onSubmit={handleSubmitCommand}
           className="mx-auto flex max-w-5xl flex-wrap items-center gap-2.5"
         >
-          {/* Voice Input Mic Button */}
+          {/* Voice Input Mic Button driven purely by voiceMachine */}
           <button
             type="button"
             data-testid="jarvis-mic-button"
             onClick={handleToggleVoice}
             className={`cursor-pointer flex items-center gap-1.5 rounded-xl border px-3 py-2 font-mono text-xs font-bold transition whitespace-nowrap ${
-              voiceEnabled
-                ? 'border-emerald-400 bg-emerald-950/80 text-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.35)] animate-pulse'
-                : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-cyan-500/50 hover:text-cyan-200'
+              voiceMachine.current === 'listening'
+                ? 'border-cyan-400 bg-cyan-950/80 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.35)] animate-pulse'
+                : voiceMachine.current === 'speaking'
+                  ? 'border-emerald-400 bg-emerald-950/80 text-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.35)] animate-pulse'
+                  : voiceMachine.current === 'thinking'
+                    ? 'border-amber-400 bg-amber-950/80 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.35)] animate-pulse'
+                    : voiceMachine.current === 'executing'
+                      ? 'border-indigo-400 bg-indigo-950/80 text-indigo-300 shadow-[0_0_15px_rgba(129,140,248,0.35)] animate-pulse'
+                      : voiceEnabled
+                        ? 'border-emerald-500/50 bg-emerald-950/40 text-emerald-400'
+                        : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-cyan-500/50 hover:text-cyan-200'
             }`}
             title={voicePermissionStatus}
           >
-            <span>{voiceEnabled ? '🎙 LISTENING...' : '🎙 MIC OFF'}</span>
+            <span>
+              {voiceMachine.current === 'listening'
+                ? '🎙 LISTENING...'
+                : voiceMachine.current === 'speaking'
+                  ? '🔊 SPEAKING (TAP TO INTERRUPT)'
+                  : voiceMachine.current === 'thinking'
+                    ? '⚙️ THINKING...'
+                    : voiceMachine.current === 'executing'
+                      ? '⚡ EXECUTING...'
+                      : voiceMachine.current === 'error'
+                        ? '⚠️ ERROR'
+                        : voiceEnabled
+                          ? '🎙 READY (SPEAK)'
+                          : '🎙 MIC OFF'}
+            </span>
           </button>
 
           {/* TTS Mute Toggle */}
@@ -1634,11 +1900,6 @@ export default function JarvisInterior({
             value={commandInput}
             onChange={(e) => {
               setCommandInput(e.target.value)
-              if (e.target.value.trim().length > 0 && coreState === 'idle') {
-                onCoreStateChange('listening')
-              } else if (e.target.value.trim().length === 0 && coreState === 'listening') {
-                onCoreStateChange('idle')
-              }
             }}
             placeholder={`Speak or type a directive for JARVIS, ${userName}...`}
             className="flex-1 min-w-[220px] rounded-xl border border-cyan-500/40 bg-slate-950/90 px-4 py-2 font-mono text-xs text-slate-100 placeholder-slate-500 focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-400"

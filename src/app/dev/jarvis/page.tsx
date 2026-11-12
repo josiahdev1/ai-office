@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   ARC_REACTOR_STATE_CONFIG,
@@ -18,6 +18,31 @@ export default function JarvisDevLabPage() {
   const [audioLevel, setAudioLevel] = useState(0.55)
   const [forceHoverLabel, setForceHoverLabel] = useState(true)
   const [reducedMotion, setReducedMotion] = useState(false)
+  const [beatPulse, setBeatPulse] = useState(0)
+  const [autoBeatEnabled, setAutoBeatEnabled] = useState(false)
+
+  // Smooth decay for beat pulse
+  useEffect(() => {
+    if (beatPulse <= 0.01) return
+    const id = requestAnimationFrame(() => {
+      setBeatPulse((prev) => Math.max(0, prev - 0.035))
+    })
+    return () => cancelAnimationFrame(id)
+  }, [beatPulse])
+
+  // Auto beat loop simulator
+  useEffect(() => {
+    if (!autoBeatEnabled) return
+    const interval = setInterval(() => {
+      setBeatPulse(0.75 + Math.random() * 0.25)
+    }, 550)
+    return () => clearInterval(interval)
+  }, [autoBeatEnabled])
+
+  const triggerBeat = (val: number, nextState?: JarvisCoreState) => {
+    setBeatPulse(val)
+    if (nextState) setSelectedState(nextState)
+  }
 
   const activeConfig = ARC_REACTOR_STATE_CONFIG[selectedState]
 
@@ -222,6 +247,102 @@ export default function JarvisDevLabPage() {
               </button>
             </div>
           </div>
+
+          {/* BEAT SIMULATOR PANEL (Phase J10) */}
+          <div className="mt-5 border-t border-slate-800/80 pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-orange-400 animate-ping" />
+                  <span className="font-mono text-xs font-bold tracking-wider text-orange-400 uppercase">
+                    BEAT SYNCHRONIZATION SIMULATOR (PHASE J10)
+                  </span>
+                </div>
+                <p className="mt-0.5 font-mono text-[11px] text-slate-400">
+                  Simulate real synchronous arrival events: word boundaries, sentence accents, streamed token chunks, and task progress pulses.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[10px] text-slate-400">
+                  PULSE INTENSITY:{' '}
+                  <strong className="text-orange-300">{(beatPulse * 100).toFixed(0)}%</strong>
+                </span>
+                <button
+                  type="button"
+                  data-testid="beat-sim-auto-btn"
+                  onClick={() => setAutoBeatEnabled((v) => !v)}
+                  className={`cursor-pointer rounded-md border px-3 py-1 font-mono text-xs font-bold transition whitespace-nowrap ${
+                    autoBeatEnabled
+                      ? 'border-orange-400 bg-orange-500/25 text-orange-200 shadow-[0_0_12px_rgba(249,115,22,0.4)]'
+                      : 'border-slate-700 bg-slate-900 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {autoBeatEnabled ? '⏸ STOP AUTO BEAT' : '▶ AUTO 120 BPM BEAT'}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                data-testid="beat-sim-word-btn"
+                onClick={() => triggerBeat(0.65, 'speaking')}
+                className="cursor-pointer rounded-lg border border-cyan-500/40 bg-cyan-950/60 px-3 py-1.5 font-mono text-xs font-semibold text-cyan-200 transition hover:border-cyan-400 hover:bg-cyan-900/60 active:scale-95 whitespace-nowrap"
+              >
+                🗣 Word Boundary (0.65)
+              </button>
+              <button
+                type="button"
+                data-testid="beat-sim-sentence-btn"
+                onClick={() => triggerBeat(1.0, 'speaking')}
+                className="cursor-pointer rounded-lg border border-cyan-400 bg-cyan-950/80 px-3 py-1.5 font-mono text-xs font-bold text-cyan-100 transition hover:bg-cyan-900 active:scale-95 whitespace-nowrap shadow-[0_0_10px_rgba(0,229,255,0.2)]"
+              >
+                💥 Sentence Boundary (1.00)
+              </button>
+              <button
+                type="button"
+                data-testid="beat-sim-token-btn"
+                onClick={() => triggerBeat(0.9, 'thinking')}
+                className="cursor-pointer rounded-lg border border-amber-500/50 bg-amber-950/60 px-3 py-1.5 font-mono text-xs font-bold text-amber-200 transition hover:border-amber-400 hover:bg-amber-900/60 active:scale-95 whitespace-nowrap"
+              >
+                ⚡ Streamed Token Chunk (0.90)
+              </button>
+              <button
+                type="button"
+                data-testid="beat-sim-task-btn"
+                onClick={() => {
+                  setProgress((p) => (p >= 95 ? 10 : p + 10))
+                  triggerBeat(0.85, 'executing')
+                }}
+                className="cursor-pointer rounded-lg border border-indigo-500/50 bg-indigo-950/60 px-3 py-1.5 font-mono text-xs font-bold text-indigo-200 transition hover:border-indigo-400 hover:bg-indigo-900/60 active:scale-95 whitespace-nowrap"
+              >
+                📈 Task Progress Step (+10%)
+              </button>
+              <button
+                type="button"
+                data-testid="beat-sim-mic-btn"
+                onClick={() => {
+                  setAudioLevel(0.85)
+                  triggerBeat(0.8, 'listening')
+                }}
+                className="cursor-pointer rounded-lg border border-emerald-500/50 bg-emerald-950/60 px-3 py-1.5 font-mono text-xs font-bold text-emerald-200 transition hover:border-emerald-400 hover:bg-emerald-900/60 active:scale-95 whitespace-nowrap"
+              >
+                🎙 Syllable Burst Ripple
+              </button>
+              <button
+                type="button"
+                data-testid="beat-sim-bargein-btn"
+                onClick={() => {
+                  setSelectedState('listening')
+                  triggerBeat(1.0, 'listening')
+                }}
+                className="cursor-pointer rounded-lg border border-rose-500/50 bg-rose-950/60 px-3 py-1.5 font-mono text-xs font-bold text-rose-200 transition hover:border-rose-400 hover:bg-rose-900/60 active:scale-95 whitespace-nowrap"
+              >
+                🛑 Simulate Barge-In (Interrupt)
+              </button>
+            </div>
+          </div>
         </section>
 
         {/* Dual Size Comparison Stage: Office Size vs Interior Size */}
@@ -264,6 +385,7 @@ export default function JarvisDevLabPage() {
                   renderMode={renderMode}
                   progress={progress}
                   audioLevel={audioLevel}
+                  beatPulse={beatPulse}
                   showLabel={forceHoverLabel}
                   reducedMotion={reducedMotion}
                 />
@@ -281,12 +403,11 @@ export default function JarvisDevLabPage() {
                     JARVIS INTERIOR CHAMBER VARIANT (size=&quot;interior&quot;)
                   </span>
                   <p className="font-mono text-[11px] text-slate-400">
-                    5 counter-rotating gyroscopic rings • 84 particles • 32-bar radial
-                    waveform
+                    7 concentric rings • Orange sweep • Micro-text strip • Parallax tilt
                   </p>
                 </div>
                 <span className="rounded border border-cyan-400/50 bg-cyan-950/70 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-200 whitespace-nowrap">
-                  5 RINGS / HIGH DETAIL
+                  7 RINGS / HIGH DETAIL
                 </span>
               </div>
 
@@ -297,6 +418,7 @@ export default function JarvisDevLabPage() {
                   renderMode={renderMode}
                   progress={progress}
                   audioLevel={audioLevel}
+                  beatPulse={beatPulse}
                   showLabel={forceHoverLabel}
                   reducedMotion={reducedMotion}
                 />
@@ -384,6 +506,7 @@ export default function JarvisDevLabPage() {
                       renderMode={renderMode}
                       progress={progress}
                       audioLevel={audioLevel}
+                      beatPulse={selectedState === st ? beatPulse : 0}
                       showLabel={forceHoverLabel}
                       reducedMotion={reducedMotion}
                     />

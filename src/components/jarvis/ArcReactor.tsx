@@ -32,6 +32,7 @@ export interface ArcReactorStateSpec {
   primaryColor: string
   secondaryColor: string
   accentColor: string
+  orangeAccentColor: string
   ringSpeedMultiplier: number
   radiusScale: number
   /** Strictly < 3.0 Hz across all states to satisfy WCAG flash-rate safety */
@@ -49,6 +50,7 @@ export const ARC_REACTOR_STATE_CONFIG: Record<JarvisCoreState, ArcReactorStateSp
     primaryColor: '#00e5ff',
     secondaryColor: '#38bdf8',
     accentColor: '#0284c7',
+    orangeAccentColor: '#f97316',
     ringSpeedMultiplier: 1.0,
     radiusScale: 1.0,
     pulseHz: 0.45,
@@ -58,39 +60,42 @@ export const ARC_REACTOR_STATE_CONFIG: Record<JarvisCoreState, ArcReactorStateSp
   listening: {
     state: 'listening',
     label: 'LISTENING',
-    subtitle: 'Rings Tighten • Sonar Input Ripple',
+    subtitle: 'Rings Tighten • Live Mic Sonar Ripple',
     coreColor: '#ecfeff',
     primaryColor: '#22d3ee',
     secondaryColor: '#34d399',
     accentColor: '#00e5ff',
+    orangeAccentColor: '#fb923c',
     ringSpeedMultiplier: 1.35,
     radiusScale: 0.86,
     pulseHz: 1.1,
-    pulseAmp: 0.11,
+    pulseAmp: 0.12,
     particleInwardSpeed: 0.35,
   },
   thinking: {
     state: 'thinking',
     label: 'THINKING',
-    subtitle: 'Orange Accent • Fast Rings • Vortex Swirl',
+    subtitle: 'Orange Sweep • Streamed Token Pulse • Inward Swirl',
     coreColor: '#fffbeb',
     primaryColor: '#f59e0b',
     secondaryColor: '#fb923c',
     accentColor: '#00e5ff',
+    orangeAccentColor: '#ea580c',
     ringSpeedMultiplier: 2.45,
     radiusScale: 0.96,
     pulseHz: 1.6,
-    pulseAmp: 0.13,
-    particleInwardSpeed: 1.45,
+    pulseAmp: 0.15,
+    particleInwardSpeed: 1.65,
   },
   executing: {
     state: 'executing',
     label: 'EXECUTING',
-    subtitle: 'Synchronized Task Progress Heartbeat',
+    subtitle: 'Task Progress Heartbeat • Ring Segment Fill',
     coreColor: '#f0f9ff',
     primaryColor: '#00e5ff',
     secondaryColor: '#818cf8',
     accentColor: '#34d399',
+    orangeAccentColor: '#f97316',
     ringSpeedMultiplier: 1.85,
     radiusScale: 1.04,
     pulseHz: 1.4,
@@ -100,16 +105,17 @@ export const ARC_REACTOR_STATE_CONFIG: Record<JarvisCoreState, ArcReactorStateSp
   speaking: {
     state: 'speaking',
     label: 'SPEAKING',
-    subtitle: 'Audio-Reactive 32-Bar Waveform Ring',
+    subtitle: 'Word-Boundary Audio Pulse • Waveform Modulation',
     coreColor: '#ffffff',
     primaryColor: '#38bdf8',
     secondaryColor: '#00e5ff',
     accentColor: '#a5f3fc',
-    ringSpeedMultiplier: 1.25,
+    orangeAccentColor: '#fb923c',
+    ringSpeedMultiplier: 1.3,
     radiusScale: 1.02,
     pulseHz: 1.8,
-    pulseAmp: 0.12,
-    particleInwardSpeed: 0.15,
+    pulseAmp: 0.16,
+    particleInwardSpeed: 0.2,
   },
   error: {
     state: 'error',
@@ -119,6 +125,7 @@ export const ARC_REACTOR_STATE_CONFIG: Record<JarvisCoreState, ArcReactorStateSp
     primaryColor: '#ef4444',
     secondaryColor: '#f97316',
     accentColor: '#fca5a5',
+    orangeAccentColor: '#dc2626',
     ringSpeedMultiplier: 0.45,
     radiusScale: 0.94,
     pulseHz: 2.0,
@@ -131,105 +138,127 @@ export interface RingLayerDefinition {
   index: number
   baseRadius: number
   tubeRadius: number
+  depthZ: number
   segments: number
   arcCoverage: number
   baseSpeed: number
   tiltX: number
   tiltY: number
-  useAccent: boolean
+  colorRole: 'cyan' | 'orange_sweep' | 'accent' | 'dashed'
 }
 
+/**
+ * 3 concentric rings for exterior office Brain core (compact low-overhead)
+ */
 export const OFFICE_RING_LAYERS: RingLayerDefinition[] = [
   {
     index: 0,
-    baseRadius: 1.18,
+    baseRadius: 1.15,
     tubeRadius: 0.032,
+    depthZ: 0.06,
     segments: 3,
     arcCoverage: 0.72,
     baseSpeed: 0.75,
     tiltX: 0.35,
     tiltY: 0.2,
-    useAccent: false,
+    colorRole: 'cyan',
   },
   {
     index: 1,
     baseRadius: 1.54,
     tubeRadius: 0.026,
+    depthZ: 0.02,
     segments: 4,
     arcCoverage: 0.65,
     baseSpeed: -0.58,
     tiltX: -0.42,
     tiltY: 0.38,
-    useAccent: true,
+    colorRole: 'orange_sweep',
   },
   {
     index: 2,
     baseRadius: 1.92,
     tubeRadius: 0.022,
+    depthZ: -0.04,
     segments: 6,
     arcCoverage: 0.58,
     baseSpeed: 0.42,
     tiltX: 0.22,
     tiltY: -0.45,
-    useAccent: false,
+    colorRole: 'cyan',
   },
 ]
 
+/**
+ * 5 primary concentric ring layers for interior Jarvis Chamber at distinct Z-depths,
+ * complemented by the micro-text data ring, tick reticle ring, and radial axis lines
+ * to deliver 7 to 8 concentric rings matching design-ref/jarvis-core.png.
+ */
 export const INTERIOR_RING_LAYERS: RingLayerDefinition[] = [
+  // Ring 0: Inner lens bezel
   {
     index: 0,
-    baseRadius: 1.08,
-    tubeRadius: 0.036,
+    baseRadius: 0.98,
+    tubeRadius: 0.034,
+    depthZ: 0.1,
     segments: 3,
-    arcCoverage: 0.76,
-    baseSpeed: 0.85,
-    tiltX: 0.18,
-    tiltY: 0.12,
-    useAccent: false,
+    arcCoverage: 0.78,
+    baseSpeed: 0.88,
+    tiltX: 0.08,
+    tiltY: 0.06,
+    colorRole: 'cyan',
   },
+  // Ring 1: Precision tick reticle ring
   {
     index: 1,
-    baseRadius: 1.42,
-    tubeRadius: 0.03,
+    baseRadius: 1.36,
+    tubeRadius: 0.028,
+    depthZ: 0.06,
     segments: 4,
-    arcCoverage: 0.68,
-    baseSpeed: -0.68,
-    tiltX: -0.24,
-    tiltY: 0.22,
-    useAccent: true,
+    arcCoverage: 0.72,
+    baseSpeed: -0.65,
+    tiltX: -0.1,
+    tiltY: 0.12,
+    colorRole: 'dashed',
   },
+  // Ring 2: Primary Segmented Arc with Vibrant Orange Sweep
   {
     index: 2,
-    baseRadius: 1.78,
-    tubeRadius: 0.026,
-    segments: 6,
-    arcCoverage: 0.62,
-    baseSpeed: 0.52,
-    tiltX: 0.14,
-    tiltY: -0.28,
-    useAccent: false,
+    baseRadius: 1.74,
+    tubeRadius: 0.032,
+    depthZ: 0.02,
+    segments: 4,
+    arcCoverage: 0.64,
+    baseSpeed: 0.54,
+    tiltX: 0.06,
+    tiltY: -0.14,
+    colorRole: 'orange_sweep',
   },
+  // Ring 3: Telemetry data strip boundary
   {
     index: 3,
-    baseRadius: 2.16,
-    tubeRadius: 0.022,
-    segments: 8,
-    arcCoverage: 0.55,
-    baseSpeed: -0.38,
-    tiltX: -0.12,
-    tiltY: -0.16,
-    useAccent: true,
+    baseRadius: 2.12,
+    tubeRadius: 0.024,
+    depthZ: -0.04,
+    segments: 6,
+    arcCoverage: 0.6,
+    baseSpeed: -0.42,
+    tiltX: -0.08,
+    tiltY: -0.08,
+    colorRole: 'cyan',
   },
+  // Ring 4: Outer precision segmented ring with orange accents
   {
     index: 4,
-    baseRadius: 2.54,
-    tubeRadius: 0.018,
-    segments: 12,
-    arcCoverage: 0.5,
-    baseSpeed: 0.28,
-    tiltX: 0.08,
-    tiltY: 0.1,
-    useAccent: false,
+    baseRadius: 2.56,
+    tubeRadius: 0.02,
+    depthZ: -0.08,
+    segments: 8,
+    arcCoverage: 0.55,
+    baseSpeed: 0.32,
+    tiltX: 0.05,
+    tiltY: 0.08,
+    colorRole: 'orange_sweep',
   },
 ]
 
@@ -245,11 +274,12 @@ export interface ArcReactorFrameMetrics {
   lightIntensity: number
   waveformAmplitudes: number[]
   rippleProgress: number
+  beatEnvelope: number
 }
 
 /**
  * Pure deterministic frame calculator shared by both 3D WebGL (`ArcReactor`) and
- * 2D Canvas (`drawArcReactor2D`). Guarantees 100% mathematical & visual parity.
+ * 2D Canvas (`drawArcReactor2D`). Guarantees 100% parity across views.
  */
 export function computeArcReactorFrame(
   state: JarvisCoreState,
@@ -257,6 +287,7 @@ export function computeArcReactorFrame(
   options?: {
     progress?: number
     audioLevel?: number
+    beatPulse?: number
     hovered?: boolean
     reducedMotion?: boolean
   }
@@ -266,29 +297,40 @@ export function computeArcReactorFrame(
   const t = reduced ? 0 : elapsedSec
   const progress = Math.max(0, Math.min(100, options?.progress ?? 68))
   const audioLevel = Math.max(0, Math.min(1, options?.audioLevel ?? 0.72))
+  const beatPulse = Math.max(0, Math.min(1, options?.beatPulse ?? 0))
   const hoverBoost = options?.hovered ? 1.12 : 1.0
 
-  // Heartbeat / harmonic breathing wave (strictly < 3 Hz for accessibility)
+  // Harmonic breathing wave
   const omega = spec.pulseHz * Math.PI * 2
   let harmonic = reduced ? 0 : Math.sin(t * omega)
   if (!reduced && state === 'executing') {
-    // Double-beat systolic heartbeat synchronized with task progress
+    // Double-beat systolic heartbeat synchronized with real task progress
     const beat1 = Math.max(0, Math.sin(t * omega))
     const beat2 = Math.max(0, Math.sin(t * omega * 2 - 0.8)) * 0.55
     const progressFactor = 0.75 + (progress / 100) * 0.5
     harmonic = (beat1 + beat2 - 0.35) * progressFactor
   } else if (!reduced && state === 'error') {
-    // Controlled diagnostic pulse at 2.0 Hz (never exceeds 3 flashes/sec)
+    // Controlled diagnostic pulse at 2.0 Hz (< 3.0 Hz WCAG safe)
     harmonic = Math.sin(t * Math.PI * 2 * 2.0) * 0.85
   }
 
-  const coreScale = (1 + harmonic * spec.pulseAmp) * hoverBoost
-  const bloomScale = (1.18 + harmonic * spec.pulseAmp * 1.45) * hoverBoost
-  const radiusMultiplier =
-    spec.radiusScale * (1 + harmonic * (spec.pulseAmp * 0.35)) * (options?.hovered ? 1.05 : 1.0)
-  const lightIntensity = (2.8 + harmonic * 1.1) * (options?.hovered ? 1.35 : 1.0)
+  // Combined pulse with real beat events (token arrival, word boundary, mic burst)
+  const beatEnvelope = beatPulse * 0.35
+  const combinedPulse = reduced ? 0 : harmonic * spec.pulseAmp + beatEnvelope
 
-  // 32-bar radial waveform amplitudes (active in 'speaking' & subtle in 'listening'/'executing')
+  const coreScale = (1 + combinedPulse) * hoverBoost
+  const bloomScale = (1.2 + combinedPulse * 1.5) * hoverBoost
+  const radiusMultiplier = reduced
+    ? spec.radiusScale * (options?.hovered ? 1.05 : 1.0)
+    : spec.radiusScale *
+      (1 + combinedPulse * 0.4 + (state === 'listening' ? audioLevel * 0.14 : 0)) *
+      (options?.hovered ? 1.05 : 1.0)
+  const lightIntensity = reduced
+    ? 2.8 * (options?.hovered ? 1.35 : 1.0)
+    : (2.8 + combinedPulse * 2.2 + (state === 'speaking' ? audioLevel * 1.5 : 0)) *
+      (options?.hovered ? 1.35 : 1.0)
+
+  // 32-bar radial waveform amplitudes
   const waveformAmplitudes: number[] = []
   for (let i = 0; i < 32; i++) {
     if (reduced) {
@@ -298,13 +340,17 @@ export function computeArcReactorFrame(
     if (state === 'speaking') {
       const waveA = Math.sin(t * 9.5 + i * 0.55) * 0.5 + 0.5
       const waveB = Math.cos(t * 6.2 - i * 0.35) * 0.5 + 0.5
-      waveformAmplitudes.push(0.2 + (waveA * 0.6 + waveB * 0.4) * 0.8 * audioLevel)
+      const dynamicLevel = Math.max(audioLevel, beatPulse * 0.8)
+      waveformAmplitudes.push(0.18 + (waveA * 0.6 + waveB * 0.4) * 0.85 * dynamicLevel)
     } else if (state === 'listening') {
       const ripple = Math.sin(t * 5.0 + i * 0.4) * 0.5 + 0.5
-      waveformAmplitudes.push(0.12 + ripple * 0.28)
+      waveformAmplitudes.push(0.1 + ripple * 0.3 * Math.max(0.3, audioLevel))
     } else if (state === 'executing') {
-      const activeBar = (i / 32) * 100 <= progress ? 0.55 : 0.12
+      const activeBar = (i / 32) * 100 <= progress ? 0.65 : 0.12
       waveformAmplitudes.push(activeBar)
+    } else if (state === 'thinking') {
+      const swirlBar = Math.sin(t * 12.0 - i * 0.6) * 0.5 + 0.5
+      waveformAmplitudes.push(0.15 + swirlBar * 0.45)
     } else {
       waveformAmplitudes.push(0.1)
     }
@@ -320,7 +366,42 @@ export function computeArcReactorFrame(
     lightIntensity,
     waveformAmplitudes,
     rippleProgress,
+    beatEnvelope,
   }
+}
+
+/**
+ * Procedural monospace micro-text canvas texture for rotating data strips
+ */
+function createMicroTextTexture(): THREE.CanvasTexture | null {
+  if (typeof document === 'undefined') return null
+  const canvas = document.createElement('canvas')
+  canvas.width = 1024
+  canvas.height = 128
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+
+  ctx.fillStyle = 'rgba(2, 6, 18, 0.95)'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  const lines = [
+    'EASYUP HQ // J.A.R.V.I.S. MK-VII // SYS_CORE: 0x8F4A // VOLTAGE: 1.24V // MEM_SYNC: OK',
+    'AUTONOMOUS MULTI-AGENT ORCHESTRATOR // HEURISTIC MATRIX: 100% // RETICLE_LOCK: ACTIVE',
+    'STREAM_TELEMETRY: PHT_TIME_SERVER // STATUS: OPTIMAL // ENCRYPTION: SHA-256',
+    'VECTOR_RADIAL: 0.9842 // THREADS: 24 ACTIVE // BUS_LOAD: 12.4% // INGEST_ID: LIVE',
+  ]
+
+  ctx.font = 'bold 15px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+  lines.forEach((line, i) => {
+    ctx.fillStyle = i % 2 === 0 ? '#00e5ff' : '#fb923c'
+    ctx.fillText(line, 18, 28 + i * 26)
+  })
+
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.wrapS = THREE.RepeatWrapping
+  tex.wrapT = THREE.ClampToEdgeWrapping
+  tex.needsUpdate = true
+  return tex
 }
 
 /**
@@ -378,18 +459,25 @@ export interface ArcReactorProps {
   scale?: number
   progress?: number
   audioLevel?: number
+  beatPulse?: number
   hovered?: boolean
   showLabel?: boolean
   reducedMotion?: boolean
+  pointerParallax?: boolean
   onClick?: () => void
   onHoverChange?: (hovered: boolean) => void
 }
 
 /**
  * Shared 3D WebGL ArcReactor Component (React Three Fiber)
- * Used identically inside:
- * 1. The Brain Core in the 3D Office (`size="office"`, compact low-detail)
- * 2. The Jarvis Interior Chamber & `/dev/jarvis` (`size="interior"`, high-detail)
+ * Matched to design-ref/jarvis-core.png:
+ * - 5 to 8 concentric rings at slightly different depths
+ * - Segmented arcs, dashed rings, tick marks, fine radial lines
+ * - Dark inner lens with faint wireframe nucleus
+ * - Cyan-to-orange gradient split (cyan dominant, orange sweep on one side)
+ * - Small orbiting sparks
+ * - Scrolling micro text data strips
+ * - Smooth pointer parallax tilt
  */
 export function ArcReactor({
   state = 'idle',
@@ -397,9 +485,11 @@ export function ArcReactor({
   scale = 1,
   progress = 68,
   audioLevel = 0.75,
+  beatPulse = 0,
   hovered: controlledHovered,
   showLabel = false,
   reducedMotion = false,
+  pointerParallax = true,
   onClick,
   onHoverChange,
 }: ArcReactorProps) {
@@ -407,23 +497,28 @@ export function ArcReactor({
   const isHovered = controlledHovered ?? internalHovered
 
   const rootRef = useRef<THREE.Group>(null)
+  const tiltGroupRef = useRef<THREE.Group>(null)
   const innerCoreRef = useRef<THREE.Mesh>(null)
   const wireframeCageRef = useRef<THREE.Mesh>(null)
+  const darkLensRef = useRef<THREE.Mesh>(null)
   const bloomShellRef = useRef<THREE.Mesh>(null)
   const pointLightRef = useRef<THREE.PointLight>(null)
+  const orangeSweepLightRef = useRef<THREE.PointLight>(null)
   const ringGroupRefs = useRef<(THREE.Group | null)[]>([])
   const tickGroupRef = useRef<THREE.Group>(null)
+  const radialLinesGroupRef = useRef<THREE.Group>(null)
+  const microTextRingRef = useRef<THREE.Mesh>(null)
   const waveformBarRefs = useRef<(THREE.Mesh | null)[]>([])
   const rippleRingRef = useRef<THREE.Mesh>(null)
   const particleMeshRef = useRef<THREE.InstancedMesh>(null)
 
   const spec = ARC_REACTOR_STATE_CONFIG[state] || ARC_REACTOR_STATE_CONFIG.idle
   const ringLayers = useMemo(() => getRingLayersForSize(size), [size])
-  const tickCount = size === 'interior' ? 36 : 12
+  const tickCount = size === 'interior' ? 48 : 16
   const particleCount = size === 'interior' ? 96 : 28
   const showWaveformRing = size === 'interior' || state === 'speaking'
 
-  // Deterministic initial orbital particles
+  // Deterministic orbital sparks (mix of cyan and orange)
   const particles = useMemo(() => {
     const arr: {
       angle: number
@@ -431,22 +526,26 @@ export function ArcReactor({
       yOffset: number
       speed: number
       size: number
+      isOrange: boolean
     }[] = []
     for (let i = 0; i < particleCount; i++) {
       const seed = (i * 9301 + 49297) % 233280
       const norm = seed / 233280
       const angle = (i / particleCount) * Math.PI * 2
-      const radius = 0.95 + norm * (size === 'interior' ? 1.85 : 1.15)
-      const yOffset = ((i % 7) - 3) * 0.14
-      const speed = 0.45 + (i % 5) * 0.18
-      const pSize = size === 'interior' ? 0.038 : 0.045
-      arr.push({ angle, radius, yOffset, speed, size: pSize })
+      const radius = 0.85 + norm * (size === 'interior' ? 2.25 : 1.35)
+      const yOffset = ((i % 9) - 4) * 0.12
+      const speed = 0.45 + (i % 6) * 0.18
+      const pSize = size === 'interior' ? 0.036 : 0.044
+      // 30% of sparks are radiant orange matching the reference sweep
+      const isOrange = i % 3 === 0 || (angle > Math.PI * 0.1 && angle < Math.PI * 0.7)
+      arr.push({ angle, radius, yOffset, speed, size: pSize, isOrange })
     }
     return arr
   }, [particleCount, size])
 
   const dummyObj = useMemo(() => new THREE.Object3D(), [])
 
+  const microTextTexture = useMemo(() => createMicroTextTexture(), [])
   const badgeTexture = useMemo(
     () => createJarvisBadgeTexture(state, isHovered),
     [state, isHovered]
@@ -455,30 +554,43 @@ export function ArcReactor({
   useEffect(() => {
     return () => {
       badgeTexture?.dispose()
+      microTextTexture?.dispose()
     }
-  }, [badgeTexture])
+  }, [badgeTexture, microTextTexture])
 
   useFrame((r3fState) => {
     const elapsed = r3fState.clock.getElapsedTime()
     const frame = computeArcReactorFrame(state, elapsed, {
       progress,
       audioLevel,
+      beatPulse,
       hovered: isHovered,
       reducedMotion,
     })
 
     const effTime = reducedMotion ? 0 : elapsed
 
-    // 1. Central Plasma Core & Bloom Shell
+    // 0. Parallax Pointer Tilt
+    if (tiltGroupRef.current && pointerParallax && !reducedMotion) {
+      const targetRotX = -r3fState.pointer.y * 0.18
+      const targetRotY = r3fState.pointer.x * 0.22
+      tiltGroupRef.current.rotation.x += (targetRotX - tiltGroupRef.current.rotation.x) * 0.08
+      tiltGroupRef.current.rotation.y += (targetRotY - tiltGroupRef.current.rotation.y) * 0.08
+    }
+
+    // 1. Central Plasma Core, Dark Lens & Wireframe Nucleus
     if (innerCoreRef.current) {
-      innerCoreRef.current.scale.setScalar(frame.coreScale)
+      innerCoreRef.current.scale.setScalar(frame.coreScale * 0.95)
       innerCoreRef.current.rotation.y = effTime * 0.5
       innerCoreRef.current.rotation.z = effTime * 0.3
     }
     if (wireframeCageRef.current) {
-      wireframeCageRef.current.scale.setScalar(frame.coreScale * 1.06)
-      wireframeCageRef.current.rotation.y = -effTime * 0.65 * spec.ringSpeedMultiplier
-      wireframeCageRef.current.rotation.x = effTime * 0.4 * spec.ringSpeedMultiplier
+      wireframeCageRef.current.scale.setScalar(frame.coreScale * 1.08)
+      wireframeCageRef.current.rotation.y = -effTime * 0.7 * spec.ringSpeedMultiplier
+      wireframeCageRef.current.rotation.x = effTime * 0.45 * spec.ringSpeedMultiplier
+    }
+    if (darkLensRef.current) {
+      darkLensRef.current.scale.setScalar(frame.coreScale)
     }
     if (bloomShellRef.current) {
       bloomShellRef.current.scale.setScalar(frame.bloomScale)
@@ -486,46 +598,59 @@ export function ArcReactor({
     if (pointLightRef.current) {
       pointLightRef.current.intensity = frame.lightIntensity
     }
+    if (orangeSweepLightRef.current) {
+      orangeSweepLightRef.current.intensity =
+        frame.lightIntensity * (state === 'thinking' ? 1.6 : 0.85)
+    }
 
-    // 2. Concentric Segmented Rings
+    // 2. Concentric Segmented Rings at Distinct Depths
     ringLayers.forEach((layer, idx) => {
       const grp = ringGroupRefs.current[idx]
       if (!grp) return
       const spd = layer.baseSpeed * spec.ringSpeedMultiplier
       grp.scale.setScalar(frame.radiusMultiplier)
       if (size === 'office') {
-        grp.rotation.x = layer.tiltX + effTime * spd * 0.7
-        grp.rotation.y = layer.tiltY + effTime * spd
+        grp.rotation.x = layer.tiltX + effTime * spd * 0.6
+        grp.rotation.y = layer.tiltY + effTime * spd * 0.8
         grp.rotation.z = effTime * spd * 0.5
       } else {
-        grp.rotation.x = layer.tiltX + Math.sin(effTime * 0.6 + idx) * 0.14
-        grp.rotation.y = layer.tiltY + Math.cos(effTime * 0.5 + idx) * 0.14
+        grp.rotation.x = layer.tiltX + Math.sin(effTime * 0.5 + idx) * 0.08
+        grp.rotation.y = layer.tiltY + Math.cos(effTime * 0.4 + idx) * 0.08
         grp.rotation.z = effTime * spd
       }
     })
 
-    // 3. Radial Tick Marks Ring
+    // 3. Radial Tick Marks & Radial Line Reticles
     if (tickGroupRef.current) {
       tickGroupRef.current.scale.setScalar(frame.radiusMultiplier)
       tickGroupRef.current.rotation.z = -effTime * 0.22 * spec.ringSpeedMultiplier
     }
+    if (radialLinesGroupRef.current) {
+      radialLinesGroupRef.current.scale.setScalar(frame.radiusMultiplier)
+      radialLinesGroupRef.current.rotation.z = effTime * 0.12 * spec.ringSpeedMultiplier
+    }
 
-    // 4. Audio-Reactive 32-Bar Waveform Ring
+    // 4. Scrolling Micro-Text Ring Texture (spins ring in 3D)
+    if (microTextRingRef.current) {
+      microTextRingRef.current.rotation.z = effTime * 0.18 * spec.ringSpeedMultiplier
+    }
+
+    // 5. Audio-Reactive 32-Bar Waveform Ring
     if (showWaveformRing) {
       for (let i = 0; i < 32; i++) {
         const bar = waveformBarRefs.current[i]
         if (!bar) continue
         const amp = frame.waveformAmplitudes[i] ?? 0.15
-        bar.scale.set(1, Math.max(0.2, amp * 2.4), 1)
+        bar.scale.set(1, Math.max(0.2, amp * 2.5), 1)
       }
     }
 
-    // 5. Sonar Listening Ripple Ring
+    // 6. Sonar Listening Ripple Ring
     if (rippleRingRef.current) {
       if (state === 'listening' || isHovered) {
         rippleRingRef.current.visible = true
         const rp = frame.rippleProgress
-        const rScale = 0.85 + rp * 1.45
+        const rScale = 0.85 + rp * 1.55
         rippleRingRef.current.scale.setScalar(rScale)
         const mat = rippleRingRef.current.material as THREE.MeshBasicMaterial
         if (mat) {
@@ -536,9 +661,9 @@ export function ArcReactor({
       }
     }
 
-    // 6. Orbital & Vortex Swirl Particles
+    // 7. Orbital & Inward Swirl Sparks
     if (particleMeshRef.current) {
-      const maxR = size === 'interior' ? 2.75 : 2.05
+      const maxR = size === 'interior' ? 3.15 : 2.25
       const minR = 0.55
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i]
@@ -555,9 +680,9 @@ export function ArcReactor({
         const px = Math.cos(ang) * r
         const pz = Math.sin(ang) * r
         const py =
-          p.yOffset + (reducedMotion ? 0 : Math.sin(effTime * 2.0 + i) * 0.08)
+          p.yOffset + (reducedMotion ? 0 : Math.sin(effTime * 2.2 + i) * 0.08)
         dummyObj.position.set(px, py, pz)
-        dummyObj.scale.setScalar(p.size)
+        dummyObj.scale.setScalar(p.size * (1 + frame.beatEnvelope * 0.8))
         dummyObj.updateMatrix()
         particleMeshRef.current.setMatrixAt(i, dummyObj.matrix)
       }
@@ -588,8 +713,8 @@ export function ArcReactor({
     onClick?.()
   }
 
-  const waveformRadius = size === 'interior' ? 2.82 : 2.15
-  const tickRadius = size === 'interior' ? 2.38 : 1.72
+  const waveformRadius = size === 'interior' ? 2.95 : 2.15
+  const tickRadius = size === 'interior' ? 1.95 : 1.45
 
   return (
     <group
@@ -600,201 +725,282 @@ export function ArcReactor({
       onPointerOut={handlePointerOut}
       onClick={handleClick}
     >
-      {/* Transparent Interaction Hit Sphere for effortless 3D raycasting (must remain visible=true for THREE.Raycaster) */}
-      <mesh position={[0, 0.35, 0]}>
-        <sphereGeometry args={[size === 'interior' ? 3.1 : 2.6, 16, 16]} />
-        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-      </mesh>
-
-      {/* 1. Bright Cyan-White Inner Energy Core */}
-      <mesh ref={innerCoreRef}>
-        <sphereGeometry args={[0.48, 32, 32]} />
-        <meshStandardMaterial
-          color={spec.coreColor}
-          emissive={spec.primaryColor}
-          emissiveIntensity={2.8}
-          roughness={0.1}
-          metalness={0.2}
-        />
-      </mesh>
-
-      {/* 2. Faceted Icosahedral Plasma Lattice */}
-      <mesh ref={wireframeCageRef}>
-        <icosahedronGeometry args={[0.76, size === 'interior' ? 2 : 1]} />
-        <meshStandardMaterial
+      <group ref={tiltGroupRef}>
+        {/* Central Core Point Lights: Primary Cyan + Signature Orange Sweep Light */}
+        <pointLight
+          ref={pointLightRef}
           color={spec.primaryColor}
-          emissive={spec.primaryColor}
-          emissiveIntensity={2.2}
-          wireframe
-          transparent
-          opacity={0.88}
+          intensity={3.2}
+          distance={size === 'interior' ? 12 : 6}
+          decay={2}
         />
-      </mesh>
-
-      {/* 3. Soft Volumetric Bloom Halo Shell */}
-      <mesh ref={bloomShellRef}>
-        <sphereGeometry args={[0.92, 24, 24]} />
-        <meshBasicMaterial
-          color={spec.primaryColor}
-          transparent
-          opacity={isHovered ? 0.28 : 0.18}
-          depthWrite={false}
+        <pointLight
+          ref={orangeSweepLightRef}
+          position={[1.8, 1.2, 0.4]}
+          color={spec.orangeAccentColor}
+          intensity={2.2}
+          distance={size === 'interior' ? 9 : 4}
+          decay={2}
         />
-      </mesh>
 
-      {/* 4. Dynamic Point Light */}
-      <pointLight
-        ref={pointLightRef}
-        color={spec.primaryColor}
-        intensity={3.0}
-        distance={size === 'interior' ? 22 : 14}
-        decay={2}
-      />
+        {/* 1. Dark Inner Lens (matches jarvis-core.png dark crystalline center) */}
+        <mesh ref={darkLensRef} position={[0, 0, 0.05]}>
+          <cylinderGeometry args={[0.62, 0.62, 0.06, 48]} />
+          <meshStandardMaterial
+            color="#040914"
+            roughness={0.15}
+            metalness={0.9}
+            transparent
+            opacity={0.88}
+          />
+        </mesh>
 
-      {/* 5. Concentric Segmented Arc Rings */}
-      {ringLayers.map((layer, lIdx) => {
-        const ringColor = layer.useAccent ? spec.secondaryColor : spec.primaryColor
-        const stepAngle = (Math.PI * 2) / layer.segments
-        const arcLength = stepAngle * layer.arcCoverage
+        {/* 2. Central Plasma Nucleus & Faint Wireframe Icosahedron */}
+        <mesh ref={innerCoreRef} position={[0, 0, 0.08]}>
+          <sphereGeometry args={[0.32, 28, 28]} />
+          <meshBasicMaterial color={spec.coreColor} />
+        </mesh>
 
-        return (
-          <group
-            key={`arc-layer-${layer.index}`}
-            ref={(el) => {
-              ringGroupRefs.current[lIdx] = el
-            }}
-          >
-            {Array.from({ length: layer.segments }).map((_, sIdx) => {
-              const startAngle = sIdx * stepAngle
-              return (
-                <mesh
-                  key={`seg-${layer.index}-${sIdx}`}
-                  rotation={[0, 0, startAngle]}
-                >
-                  <torusGeometry
-                    args={[layer.baseRadius, layer.tubeRadius, 12, 36, arcLength]}
-                  />
-                  <meshBasicMaterial color={ringColor} />
-                </mesh>
-              )
-            })}
-          </group>
-        )
-      })}
+        <mesh ref={wireframeCageRef} position={[0, 0, 0.08]}>
+          <icosahedronGeometry args={[0.48, 1]} />
+          <meshBasicMaterial
+            color={spec.primaryColor}
+            wireframe
+            transparent
+            opacity={0.55}
+          />
+        </mesh>
 
-      {/* 6. Precision Radial Tick Marks */}
-      <group ref={tickGroupRef}>
-        {Array.from({ length: tickCount }).map((_, idx) => {
-          const angle = (idx / tickCount) * Math.PI * 2
-          const isMajor = idx % 3 === 0
-          const len = isMajor ? 0.16 : 0.08
-          const r = tickRadius
+        {/* 3. Soft Radial Bloom Halo Shell */}
+        <mesh ref={bloomShellRef} position={[0, 0, 0.02]}>
+          <sphereGeometry args={[0.55, 20, 20]} />
+          <meshBasicMaterial
+            color={spec.primaryColor}
+            transparent
+            opacity={0.22}
+            blending={THREE.AdditiveBlending}
+            side={THREE.BackSide}
+          />
+        </mesh>
+
+        {/* 4. Concentric Segmented Rings at Distinct Z-Depths */}
+        {ringLayers.map((layer, idx) => {
+          const step = (Math.PI * 2) / layer.segments
+          const arcSpan = step * layer.arcCoverage
+          const ringColor =
+            layer.colorRole === 'orange_sweep'
+              ? spec.orangeAccentColor
+              : layer.colorRole === 'accent'
+                ? spec.accentColor
+                : spec.primaryColor
+
           return (
-            <mesh
-              key={`tick-${idx}`}
-              position={[Math.cos(angle) * r, Math.sin(angle) * r, 0]}
-              rotation={[0, 0, angle]}
+            <group
+              key={layer.index}
+              ref={(el) => {
+                ringGroupRefs.current[idx] = el
+              }}
+              position={[0, 0, layer.depthZ]}
             >
-              <boxGeometry args={[len, isMajor ? 0.028 : 0.016, 0.02]} />
-              <meshBasicMaterial
-                color={isMajor ? spec.primaryColor : spec.secondaryColor}
-              />
-            </mesh>
+              {Array.from({ length: layer.segments }).map((_, s) => {
+                const startAngle = s * step
+                // In orange_sweep layers, give 1 arc segment radiant orange matching jarvis-core.png
+                const isSweepArc =
+                  layer.colorRole === 'orange_sweep' && (s === 0 || s === 1)
+                const segColor = isSweepArc ? spec.orangeAccentColor : ringColor
+
+                return (
+                  <mesh key={s} rotation={[0, 0, startAngle]}>
+                    <torusGeometry
+                      args={[
+                        layer.baseRadius,
+                        layer.tubeRadius * (isSweepArc ? 1.25 : 1.0),
+                        14,
+                        32,
+                        arcSpan,
+                      ]}
+                    />
+                    <meshStandardMaterial
+                      color={segColor}
+                      emissive={segColor}
+                      emissiveIntensity={isSweepArc ? 1.4 : 0.9}
+                      roughness={0.2}
+                      metalness={0.7}
+                      transparent
+                      opacity={0.92}
+                    />
+                  </mesh>
+                )
+              })}
+            </group>
           )
         })}
-      </group>
 
-      {/* 7. 32-Bar Audio-Reactive Waveform Ring */}
-      {showWaveformRing && (
-        <group name="AudioWaveformRing">
-          {Array.from({ length: 32 }).map((_, i) => {
-            const angle = (i / 32) * Math.PI * 2
-            const r = waveformRadius
+        {/* 5. Radial Precision Tick Marks Ring */}
+        <group ref={tickGroupRef} position={[0, 0, 0.04]}>
+          {Array.from({ length: tickCount }).map((_, i) => {
+            const ang = (i / tickCount) * Math.PI * 2
+            const isMajor = i % 4 === 0
+            const tickLen = isMajor ? 0.22 : 0.11
+            const tickColor = isMajor ? spec.primaryColor : spec.secondaryColor
+            const x = Math.cos(ang) * tickRadius
+            const y = Math.sin(ang) * tickRadius
+
             return (
               <mesh
-                key={`wave-${i}`}
-                ref={(el) => {
-                  waveformBarRefs.current[i] = el
-                }}
-                position={[Math.cos(angle) * r, Math.sin(angle) * r, 0]}
-                rotation={[0, 0, angle - Math.PI / 2]}
+                key={i}
+                position={[x, y, 0]}
+                rotation={[0, 0, ang + Math.PI * 0.5]}
               >
-                <boxGeometry args={[0.035, 0.18, 0.025]} />
-                <meshBasicMaterial
-                  color={i % 2 === 0 ? spec.primaryColor : spec.accentColor}
-                />
+                <boxGeometry args={[0.016, tickLen, 0.01]} />
+                <meshBasicMaterial color={tickColor} />
               </mesh>
             )
           })}
         </group>
-      )}
 
-      {/* 8. Expanding Sonar Ripple Ring (Listening / Hover Highlight) */}
-      <mesh ref={rippleRingRef} visible={false}>
-        <ringGeometry args={[1.05, 1.12, 48]} />
-        <meshBasicMaterial
-          color={spec.primaryColor}
-          transparent
-          opacity={0.5}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
+        {/* 6. Thin Radial Reticle Lines with 4 Cardinal Nodes */}
+        {size === 'interior' && (
+          <group ref={radialLinesGroupRef} position={[0, 0, -0.05]}>
+            {[0, Math.PI * 0.5, Math.PI, Math.PI * 1.5].map((ang, i) => (
+              <group key={i} rotation={[0, 0, ang]}>
+                {/* Thin radial axis line */}
+                <mesh position={[1.85, 0, 0]}>
+                  <boxGeometry args={[1.5, 0.012, 0.008]} />
+                  <meshBasicMaterial
+                    color={i === 0 ? spec.orangeAccentColor : spec.primaryColor}
+                    transparent
+                    opacity={0.4}
+                  />
+                </mesh>
+                {/* Cardinal node dot */}
+                <mesh position={[2.65, 0, 0]}>
+                  <sphereGeometry args={[0.035, 12, 12]} />
+                  <meshBasicMaterial
+                    color={i === 0 ? spec.orangeAccentColor : spec.primaryColor}
+                  />
+                </mesh>
+              </group>
+            ))}
+          </group>
+        )}
 
-      {/* 9. Instanced Orbital & Vortex Energy Particles */}
-      <instancedMesh
-        ref={particleMeshRef}
-        args={[undefined, undefined, particleCount]}
-      >
-        <sphereGeometry args={[1, 8, 8]} />
-        <meshBasicMaterial color={spec.coreColor} />
-      </instancedMesh>
+        {/* 7. Scrolling Monospace Micro-Text Data Strip Ring */}
+        {size === 'interior' && microTextTexture && (
+          <mesh ref={microTextRingRef} position={[0, 0, -0.02]}>
+            <ringGeometry args={[2.02, 2.18, 64]} />
+            <meshBasicMaterial
+              map={microTextTexture}
+              transparent
+              opacity={0.75}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        )}
 
-      {/* 10. Floating "JARVIS" Callout Sprite (Visible on Hover or when showLabel=true) */}
-      {(isHovered || showLabel) && badgeTexture && (
-        <sprite
-          position={[0, size === 'interior' ? 3.1 : 2.4, 0]}
-          scale={isHovered ? [3.5, 0.82, 1] : [2.95, 0.7, 1]}
-          onPointerOver={handlePointerOver}
-          onPointerOut={handlePointerOut}
-          onClick={handleClick}
-        >
-          <spriteMaterial
-            map={badgeTexture}
+        {/* 8. Audio-Reactive 32-Bar Waveform Ring */}
+        {showWaveformRing && (
+          <group position={[0, 0, 0]}>
+            {Array.from({ length: 32 }).map((_, i) => {
+              const ang = (i / 32) * Math.PI * 2
+              const x = Math.cos(ang) * waveformRadius
+              const y = Math.sin(ang) * waveformRadius
+              const barColor =
+                i > 4 && i < 12 ? spec.orangeAccentColor : spec.primaryColor
+
+              return (
+                <mesh
+                  key={i}
+                  ref={(el) => {
+                    waveformBarRefs.current[i] = el
+                  }}
+                  position={[x, y, 0]}
+                  rotation={[0, 0, ang + Math.PI * 0.5]}
+                >
+                  <boxGeometry args={[0.024, 0.28, 0.012]} />
+                  <meshStandardMaterial
+                    color={barColor}
+                    emissive={barColor}
+                    emissiveIntensity={0.8}
+                  />
+                </mesh>
+              )
+            })}
+          </group>
+        )}
+
+        {/* 9. Sonar Ripple Ring (active on listening or hover) */}
+        <mesh ref={rippleRingRef} position={[0, 0, 0.02]} visible={false}>
+          <ringGeometry args={[1.05, 1.1, 48]} />
+          <meshBasicMaterial
+            color={spec.primaryColor}
             transparent
-            depthTest={false}
-            depthWrite={false}
+            opacity={0.65}
+            side={THREE.DoubleSide}
           />
-        </sprite>
-      )}
+        </mesh>
+
+        {/* 10. Orbiting Energy Sparks (InstancedMesh) */}
+        <instancedMesh
+          ref={particleMeshRef}
+          args={[undefined, undefined, particleCount]}
+        >
+          <sphereGeometry args={[1, 10, 10]} />
+          <meshBasicMaterial color={spec.primaryColor} />
+        </instancedMesh>
+
+        {/* 11. Floating "JARVIS" Callout Badge Pill */}
+        {showLabel && badgeTexture && (
+          <sprite position={[0, size === 'interior' ? 3.4 : 2.5, 0.2]} scale={[2.4, 0.56, 1]}>
+            <spriteMaterial map={badgeTexture} transparent depthTest={false} />
+          </sprite>
+        )}
+      </group>
     </group>
   )
 }
 
+/**
+ * Deterministic Canvas 2D projection function for legacy 2D view (`?v=2`)
+ * Updated to match the new concentric segmented arcs, tick marks, and cyan/orange split!
+ */
 export interface DrawArcReactor2DOptions {
   state?: JarvisCoreState
   size?: ArcReactorSizeVariant
   progress?: number
   audioLevel?: number
+  beatPulse?: number
   hovered?: boolean
   showLabel?: boolean
   reducedMotion?: boolean
   isometricTilt?: boolean
 }
 
-/**
- * Shared 2D Canvas Renderer for the ArcReactor.
- * Used directly inside `OfficeCanvas2D.tsx` (`?v=2`) and on `/dev/jarvis` so the 2D view
- * shares the exact same segmented rings, tick marks, colors, and state animations as 3D.
- */
 export function drawArcReactor2D(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
   baseRadiusPx: number,
-  elapsedSec: number,
-  options?: DrawArcReactor2DOptions
+  arg5: number | JarvisCoreState,
+  arg6?: number | DrawArcReactor2DOptions,
+  arg7?: DrawArcReactor2DOptions
 ): { hitRadiusPx: number } {
-  const state = options?.state ?? 'idle'
+  let state: JarvisCoreState = 'idle'
+  let elapsedSec = 0
+  let options: DrawArcReactor2DOptions | undefined
+
+  if (typeof arg5 === 'number') {
+    // Signature: (ctx, cx, cy, baseRadiusPx, elapsedSec, options)
+    elapsedSec = arg5
+    options = typeof arg6 === 'object' ? arg6 : undefined
+    state = options?.state ?? 'idle'
+  } else {
+    // Signature: (ctx, cx, cy, baseRadiusPx, state, elapsedSec, options)
+    state = arg5
+    elapsedSec = typeof arg6 === 'number' ? arg6 : 0
+    options = arg7
+  }
+
   const size = options?.size ?? 'office'
   const hovered = options?.hovered ?? false
   const showLabel = options?.showLabel ?? false
@@ -804,6 +1010,7 @@ export function drawArcReactor2D(
   const frame = computeArcReactorFrame(state, elapsedSec, {
     progress: options?.progress,
     audioLevel: options?.audioLevel,
+    beatPulse: options?.beatPulse,
     hovered,
     reducedMotion,
   })
@@ -819,14 +1026,14 @@ export function drawArcReactor2D(
   const grad = ctx.createRadialGradient(cx, cy, scaleR * 0.1, cx, cy, bloomR)
   grad.addColorStop(0, spec.coreColor)
   grad.addColorStop(0.28, `${spec.primaryColor}cc`)
-  grad.addColorStop(0.62, `${spec.secondaryColor}44`)
+  grad.addColorStop(0.55, `${spec.orangeAccentColor}44`)
   grad.addColorStop(1, 'rgba(0, 229, 255, 0)')
   ctx.fillStyle = grad
   ctx.beginPath()
   ctx.arc(cx, cy, bloomR, 0, Math.PI * 2)
   ctx.fill()
 
-  // 2.Hover / Listening Sonar Ripple Ring
+  // 2. Hover / Listening Sonar Ripple Ring
   if (state === 'listening' || hovered) {
     const rp = frame.rippleProgress
     const ripR = scaleR * (0.9 + rp * 1.4)
@@ -834,20 +1041,12 @@ export function drawArcReactor2D(
     ctx.globalAlpha = Math.max(0.08, (1 - rp) * 0.65)
     ctx.lineWidth = hovered ? 2.2 : 1.5
     ctx.beginPath()
-    ctx.ellipse(
-      cx,
-      cy,
-      ripR,
-      isoTilt ? ripR * 0.68 : ripR,
-      0,
-      0,
-      Math.PI * 2
-    )
+    ctx.ellipse(cx, cy, ripR, isoTilt ? ripR * 0.68 : ripR, 0, 0, Math.PI * 2)
     ctx.stroke()
     ctx.globalAlpha = 1
   }
 
-  // 3. Concentric Segmented Rings
+  // 3. Concentric Segmented Rings with Cyan & Orange Sweep
   layers.forEach((layer) => {
     const r = scaleR * layer.baseRadius * 0.82
     const ry = isoTilt ? r * 0.68 : r
@@ -855,9 +1054,14 @@ export function drawArcReactor2D(
     const step = (Math.PI * 2) / layer.segments
     const arcSpan = step * layer.arcCoverage
 
-    ctx.strokeStyle = layer.useAccent ? spec.secondaryColor : spec.primaryColor
-    ctx.lineWidth = Math.max(1.5, layer.tubeRadius * scaleR * 2.2)
     for (let s = 0; s < layer.segments; s++) {
+      const isSweep = layer.colorRole === 'orange_sweep' && (s === 0 || s === 1)
+      ctx.strokeStyle = isSweep
+        ? spec.orangeAccentColor
+        : layer.colorRole === 'accent'
+          ? spec.secondaryColor
+          : spec.primaryColor
+      ctx.lineWidth = Math.max(1.5, layer.tubeRadius * scaleR * 2.2 * (isSweep ? 1.3 : 1.0))
       const start = rot + s * step
       ctx.beginPath()
       ctx.ellipse(cx, cy, r, ry, 0, start, start + arcSpan)
@@ -866,16 +1070,21 @@ export function drawArcReactor2D(
   })
 
   // 4. Radial Precision Tick Marks
-  const tickCount = size === 'interior' ? 36 : 12
+  const tickCount = size === 'interior' ? 48 : 16
   const tickBaseR = scaleR * (size === 'interior' ? 1.95 : 1.45)
   const tickRot = -effTime * 0.22 * spec.ringSpeedMultiplier
   for (let i = 0; i < tickCount; i++) {
     const ang = tickRot + (i / tickCount) * Math.PI * 2
-    const isMajor = i % 3 === 0
-    const innerR = tickBaseR * (isMajor ? 0.92 : 0.95)
-    const outerR = tickBaseR * (isMajor ? 1.04 : 1.01)
+    const isMajor = i % 4 === 0
+    const innerR = tickBaseR * (isMajor ? 0.91 : 0.95)
+    const outerR = tickBaseR * (isMajor ? 1.05 : 1.01)
     const yScale = isoTilt ? 0.68 : 1
-    ctx.strokeStyle = isMajor ? spec.primaryColor : spec.secondaryColor
+    const isSweepTick = ang > Math.PI * 0.1 && ang < Math.PI * 0.6
+    ctx.strokeStyle = isSweepTick
+      ? spec.orangeAccentColor
+      : isMajor
+        ? spec.primaryColor
+        : spec.secondaryColor
     ctx.lineWidth = isMajor ? 1.8 : 1.1
     ctx.beginPath()
     ctx.moveTo(cx + Math.cos(ang) * innerR, cy + Math.sin(ang) * innerR * yScale)
@@ -883,21 +1092,23 @@ export function drawArcReactor2D(
     ctx.stroke()
   }
 
-  // 5. 32-Bar Audio-Reactive Waveform Ring (for interior or speaking state)
+  // 5. 32-Bar Audio-Reactive Waveform Ring
   if (size === 'interior' || state === 'speaking') {
-    const waveR = scaleR * (size === 'interior' ? 2.22 : 1.72)
+    const waveR = scaleR * (size === 'interior' ? 2.28 : 1.72)
     const yScale = isoTilt ? 0.68 : 1
     for (let i = 0; i < 32; i++) {
       const ang = (i / 32) * Math.PI * 2
       const amp = frame.waveformAmplitudes[i] ?? 0.15
-      const barLen = scaleR * (0.06 + amp * 0.28)
-      ctx.strokeStyle = i % 2 === 0 ? spec.primaryColor : spec.accentColor
+      const barLen = scaleR * (0.06 + amp * 0.3)
+      const isOrangeBar = i > 4 && i < 12
+      ctx.strokeStyle = isOrangeBar
+        ? spec.orangeAccentColor
+        : i % 2 === 0
+          ? spec.primaryColor
+          : spec.accentColor
       ctx.lineWidth = Math.max(1.4, scaleR * 0.045)
       ctx.beginPath()
-      ctx.moveTo(
-        cx + Math.cos(ang) * waveR,
-        cy + Math.sin(ang) * waveR * yScale
-      )
+      ctx.moveTo(cx + Math.cos(ang) * waveR, cy + Math.sin(ang) * waveR * yScale)
       ctx.lineTo(
         cx + Math.cos(ang) * (waveR + barLen),
         cy + Math.sin(ang) * (waveR + barLen) * yScale
@@ -906,8 +1117,8 @@ export function drawArcReactor2D(
     }
   }
 
-  // 6. Orbiting / Swirling Energy Particles
-  const pCount = size === 'interior' ? 36 : 12
+  // 6. Orbiting Energy Sparks (cyan + orange)
+  const pCount = size === 'interior' ? 36 : 14
   for (let i = 0; i < pCount; i++) {
     const baseAng = (i / pCount) * Math.PI * 2
     const spd = (0.45 + (i % 4) * 0.2) * spec.ringSpeedMultiplier
@@ -919,38 +1130,31 @@ export function drawArcReactor2D(
     }
     const px = cx + Math.cos(ang) * pr
     const py = cy + Math.sin(ang) * pr * (isoTilt ? 0.68 : 1)
-    ctx.fillStyle = i % 2 === 0 ? spec.coreColor : spec.primaryColor
+    const isOrangeSpark = i % 3 === 0
+    ctx.fillStyle = isOrangeSpark ? spec.orangeAccentColor : spec.primaryColor
     ctx.beginPath()
     ctx.arc(px, py, Math.max(1.3, scaleR * 0.045), 0, Math.PI * 2)
     ctx.fill()
   }
 
-  // 7. Bright Cyan-White Inner Core & Hex Lattice
-  const coreR = Math.max(5, scaleR * 0.42 * frame.coreScale)
-  ctx.fillStyle = spec.coreColor
+  // 7. Dark Inner Lens Disk & Glowing Wireframe Center
+  const lensR = Math.max(6, scaleR * 0.44 * frame.coreScale)
+  ctx.fillStyle = '#050b18'
   ctx.strokeStyle = spec.primaryColor
   ctx.lineWidth = 2
   ctx.beginPath()
-  ctx.arc(cx, cy, coreR, 0, Math.PI * 2)
+  ctx.arc(cx, cy, lensR, 0, Math.PI * 2)
   ctx.fill()
   ctx.stroke()
 
-  // Inner hexagon lattice lines
-  const hexR = coreR * 1.38
-  ctx.strokeStyle = spec.primaryColor
-  ctx.lineWidth = 1.2
+  // Inner nucleus
+  const coreR = lensR * 0.55
+  ctx.fillStyle = spec.coreColor
   ctx.beginPath()
-  for (let h = 0; h < 6; h++) {
-    const ha = effTime * 0.5 + (h / 6) * Math.PI * 2
-    const hx = cx + Math.cos(ha) * hexR
-    const hy = cy + Math.sin(ha) * hexR
-    if (h === 0) ctx.moveTo(hx, hy)
-    else ctx.lineTo(hx, hy)
-  }
-  ctx.closePath()
-  ctx.stroke()
+  ctx.arc(cx, cy, coreR, 0, Math.PI * 2)
+  ctx.fill()
 
-  // 8. Floating "JARVIS" Callout Pill on Hover or showLabel
+  // 8. Floating "JARVIS" Callout Pill on Hover
   if (hovered || showLabel) {
     const labelText = hovered ? 'JARVIS // CLICK TO ENTER' : 'JARVIS'
     ctx.font = 'bold 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
@@ -989,6 +1193,7 @@ export interface ArcReactorPreviewCanvasProps {
   renderMode?: '3d' | '2d'
   progress?: number
   audioLevel?: number
+  beatPulse?: number
   hovered?: boolean
   showLabel?: boolean
   reducedMotion?: boolean
@@ -998,8 +1203,7 @@ export interface ArcReactorPreviewCanvasProps {
 }
 
 /**
- * Self-contained 3D WebGL or 2D Canvas viewport for inspecting the ArcReactor
- * in `/dev/jarvis` or standalone HUD cards.
+ * Universal preview wrapper supporting both 3D WebGL and 2D Canvas fallback
  */
 export function ArcReactorPreviewCanvas({
   state,
@@ -1007,102 +1211,81 @@ export function ArcReactorPreviewCanvas({
   renderMode = '3d',
   progress = 68,
   audioLevel = 0.75,
+  beatPulse = 0,
   hovered = false,
   showLabel = false,
   reducedMotion = false,
-  enableOrbit = false,
-  className = '',
+  enableOrbit = true,
+  className = 'h-full w-full',
   onClick,
 }: ArcReactorPreviewCanvasProps) {
   const canvas2dRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     if (renderMode !== '2d') return
-    const canvas = canvas2dRef.current
-    if (!canvas) return
+    const cvs = canvas2dRef.current
+    if (!cvs) return
+    const ctx = cvs.getContext('2d')
+    if (!ctx) return
 
     let animId = 0
     const start = performance.now()
 
-    const render2D = (now: number) => {
+    const render = (now: number) => {
       const elapsed = (now - start) / 1000
-      const dpr = Math.min(2, window.devicePixelRatio || 1)
-      const w = canvas.clientWidth || 260
-      const h = canvas.clientHeight || 220
-      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
-        canvas.width = Math.round(w * dpr)
-        canvas.height = Math.round(h * dpr)
+      const w = cvs.clientWidth || 320
+      const h = cvs.clientHeight || 320
+      if (cvs.width !== w || cvs.height !== h) {
+        cvs.width = w
+        cvs.height = h
       }
-      const ctx = canvas.getContext('2d')
-      if (ctx) {
-        ctx.save()
-        ctx.scale(dpr, dpr)
-        ctx.fillStyle = '#060a12'
-        ctx.fillRect(0, 0, w, h)
-
-        // Subtle hex-grid chamber lines
-        ctx.strokeStyle = 'rgba(0, 229, 255, 0.06)'
-        ctx.lineWidth = 1
-        const step = 24
-        for (let x = 0; x < w; x += step) {
-          ctx.beginPath()
-          ctx.moveTo(x, 0)
-          ctx.lineTo(x, h)
-          ctx.stroke()
-        }
-        for (let y = 0; y < h; y += step) {
-          ctx.beginPath()
-          ctx.moveTo(0, y)
-          ctx.lineTo(w, y)
-          ctx.stroke()
-        }
-
-        const baseR = size === 'interior' ? Math.min(w, h) * 0.17 : Math.min(w, h) * 0.12
-        drawArcReactor2D(ctx, w * 0.5, h * 0.52, baseR, elapsed, {
-          state,
-          size,
-          progress,
-          audioLevel,
-          hovered,
-          showLabel,
-          reducedMotion,
-          isometricTilt: false,
-        })
-        ctx.restore()
-      }
-      animId = requestAnimationFrame(render2D)
+      ctx.clearRect(0, 0, w, h)
+      drawArcReactor2D(ctx, w * 0.5, h * 0.5, Math.min(w, h) * 0.22, state, elapsed, {
+        size,
+        progress,
+        audioLevel,
+        beatPulse,
+        hovered,
+        showLabel,
+        reducedMotion,
+        isometricTilt: false,
+      })
+      animId = requestAnimationFrame(render)
     }
 
-    animId = requestAnimationFrame(render2D)
+    animId = requestAnimationFrame(render)
     return () => cancelAnimationFrame(animId)
-  }, [renderMode, state, size, progress, audioLevel, hovered, showLabel, reducedMotion])
+  }, [renderMode, state, size, progress, audioLevel, beatPulse, hovered, showLabel, reducedMotion])
 
   if (renderMode === '2d') {
     return (
-      <canvas
-        ref={canvas2dRef}
-        onClick={onClick}
-        className={`block h-full w-full cursor-pointer ${className}`}
-      />
+      <div className={`relative flex items-center justify-center ${className}`}>
+        <canvas
+          ref={canvas2dRef}
+          onClick={onClick}
+          className="h-full w-full cursor-pointer"
+        />
+      </div>
     )
   }
 
-  const camDist = size === 'interior' ? 8.4 : 6.2
+  const cameraFov = size === 'interior' ? 45 : 38
+  const cameraZ = size === 'interior' ? 6.2 : 5.4
+
   return (
-    <div className={`relative h-full w-full bg-[#060a12] ${className}`}>
+    <div className={`relative ${className}`}>
       <Canvas
+        camera={{ position: [0, 0, cameraZ], fov: cameraFov }}
         dpr={[1, 2]}
-        camera={{ position: [0, 0, camDist], fov: 45 }}
-        gl={{ antialias: true, powerPreference: 'high-performance' }}
+        gl={{ antialias: true, alpha: true }}
       >
-        <color attach="background" args={['#060a12']} />
-        <ambientLight intensity={0.65} />
+        <ambientLight intensity={0.5} />
         <ArcReactor
           state={state}
           size={size}
-          scale={size === 'interior' ? 0.94 : 0.84}
           progress={progress}
           audioLevel={audioLevel}
+          beatPulse={beatPulse}
           hovered={hovered}
           showLabel={showLabel}
           reducedMotion={reducedMotion}
@@ -1110,9 +1293,10 @@ export function ArcReactorPreviewCanvas({
         />
         {enableOrbit && (
           <OrbitControls
+            enableZoom={false}
             enablePan={false}
-            minDistance={3.2}
-            maxDistance={11}
+            maxPolarAngle={Math.PI * 0.65}
+            minPolarAngle={Math.PI * 0.35}
           />
         )}
       </Canvas>

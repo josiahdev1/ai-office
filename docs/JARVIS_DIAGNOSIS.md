@@ -91,3 +91,33 @@ With `thinkingConfig: { thinkingBudget: 0 }` and model `gemini-3.5-flash` (with 
    - Replaced rigid intent-template routing with 7 Zod-validated server-side tools (`get_office_status`, `list_tasks`, `get_agent`, `list_approvals`, `recent_activity`, `dispatch_plan`, `office_command`).
    - Jokes, small talk, general coding questions (`"what is programming?"`), and Taglish chat call **zero tools** and inject **zero office context**.
    - The collapsible `Sources` footer is rendered **only** when one or more tools were actually called during that turn.
+
+
+---
+
+## 5. Phase J10 Root Cause Diagnosis: Why "Listening" Showed While Speaking
+
+**Symptoms Observed**:
+- When JARVIS began speaking via `speechSynthesis`, the status indicator and HUD label frequently displayed `"LISTENING"` instead of `"SPEAKING"`.
+- The microphone button in `JarvisInterior.tsx` displayed `🎙 LISTENING...` unconditionally whenever voice was enabled, regardless of whether JARVIS was speaking or thinking.
+
+**Technical Root Causes Identified**:
+1. **Scattered Flags & Competing Asynchronous State Transitions**:
+   - The application lacked a single authority for voice state. State was split across `coreState` (`'idle' | 'listening' | 'thinking' | 'executing' | 'speaking' | 'error'`), `voiceEnabledRef`, `isSpeakingTtsRef`, `isRecognitionRunningRef`, `isTransmitting`, and `jarvisCoreState` in `page.tsx`.
+   - In `sendChatMessage()` ([`src/components/jarvis/JarvisInterior.tsx`](../src/components/jarvis/JarvisInterior.tsx) lines 639–646), a `finally` block scheduled `setTimeout(() => onCoreStateChange(voiceEnabledRef.current ? 'listening' : 'idle'), 300)`.
+   - Because `window.speechSynthesis.speak(utterance)` is asynchronous, `utterance.onstart` often fired *after* or coincided with this 300ms timer, causing the scheduled `onCoreStateChange('listening')` to overwrite `'speaking'`.
+   - Continuous recognition auto-restart loops in `instance.onend` ([`JarvisInterior.tsx`](../src/components/jarvis/JarvisInterior.tsx) lines 754–765) also triggered `onCoreStateChange('listening')` asynchronously while the TTS utterance was still being synthesized or queued by the browser engine.
+2. **Fallback Label Masking in Page HUD**:
+   - In [`src/app/page.tsx`](../src/app/page.tsx) line 1273, the office HUD ternary check:
+     `jarvisCoreState === 'speaking' ? 'SPEAKING' : jarvisCoreState === 'thinking' ? 'THINKING' : 'LISTENING'`
+     defaulted to `'LISTENING'` for *any* other state, including `'idle'`, `'executing'`, or transient transition gaps.
+3. **Hardcoded Button State**:
+   - In [`src/components/jarvis/JarvisInterior.tsx`](../src/components/jarvis/JarvisInterior.tsx) line 1602:
+     `<span>{voiceEnabled ? '🎙 LISTENING...' : '🎙 MIC OFF'}</span>`
+     evaluated only `voiceEnabled`, persistently labeling the button as `"LISTENING..."` even during active speech output.
+
+**Resolution in Phase J10**:
+- Replaced all scattered flags and arbitrary timeouts with **ONE deterministic reducer-based state machine** ([`src/lib/jarvis/voiceState.ts`](../src/lib/jarvis/voiceState.ts)).
+- States: strictly `idle`, `listening`, `thinking`, `executing`, `speaking`, `error`.
+- All UI components (core animation, status badges, mic buttons, floating HUD) read **exclusively** from this single state.
+- Implemented instant **Barge-In** detection and hardware echo protection (`echoCancellation`, `noiseSuppression`, `autoGainControl`).

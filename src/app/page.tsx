@@ -1251,7 +1251,13 @@ function HQCommandPage() {
                         ? 'bg-emerald-400 animate-ping'
                         : jarvisCoreState === 'thinking'
                           ? 'bg-amber-400 animate-ping'
-                          : 'bg-cyan-400 animate-pulse'
+                          : jarvisCoreState === 'executing'
+                            ? 'bg-indigo-400 animate-ping'
+                            : jarvisCoreState === 'listening'
+                              ? 'bg-cyan-400 animate-pulse'
+                              : jarvisCoreState === 'error'
+                                ? 'bg-rose-500 animate-pulse'
+                                : 'bg-slate-400'
                     }`}
                   />
                   <span
@@ -1260,17 +1266,18 @@ function HQCommandPage() {
                         ? 'bg-emerald-400'
                         : jarvisCoreState === 'thinking'
                           ? 'bg-amber-400'
-                          : 'bg-cyan-400'
+                          : jarvisCoreState === 'executing'
+                            ? 'bg-indigo-400'
+                            : jarvisCoreState === 'listening'
+                              ? 'bg-cyan-400'
+                              : jarvisCoreState === 'error'
+                                ? 'bg-rose-500'
+                                : 'bg-slate-400'
                     }`}
                   />
                 </span>
                 <span className="font-bold text-cyan-300 tracking-wider">
-                  JARVIS{' '}
-                  {jarvisCoreState === 'speaking'
-                    ? 'SPEAKING'
-                    : jarvisCoreState === 'thinking'
-                      ? 'THINKING'
-                      : 'LISTENING'}
+                  JARVIS {jarvisCoreState.toUpperCase()}
                 </span>
               </div>
 

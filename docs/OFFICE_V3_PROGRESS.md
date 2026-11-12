@@ -208,3 +208,43 @@ Tracking progress for Office V3 architecture implementation across Phases 1 thro
 - [x] **Local Command (`npm run fleet:learn`)**:
   - Added instant CLI trigger to test and run autonomous agent learning cycles locally anytime.
 
+
+
+---
+
+## JARVIS V2: Phases J10 to J14 Roadmap
+
+### Phase J10: State Machine + Beat Sync + New 3D Core (Completed)
+- [x] **Root Cause Diagnosis**: Documented why "listening" showed while speaking in `docs/JARVIS_DIAGNOSIS.md`.
+- [x] **Deterministic Voice State Machine (`src/lib/jarvis/voiceState.ts`)**:
+  - [x] Reducer-based state machine with strictly defined states: `idle`, `listening`, `thinking`, `executing`, `speaking`, `error`.
+  - [x] Strict transitions: `idle` -> `listening` on mic open / speech start; `listening` -> `thinking` on final transcript; `thinking` -> `executing` on plan/tool run; `executing` -> `speaking` on ready reply; `speaking` -> `idle` on speech end.
+  - [x] Instant Barge-in: user speech during speaking immediately stops TTS audio, cancels queue, and transitions to `listening`.
+  - [x] Echo protection: `getUserMedia` with `echoCancellation`, `noiseSuppression`, and `autoGainControl`.
+  - [x] Vitest unit tests verifying all state transitions, barge-in, error handling, and recovery (`tests/voiceState.test.ts` 16/16 passed).
+- [x] **Beat Per State**:
+  - [x] `listening`: reacts to live mic level via AnalyserNode (volume expansion, syllable ripples, live "you are saying" transcript).
+  - [x] `thinking`: pulse on streamed token chunks with inward particle swirl.
+  - [x] `executing`: pulses with real task progress / step completion, ring segments fill with actual progress percent.
+  - [x] `speaking`: pulse per word boundary (`onboundary`) with smoothed envelope, sentence boundary pulse.
+  - [x] `idle`: calm 0.4 Hz breathing; `error`: safe < 2.2 Hz red warning flicker.
+- [x] **New 3D Core (`src/components/jarvis/ArcReactor.tsx`)**:
+  - [x] Concentric rings at distinct depths with segmented arcs, tick marks, dashed rings, thin radial lines matching `design-ref/jarvis-core.png`.
+  - [x] Dark inner lens with faint wireframe nucleus and cyan-to-orange gradient split.
+  - [x] Orbiting sparks, scrolling monospace CanvasTexture micro-text strips, bloom halo, and pointer parallax tilt.
+  - [x] Shared between office exterior (`size="office"`) and Jarvis interior (`size="interior"`).
+  - [x] Updated `/dev/jarvis` laboratory page with all states and interactive beat simulator.
+
+### Phase J11: Data Layer + LLM and SLM Status With Tokens (Planned)
+- Centralized usage wrapper (`src/lib/llm/usage.ts`) and idempotent migration `office_llm_usage`.
+- Server status logic (Gemini, Anthropic, OpenAI, local Ollama) and LLM STATUS dashboard panel with real metadata.
+
+### Phase J12: Dashboard Panels (Below Current Jarvis View) (Planned)
+- Voice Status, Mission Timeline, Live Intelligence Feed, System Monitor, Memory Insights (`office_jarvis_memory`), Quick Commands, Bottom Status Bar.
+
+### Phase J13: Real Voice Beat + Active Agents Sidebar (Planned)
+- Server-side speech endpoint `/api/jarvis/speak` using Gemini TTS + Web Audio API AnalyserNode FFT beat analysis.
+- Active Agents sidebar inside Jarvis view with live Supabase telemetry and stream activity waveforms.
+
+### Phase J14: Final QA & Visual Polish (Planned)
+- Comprehensive end-to-end browser QA with screenshots comparing live views against design references.
