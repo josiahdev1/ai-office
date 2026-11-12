@@ -119,5 +119,26 @@ With `thinkingConfig: { thinkingBudget: 0 }` and model `gemini-3.5-flash` (with 
 **Resolution in Phase J10**:
 - Replaced all scattered flags and arbitrary timeouts with **ONE deterministic reducer-based state machine** ([`src/lib/jarvis/voiceState.ts`](../src/lib/jarvis/voiceState.ts)).
 - States: strictly `idle`, `listening`, `thinking`, `executing`, `speaking`, `error`.
-- All UI components (core animation, status badges, mic buttons, floating HUD) read **exclusively** from this single state.
 - Implemented instant **Barge-In** detection and hardware echo protection (`echoCancellation`, `noiseSuppression`, `autoGainControl`).
+
+---
+
+## 6. Comprehensive Root Cause Audit & 5-Point Verification Matrix
+
+| # | Check Point | Mechanism Found | Verification & Prevention Implemented |
+|---|---|---|---|
+| **1** | **Microphone hearing JARVIS through speakers (Acoustic Echo)** | The browser's `webkitSpeechRecognition` captures raw system microphone input before Web Audio DSP processing. Loudspeaker output of Daniel/Arthur UK voice leaked into the mic, causing `onresult` to fire with JARVIS's own words, falsely triggering speech recognition and transitioning back to `listening`. | **Default (Reliable)**: Microphone and recognition are **strictly PAUSED** while JARVIS speaks so he cannot hear himself.<br>**Optional Headphones Mode**: Implemented `checkEchoOverlap()` in [`src/lib/jarvis/voiceState.ts`](../src/lib/jarvis/voiceState.ts) checking against recent sentences (last 8s). Any transcript with $>60\%$ word overlap or $<2$ novel words is rejected as acoustic echo. |
+| **2** | **Separate mic-open flag driving the label** | The button rendered `{voiceEnabled ? '🎙 LISTENING...' : '🎙 MIC OFF'}` and `page.tsx` HUD defaulted to `'LISTENING'`. A boolean `voiceEnabled` flag was conflated with active operational listening. | Refactored button and HUD labels to read strictly from `voiceMachine.current`: only displays `LISTENING` when state is actually `'listening'`. Displays `SPEAKING`, `THINKING`, `EXECUTING`, `READY (SPEAK)`, or `MIC OFF` appropriately. |
+| **3** | **`speechSynthesis` onend/onerror/cancel firing early or never** | Chromium bug: long `SpeechSynthesisUtterance` instances pause or drop `onend` after 15 seconds, or fire early if garbage collected. | Added a **100ms Watchdog Timer**: polls `speechSynthesis.speaking` every 100ms. If state is `speaking` but `window.speechSynthesis.speaking` is false for $>1000$ms, the watchdog dispatches `WATCHDOG_TIMEOUT (speaking_no_playback)` to safely return to `idle`. Utterances are referenced in memory to prevent GC. |
+| **4** | **Continuous recognition restarting itself while speaking** | `instance.onend` had an auto-restart timeout that re-invoked `startContinuousRecognition()` and called `onCoreStateChange('listening')` even when `window.speechSynthesis.speaking` was active. | Added strict guard in `instance.onend`: auto-restart is blocked if `isSpeakingTtsRef.current` or `voiceMachine.current === 'speaking'` is true. Auto-restart only resumes when speech playback officially finishes. |
+| **5** | **Several components setting state independently** | Keyboard typing in `commandInput` `onChange` called `onCoreStateChange('listening')` on keydown. Multiple timers in `JarvisInterior` and `page.tsx` dispatched disparate state strings without coordinating with the reducer. | Unified all transitions through `dispatchVoice(action)` in [`src/lib/jarvis/voiceState.ts`](../src/lib/jarvis/voiceState.ts). Keyboard input no longer modifies voice state. All 6 states follow deterministic transitions logged in the 30-item diagnostic ring buffer. |
+
+### Reproduction & Fix Validation
+- **Before Fix**: Open mic, speak directive. JARVIS replies; after 300ms, the mic button and HUD indicator flip to "LISTENING" while Daniel/Arthur UK voice is still audibly reading sentence 2 of 3. Loudspeaker sound causes `onresult` to transcribe fragments of JARVIS's own speech into the input box.
+- **After Fix**: Open mic, speak directive. JARVIS transitions to `thinking` (token beat pulses), then `speaking`. While speaking:
+  - State label stays locked on `SPEAKING`.
+  - Mic button shows `🔊 SPEAKING (TAP TO INTERRUPT)`.
+  - Banner shows: `JARVIS is speaking: press Space or tap Interrupt to talk`.
+  - Pressing `Space` or clicking `Interrupt` instantly cancels `speechSynthesis` and transitions cleanly to `listening`.
+  - Diagnostics drawer tracks every transition with timestamp, reason, and live telemetry values.
+

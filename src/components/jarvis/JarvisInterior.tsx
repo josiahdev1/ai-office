@@ -30,6 +30,7 @@ import {
   voiceStateReducer,
   INITIAL_VOICE_STATE,
   checkBargeInCondition,
+  checkEchoOverlap,
   getEchoProtectedMediaConstraints,
 } from '@/lib/jarvis/voiceState'
 
@@ -209,6 +210,132 @@ export default function JarvisInterior({
     return () => cancelAnimationFrame(id)
   }, [beatPulse])
 
+  const [handsFreeMode, setHandsFreeMode] = useState<boolean>(true)
+  const handsFreeModeRef = useRef<boolean>(true)
+  useEffect(() => {
+    handsFreeModeRef.current = handsFreeMode
+  }, [handsFreeMode])
+
+  const [voiceInterruptHeadphones, setVoiceInterruptHeadphones] = useState<boolean>(false)
+  const voiceInterruptHeadphonesRef = useRef<boolean>(false)
+  useEffect(() => {
+    voiceInterruptHeadphonesRef.current = voiceInterruptHeadphones
+  }, [voiceInterruptHeadphones])
+
+  const [showDiagnosticsModal, setShowDiagnosticsModal] = useState<boolean>(false)
+  const recentSpokenSentencesRef = useRef<{ text: string; timestamp: number }[]>([])
+  const lastHeardTranscriptRef = useRef<string>('')
+
+  // Space key interrupt: pressing Space while JARVIS speaks stops TTS immediately and transitions to listening
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !e.repeat) {
+        const tag = document.activeElement?.tagName.toLowerCase()
+        const isInput =
+          tag === 'input' ||
+          tag === 'textarea' ||
+          (document.activeElement as HTMLElement)?.isContentEditable
+        if (isInput) return
+
+        if (voiceMachineRef.current.current === 'speaking' || isSpeakingTtsRef.current) {
+          e.preventDefault()
+          if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            window.speechSynthesis.cancel()
+          }
+          isSpeakingTtsRef.current = false
+          dispatchVoice({
+            type: 'SPACE_INTERRUPT',
+            liveValues: {
+              speechSynthesisSpeaking: false,
+              micOpen: true,
+              micLevel: 0.6,
+              lastRecognitionResult: lastHeardTranscriptRef.current,
+            },
+          })
+          onCoreStateChange('listening')
+          setLiveAudioLevel(0.8)
+          setBeatPulse(1.0)
+          setTimeout(() => {
+            if (!isRecognitionRunningRef.current && voiceEnabledRef.current) {
+              startRecognitionFnRef.current()
+            }
+          }, 100)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onCoreStateChange])
+
+  // 100ms Watchdog: ensures speaking state follows real audio playback and listening follows active mic
+  useEffect(() => {
+    let silentSpeakingTicks = 0
+    let closedMicTicks = 0
+    const interval = setInterval(() => {
+      const isSpeakingReal =
+        typeof window !== 'undefined' && 'speechSynthesis' in window
+          ? window.speechSynthesis.speaking
+          : false
+
+      // Watchdog: If state is speaking but nothing is playing for >1s (10 ticks)
+      if (voiceMachineRef.current.current === 'speaking') {
+        if (!isSpeakingReal && !isSpeakingTtsRef.current) {
+          silentSpeakingTicks++
+          if (silentSpeakingTicks >= 10) {
+            dispatchVoice({
+              type: 'WATCHDOG_TIMEOUT',
+              reason: 'speaking_no_playback',
+              liveValues: {
+                speechSynthesisSpeaking: false,
+                micOpen: false,
+                micLevel: 0,
+                lastRecognitionResult: lastHeardTranscriptRef.current,
+              },
+            })
+            onCoreStateChange('idle')
+            silentSpeakingTicks = 0
+          }
+        } else {
+          silentSpeakingTicks = 0
+        }
+      } else {
+        silentSpeakingTicks = 0
+      }
+
+      // Watchdog: If state is listening but mic is closed / inactive for >1s
+      if (voiceMachineRef.current.current === 'listening') {
+        const hasLiveTrack = Boolean(
+          micStreamRef.current &&
+            micStreamRef.current.getAudioTracks().some((t) => t.readyState === 'live')
+        )
+        if (!hasLiveTrack && !isRecognitionRunningRef.current && !voiceEnabledRef.current) {
+          closedMicTicks++
+          if (closedMicTicks >= 10) {
+            dispatchVoice({
+              type: 'WATCHDOG_TIMEOUT',
+              reason: 'listening_mic_closed',
+              liveValues: {
+                speechSynthesisSpeaking: false,
+                micOpen: false,
+                micLevel: 0,
+                lastRecognitionResult: lastHeardTranscriptRef.current,
+              },
+            })
+            onCoreStateChange('idle')
+            closedMicTicks = 0
+          }
+        } else {
+          closedMicTicks = 0
+        }
+      } else {
+        closedMicTicks = 0
+      }
+    }, 100)
+
+    return () => clearInterval(interval)
+  }, [onCoreStateChange])
+
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const micStreamRef = useRef<MediaStream | null>(null)
@@ -216,17 +343,7 @@ export default function JarvisInterior({
   // Hardware echo-protected Web Audio AnalyserNode setup
   useEffect(() => {
     if (typeof window === 'undefined' || !navigator.mediaDevices?.getUserMedia) return
-    if (!voiceEnabled) {
-      if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach((t) => t.stop())
-        micStreamRef.current = null
-      }
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        void audioContextRef.current.close()
-        audioContextRef.current = null
-      }
-      return
-    }
+    if (!voiceEnabled) return
 
     let isCancelled = false
     let animId = 0
@@ -400,13 +517,23 @@ export default function JarvisInterior({
       if (ttsMutedRef.current && !forceSpeak) return
 
       try {
-        // Pause microphone recognition while Jarvis speaks so Jarvis doesn't transcribe its own voice
+        // Record sentence in 8-second spoken window for echo-filtering in headphones mode
+        const nowMs = Date.now()
+        recentSpokenSentencesRef.current = [
+          ...recentSpokenSentencesRef.current.filter((s) => nowMs - s.timestamp < 8000),
+          { text, timestamp: nowMs },
+        ]
+
+        // DEFAULT BEHAVIOR (Reliable): pause mic & recognition while JARVIS speaks so he cannot hear himself
         isSpeakingTtsRef.current = true
-        if (isRecognitionRunningRef.current) {
-          try {
-            recognitionRef.current?.stop()
-          } catch {
-            // Ignore stop error
+        if (!voiceInterruptHeadphonesRef.current) {
+          if (isRecognitionRunningRef.current) {
+            try {
+              recognitionRef.current?.stop()
+            } catch {
+              // Ignore stop error
+            }
+            isRecognitionRunningRef.current = false
           }
         }
 
@@ -437,9 +564,24 @@ export default function JarvisInterior({
           clearTimeout(safetyTimer)
           isSpeakingTtsRef.current = false
           setLiveAudioLevel(0.45)
-          dispatchVoice({ type: 'SPEECH_END' })
-          if (voiceEnabledRef.current) {
-            dispatchVoice({ type: 'MIC_OPEN' })
+          dispatchVoice({
+            type: 'SPEECH_END',
+            liveValues: {
+              speechSynthesisSpeaking: false,
+              micOpen: handsFreeModeRef.current && voiceEnabledRef.current,
+              lastRecognitionResult: lastHeardTranscriptRef.current,
+            },
+          })
+          if (handsFreeModeRef.current && voiceEnabledRef.current) {
+            dispatchVoice({
+              type: 'MIC_OPEN',
+              reason: 'Hands-Free auto-resume after speech',
+              liveValues: {
+                speechSynthesisSpeaking: false,
+                micOpen: true,
+                lastRecognitionResult: lastHeardTranscriptRef.current,
+              },
+            })
             onCoreStateChange('listening')
             setTimeout(() => {
               if (voiceEnabledRef.current && !isSpeakingTtsRef.current) {
@@ -447,7 +589,15 @@ export default function JarvisInterior({
               }
             }, 150)
           } else {
-            dispatchVoice({ type: 'RESET' })
+            dispatchVoice({
+              type: 'RESET',
+              reason: 'Speech ended, hands-free standby',
+              liveValues: {
+                speechSynthesisSpeaking: false,
+                micOpen: false,
+                lastRecognitionResult: lastHeardTranscriptRef.current,
+              },
+            })
             onCoreStateChange('idle')
           }
         }
@@ -882,17 +1032,30 @@ export default function JarvisInterior({
           for (let i = event.resultIndex; i < event.results.length; i++) {
             wordsSpoken += event.results[i][0].transcript + ' '
           }
+          const trimmedWords = wordsSpoken.trim()
+          lastHeardTranscriptRef.current = trimmedWords
+
           const isBargingIn = checkBargeInCondition({
             isSpeaking: true,
-            interimTranscript: wordsSpoken,
+            interimTranscript: trimmedWords,
             minInterimWords: 2,
+            spokenSentences: recentSpokenSentencesRef.current,
           })
           if (isBargingIn) {
             if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
               window.speechSynthesis.cancel()
             }
             isSpeakingTtsRef.current = false
-            dispatchVoice({ type: 'BARGE_IN', reason: 'interim_words' })
+            dispatchVoice({
+              type: 'BARGE_IN',
+              reason: 'interim_words_non_echo',
+              liveValues: {
+                speechSynthesisSpeaking: false,
+                micOpen: true,
+                micLevel: 0.85,
+                lastRecognitionResult: trimmedWords,
+              },
+            })
             onCoreStateChange('listening')
             setLiveAudioLevel(0.85)
             setBeatPulse(1.0)
@@ -913,13 +1076,36 @@ export default function JarvisInterior({
           }
         }
         if (interim) {
-          dispatchVoice({ type: 'INTERIM_TRANSCRIPT', transcript: interim })
+          lastHeardTranscriptRef.current = interim
+          dispatchVoice({
+            type: 'INTERIM_TRANSCRIPT',
+            transcript: interim,
+            liveValues: {
+              speechSynthesisSpeaking: false,
+              micOpen: true,
+              lastRecognitionResult: interim,
+            },
+          })
           setCommandInput(interim)
           setBeatPulse(0.75) // Syllable burst ripple
         }
         if (finalTranscript.trim()) {
           const spoken = finalTranscript.trim()
-          dispatchVoice({ type: 'TRANSCRIPT_FINALIZED', transcript: spoken })
+          lastHeardTranscriptRef.current = spoken
+          // Echo-overlap filter check
+          const echoCheck = checkEchoOverlap(spoken, recentSpokenSentencesRef.current)
+          if (echoCheck.isEcho) {
+            return
+          }
+          dispatchVoice({
+            type: 'TRANSCRIPT_FINALIZED',
+            transcript: spoken,
+            liveValues: {
+              speechSynthesisSpeaking: false,
+              micOpen: true,
+              lastRecognitionResult: spoken,
+            },
+          })
           setCommandInput('')
           setVoicePermissionStatus(
             `Heard: "${spoken.slice(0, 42)}" • Always-On Mic Active`
@@ -1050,16 +1236,35 @@ export default function JarvisInterior({
     }
   }
 
+  const handleInterruptSpeech = useCallback(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+    }
+    isSpeakingTtsRef.current = false
+    dispatchVoice({
+      type: 'SPACE_INTERRUPT',
+      reason: 'User manual interrupt',
+      liveValues: {
+        speechSynthesisSpeaking: false,
+        micOpen: true,
+        micLevel: 0.5,
+        lastRecognitionResult: lastHeardTranscriptRef.current,
+      },
+    })
+    onCoreStateChange('listening')
+    setLiveAudioLevel(0.6)
+    setBeatPulse(1.0)
+    setTimeout(() => {
+      if (!isRecognitionRunningRef.current && voiceEnabledRef.current) {
+        startRecognitionFnRef.current()
+      }
+    }, 100)
+  }, [onCoreStateChange])
+
   const handleToggleVoice = () => {
     // If speaking, tapping mic interrupts immediately (Barge-In)
     if (voiceMachineRef.current.current === 'speaking' || isSpeakingTtsRef.current) {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel()
-      }
-      isSpeakingTtsRef.current = false
-      dispatchVoice({ type: 'BARGE_IN', reason: 'interim_words' })
-      onCoreStateChange('listening')
-      setBeatPulse(1.0)
+      handleInterruptSpeech()
       return
     }
 
@@ -1073,7 +1278,15 @@ export default function JarvisInterior({
       } catch {
         // Ignore stop errors
       }
-      dispatchVoice({ type: 'RESET' })
+      dispatchVoice({
+        type: 'RESET',
+        reason: 'User disabled mic',
+        liveValues: {
+          speechSynthesisSpeaking: false,
+          micOpen: false,
+          lastRecognitionResult: lastHeardTranscriptRef.current,
+        },
+      })
       onCoreStateChange('idle')
       return
     }
@@ -1081,7 +1294,15 @@ export default function JarvisInterior({
     voiceEnabledRef.current = true
     setVoiceEnabled(true)
     setTtsMuted(false)
-    dispatchVoice({ type: 'MIC_OPEN' })
+    dispatchVoice({
+      type: 'MIC_OPEN',
+      reason: 'User enabled mic',
+      liveValues: {
+        speechSynthesisSpeaking: false,
+        micOpen: true,
+        lastRecognitionResult: lastHeardTranscriptRef.current,
+      },
+    })
     startContinuousRecognition()
   }
 
@@ -1345,6 +1566,20 @@ export default function JarvisInterior({
             <option value="medium">QUALITY: MED</option>
             <option value="low">QUALITY: LOW</option>
           </select>
+
+          {/* Diagnostics Modal Toggle Button */}
+          <button
+            type="button"
+            data-testid="jarvis-diagnostics-btn"
+            onClick={() => setShowDiagnosticsModal(true)}
+            className="cursor-pointer flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-950/40 px-2.5 py-1 font-mono text-[10px] font-bold text-amber-300 hover:border-amber-400 hover:bg-amber-900/60 transition whitespace-nowrap"
+            title="Open Jarvis Voice & State Diagnostics"
+          >
+            <span>⚡ DIAGNOSTICS</span>
+            <span className="rounded bg-amber-500/30 px-1 py-0.2 text-[9px] text-amber-200">
+              {voiceMachine.history.length}
+            </span>
+          </button>
         </div>
       </header>
 
@@ -1827,6 +2062,32 @@ export default function JarvisInterior({
           </div>
         )}
 
+        {/* Speaking Banner with Space / Tap Interrupt Prompt */}
+        {voiceMachine.current === 'speaking' && (
+          <div
+            data-testid="jarvis-speaking-interrupt-banner"
+            className="mx-auto mb-2 flex max-w-5xl items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-950/60 px-3 py-1.5 font-mono text-xs text-amber-200"
+          >
+            <div className="flex items-center gap-2 truncate">
+              <span className="inline-block h-2 w-2 rounded-full bg-amber-400 animate-ping shrink-0" />
+              <span className="font-bold uppercase tracking-wider text-amber-300 text-[10px] shrink-0">
+                JARVIS is speaking:
+              </span>
+              <span className="truncate italic text-amber-100">
+                Press Space or tap Interrupt to talk
+              </span>
+            </div>
+            <button
+              type="button"
+              data-testid="jarvis-interrupt-btn"
+              onClick={handleInterruptSpeech}
+              className="cursor-pointer rounded-md border border-amber-400/80 bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold text-amber-200 hover:bg-amber-500/40 transition whitespace-nowrap shrink-0"
+            >
+              🛑 INTERRUPT (SPACE)
+            </button>
+          </div>
+        )}
+
         <form
           onSubmit={handleSubmitCommand}
           className="mx-auto flex max-w-5xl flex-wrap items-center gap-2.5"
@@ -1915,6 +2176,188 @@ export default function JarvisInterior({
           </button>
         </form>
       </footer>
+
+      {/* 4. JARVIS VOICE & STATE DIAGNOSTICS MODAL (LAST 30 TRANSITIONS) */}
+      {showDiagnosticsModal && (
+        <div
+          data-testid="jarvis-diagnostics-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="JARVIS Voice & State Diagnostics"
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
+        >
+          <div className="flex flex-col w-full max-w-4xl max-h-[85vh] rounded-2xl border border-cyan-500/40 bg-[#061020] shadow-[0_0_50px_rgba(0,229,255,0.25)] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-cyan-500/20 px-5 py-3.5 bg-slate-950/80">
+              <div className="flex items-center gap-2.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-ping" />
+                <h2 className="font-mono text-sm font-bold tracking-wider text-cyan-300 uppercase">
+                  JARVIS VOICE &amp; STATE DIAGNOSTICS
+                </h2>
+                <span className="rounded border border-cyan-500/30 bg-cyan-950/60 px-2 py-0.5 font-mono text-[10px] text-cyan-200">
+                  {voiceMachine.history.length} TRANSITIONS
+                </span>
+              </div>
+              <button
+                type="button"
+                data-testid="jarvis-diagnostics-close"
+                onClick={() => setShowDiagnosticsModal(false)}
+                className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-xs text-slate-300 hover:border-cyan-400 hover:text-white transition"
+              >
+                ✕ CLOSE
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 font-mono text-xs">
+              {/* Telemetry Cards Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-xl border border-cyan-500/25 bg-slate-950/60 p-3">
+                  <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">State Machine</div>
+                  <div className="mt-1 text-sm font-black text-white uppercase">{voiceMachine.current}</div>
+                  <div className="mt-0.5 text-[9px] text-slate-400">Sole state writer</div>
+                </div>
+                <div className="rounded-xl border border-cyan-500/25 bg-slate-950/60 p-3">
+                  <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">SpeechSynthesis</div>
+                  <div className="mt-1 text-sm font-black text-white">
+                    {voiceMachine.current === 'speaking' ? 'SPEAKING' : 'IDLE / SILENT'}
+                  </div>
+                  <div className="mt-0.5 text-[9px] text-slate-400">Audio playback lock</div>
+                </div>
+                <div className="rounded-xl border border-cyan-500/25 bg-slate-950/60 p-3">
+                  <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Mic &amp; Stream</div>
+                  <div className="mt-1 text-sm font-black text-white">
+                    {voiceEnabled
+                      ? voiceMachine.current === 'speaking'
+                        ? 'PAUSED (SPEAKING)'
+                        : 'STREAM LIVE'
+                      : 'CLOSED / OFF'}
+                  </div>
+                  <div className="mt-0.5 text-[9px] text-slate-400">Hardware echo cancel</div>
+                </div>
+                <div className="rounded-xl border border-cyan-500/25 bg-slate-950/60 p-3">
+                  <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Live Audio Level</div>
+                  <div className="mt-1 text-sm font-black text-cyan-300">
+                    {(liveAudioLevel * 100).toFixed(0)}%
+                  </div>
+                  <div className="mt-0.5 text-[9px] text-slate-400">AnalyserNode RMS</div>
+                </div>
+              </div>
+
+              {/* Toggles & Safe Mode Configuration */}
+              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 space-y-3">
+                <div className="font-bold text-slate-200 text-xs uppercase tracking-wider">
+                  Echo Protection &amp; Voice Mode Controls
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+                    <input
+                      type="checkbox"
+                      checked={handsFreeMode}
+                      onChange={(e) => setHandsFreeMode(e.target.checked)}
+                      className="rounded border-cyan-500/40 bg-slate-900 text-cyan-400 focus:ring-0"
+                    />
+                    <span>Hands-Free Auto-Resume (re-opens mic after speaking finishes)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+                    <input
+                      type="checkbox"
+                      checked={voiceInterruptHeadphones}
+                      onChange={(e) => setVoiceInterruptHeadphones(e.target.checked)}
+                      className="rounded border-cyan-500/40 bg-slate-900 text-cyan-400 focus:ring-0"
+                    />
+                    <span>Voice Interrupt (Headphones mode with &gt;60% echo filter)</span>
+                  </label>
+                </div>
+                {voiceMachine.history[0]?.liveValues?.lastRecognitionResult && (
+                  <div className="text-[10px] text-slate-400 truncate">
+                    Last Heard Transcript: <span className="text-cyan-300">&quot;{voiceMachine.history[0].liveValues.lastRecognitionResult}&quot;</span>
+                  </div>
+                )}
+              </div>
+
+              {/* State Transition History Table (Last 30 transitions) */}
+              <div className="rounded-xl border border-slate-800 bg-slate-950/80 overflow-hidden">
+                <div className="border-b border-slate-800 px-4 py-2.5 text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                  <span>State Transition History (Last 30 Ring-Buffer Entries)</span>
+                  <span className="text-[9px] text-slate-500">Most recent first</span>
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  <table className="w-full text-left text-[10px]">
+                    <thead className="sticky top-0 bg-slate-900/90 text-slate-400 uppercase tracking-wider">
+                      <tr>
+                        <th className="px-3 py-1.5">#</th>
+                        <th className="px-3 py-1.5">Time</th>
+                        <th className="px-3 py-1.5">From</th>
+                        <th className="px-3 py-1.5">To</th>
+                        <th className="px-3 py-1.5">Reason</th>
+                        <th className="px-3 py-1.5">Live Telemetry</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {voiceMachine.history.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-3 py-4 text-center text-slate-500">
+                            No state transitions recorded yet. Speak or transmit a command to generate transitions.
+                          </td>
+                        </tr>
+                      ) : (
+                        voiceMachine.history.map((rec, idx) => (
+                          <tr key={`${rec.timestamp}-${idx}`} className="hover:bg-slate-900/40 transition">
+                            <td className="px-3 py-1.5 text-slate-500">{voiceMachine.history.length - idx}</td>
+                            <td className="px-3 py-1.5 text-slate-300 whitespace-nowrap">
+                              {new Date(rec.timestamp).toLocaleTimeString('en-US', {
+                                hour12: false,
+                                minute: '2-digit',
+                                second: '2-digit',
+                                fractionalSecondDigits: 3,
+                              })}
+                            </td>
+                            <td className="px-3 py-1.5">
+                              <span className="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-slate-300 uppercase">
+                                {rec.from}
+                              </span>
+                            </td>
+                            <td className="px-3 py-1.5">
+                              <span className="rounded border border-cyan-500/40 bg-cyan-950/60 px-1.5 py-0.5 font-bold text-cyan-300 uppercase">
+                                {rec.to}
+                              </span>
+                            </td>
+                            <td className="px-3 py-1.5 text-amber-200/90 truncate max-w-[200px]" title={rec.reason}>
+                              {rec.reason}
+                            </td>
+                            <td className="px-3 py-1.5 text-slate-400 whitespace-nowrap text-[9px]">
+                              TTS: {rec.liveValues?.speechSynthesisSpeaking ? '🔊 ON' : 'OFF'} | Mic:{' '}
+                              {rec.liveValues?.micOpen ? 'ON' : 'OFF'}
+                              {typeof rec.liveValues?.micLevel === 'number'
+                                ? ` (${(rec.liveValues.micLevel * 100).toFixed(0)}%)`
+                                : ''}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between border-t border-cyan-500/20 px-5 py-3 bg-slate-950/90">
+              <span className="text-[10px] text-slate-500 font-mono">
+                Single State Machine: idle · listening · thinking · executing · speaking · error
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowDiagnosticsModal(false)}
+                className="cursor-pointer rounded-lg border border-cyan-500/40 bg-cyan-950/60 px-4 py-1.5 font-mono text-xs font-bold text-cyan-300 hover:border-cyan-400 hover:bg-cyan-900/60 transition"
+              >
+                DISMISS
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

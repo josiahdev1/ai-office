@@ -215,25 +215,27 @@ Tracking progress for Office V3 architecture implementation across Phases 1 thro
 ## JARVIS V2: Phases J10 to J14 Roadmap
 
 ### Phase J10: State Machine + Beat Sync + New 3D Core (Completed)
-- [x] **Root Cause Diagnosis**: Documented why "listening" showed while speaking in `docs/JARVIS_DIAGNOSIS.md`.
+- [x] **Root Cause Diagnosis**: Documented why "listening" showed while speaking in `docs/JARVIS_DIAGNOSIS.md` (Sections 5 & 6) addressing all 5 specific architectural checks.
 - [x] **Deterministic Voice State Machine (`src/lib/jarvis/voiceState.ts`)**:
   - [x] Reducer-based state machine with strictly defined states: `idle`, `listening`, `thinking`, `executing`, `speaking`, `error`.
+  - [x] Sole writer of voice state — zero conflicting state flags between speech recognition, TTS, and UI components.
   - [x] Strict transitions: `idle` -> `listening` on mic open / speech start; `listening` -> `thinking` on final transcript; `thinking` -> `executing` on plan/tool run; `executing` -> `speaking` on ready reply; `speaking` -> `idle` on speech end.
-  - [x] Instant Barge-in: user speech during speaking immediately stops TTS audio, cancels queue, and transitions to `listening`.
-  - [x] Echo protection: `getUserMedia` with `echoCancellation`, `noiseSuppression`, and `autoGainControl`.
-  - [x] Vitest unit tests verifying all state transitions, barge-in, error handling, and recovery (`tests/voiceState.test.ts` 16/16 passed).
-- [x] **Beat Per State**:
-  - [x] `listening`: reacts to live mic level via AnalyserNode (volume expansion, syllable ripples, live "you are saying" transcript).
-  - [x] `thinking`: pulse on streamed token chunks with inward particle swirl.
-  - [x] `executing`: pulses with real task progress / step completion, ring segments fill with actual progress percent.
-  - [x] `speaking`: pulse per word boundary (`onboundary`) with smoothed envelope, sentence boundary pulse.
-  - [x] `idle`: calm 0.4 Hz breathing; `error`: safe < 2.2 Hz red warning flicker.
-- [x] **New 3D Core (`src/components/jarvis/ArcReactor.tsx`)**:
-  - [x] Concentric rings at distinct depths with segmented arcs, tick marks, dashed rings, thin radial lines matching `design-ref/jarvis-core.png`.
-  - [x] Dark inner lens with faint wireframe nucleus and cyan-to-orange gradient split.
-  - [x] Orbiting sparks, scrolling monospace CanvasTexture micro-text strips, bloom halo, and pointer parallax tilt.
+  - [x] Rolling 30-entry transition history ring buffer recording timestamp, from, to, reason, and live values (`speechSynthesisSpeaking`, `audioPlaying`, `micOpen`, `micLevel`, `lastRecognitionResult`).
+  - [x] 100ms real audio watchdog: transitions `speaking` -> `idle` if >1s of no playback; transitions `listening` -> `idle` if mic stream is closed.
+  - [x] Default safe mode: microphone recognition paused during speech so JARVIS never hears himself. Banner: `"JARVIS is speaking: press Space or tap Interrupt to talk"` with instant Space key / button interrupt.
+  - [x] Optional "Voice interrupt (headphones)" mode with acoustic echo filter rejecting transcripts with >60% word overlap against sentences spoken in the last 8s or <2 non-matching words.
+  - [x] Vitest unit test suite verifying all transitions, watchdog timeouts, echo overlap filter, Space interrupt, error, and recovery (`tests/voiceState.test.ts` 21/21 passed).
+- [x] **Beat Per State & 3D Core (`src/components/jarvis/ArcReactor.tsx`)**:
+  - [x] Matches `design-ref/jarvis-core.png`: concentric segmented rings at distinct depths with cyan glow and radiant orange sweep.
+  - [x] Dark inner lens with faint wireframe nucleus and radial tick marks.
+  - [x] Monospace micro-text strip rotating slowly, bloom halo, and pointer parallax tilt.
+  - [x] Beat sync per state: listening (live mic AnalyserNode), thinking (streamed token chunks), executing (task progress pulses), speaking (word/sentence boundaries).
   - [x] Shared between office exterior (`size="office"`) and Jarvis interior (`size="interior"`).
   - [x] Updated `/dev/jarvis` laboratory page with all states and interactive beat simulator.
+- [x] **Chamber Diagnostics Modal (`src/components/jarvis/JarvisInterior.tsx`)**:
+  - [x] `⚡ DIAGNOSTICS` button with history count badge in chamber HUD.
+  - [x] Modal showing live telemetry cards (state machine, speech synthesis, mic stream, live audio level), echo protection toggles, and full 30-entry transition history table.
+  - [x] Verified via Playwright screenshots (`docs/screenshots/jarvis-chamber-3d-core.png`, `docs/screenshots/jarvis-diagnostics-modal.png`, `docs/screenshots/jarvis-dev-lab-states.png`).
 
 ### Phase J11: Data Layer + LLM and SLM Status With Tokens (Planned)
 - Centralized usage wrapper (`src/lib/llm/usage.ts`) and idempotent migration `office_llm_usage`.
