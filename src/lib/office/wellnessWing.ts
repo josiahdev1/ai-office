@@ -66,76 +66,152 @@ export interface DepartmentRecord {
 // =============================================================================
 
 export const WELLNESS_BEDS: WellnessBed[] = [
+  // North Pod Row ([-35, 0, -16] room bounds: x from -41 to -29, z from -22 to -10)
   {
     id: 'nap_bed_1',
     label: 'Nap Bed 1 (Single, North Window)',
     type: 'single',
-    position: [-33, 0.45, -18],
+    position: [-38.5, 0.45, -19.5],
     headFacing: 'NW',
-    approachTile: [-33, 0, -17],
+    approachTile: [-38.5, 0, -18.2],
     dndLight: true,
   },
   {
     id: 'nap_bed_2',
     label: 'Nap Bed 2 (Single, North Window)',
     type: 'single',
-    position: [-33, 0.45, -14],
+    position: [-35.5, 0.45, -19.5],
     headFacing: 'NW',
-    approachTile: [-33, 0, -13],
+    approachTile: [-35.5, 0, -18.2],
     dndLight: true,
   },
   {
     id: 'nap_bed_3',
-    label: 'Nap Bed 3 (Bunk 1 Lower)',
-    type: 'bunk_lower',
-    position: [-37, 0.45, -18],
-    headFacing: 'NE',
-    approachTile: [-36, 0, -18],
-    dndLight: false,
+    label: 'Nap Bed 3 (Single, North Window)',
+    type: 'single',
+    position: [-32.5, 0.45, -19.5],
+    headFacing: 'NW',
+    approachTile: [-32.5, 0, -18.2],
+    dndLight: true,
   },
   {
     id: 'nap_bed_4',
-    label: 'Nap Bed 4 (Bunk 1 Upper)',
-    type: 'bunk_upper',
-    position: [-37, 1.45, -18],
-    headFacing: 'NE',
-    approachTile: [-36, 0, -18],
-    dndLight: false,
+    label: 'Nap Bed 4 (Single, North Window)',
+    type: 'single',
+    position: [-29.8, 0.45, -19.5],
+    headFacing: 'NW',
+    approachTile: [-29.8, 0, -18.2],
+    dndLight: true,
   },
+  // Bunk 1 & 2 West Wall
   {
     id: 'nap_bed_5',
-    label: 'Nap Bed 5 (Bunk 2 Lower)',
+    label: 'Nap Bed 5 (Bunk 1 Lower)',
     type: 'bunk_lower',
-    position: [-37, 0.45, -14],
+    position: [-38.5, 0.45, -16],
     headFacing: 'NE',
-    approachTile: [-36, 0, -14],
+    approachTile: [-37.2, 0, -16],
     dndLight: false,
   },
   {
     id: 'nap_bed_6',
-    label: 'Nap Bed 6 (Bunk 2 Upper)',
+    label: 'Nap Bed 6 (Bunk 1 Upper)',
     type: 'bunk_upper',
-    position: [-37, 1.45, -14],
+    position: [-38.5, 1.45, -16],
     headFacing: 'NE',
-    approachTile: [-36, 0, -14],
+    approachTile: [-37.2, 0, -16],
     dndLight: false,
   },
   {
     id: 'nap_bed_7',
-    label: 'Nap Bed 7 (Single, Dim Corner)',
-    type: 'single',
-    position: [-35, 0.45, -11],
-    headFacing: 'SW',
-    approachTile: [-35, 0, -12],
-    dndLight: true,
+    label: 'Nap Bed 7 (Bunk 2 Lower)',
+    type: 'bunk_lower',
+    position: [-38.5, 0.45, -13],
+    headFacing: 'NE',
+    approachTile: [-37.2, 0, -13],
+    dndLight: false,
   },
   {
     id: 'nap_bed_8',
-    label: 'Nap Bed 8 (Single, Dim Corner)',
-    type: 'single',
-    position: [-33, 0.45, -11],
+    label: 'Nap Bed 8 (Bunk 2 Upper)',
+    type: 'bunk_upper',
+    position: [-38.5, 1.45, -13],
+    headFacing: 'NE',
+    approachTile: [-37.2, 0, -13],
+    dndLight: false,
+  },
+  // Bunk 3 & 4 East Wall
+  {
+    id: 'nap_bed_9',
+    label: 'Nap Bed 9 (Bunk 3 Lower)',
+    type: 'bunk_lower',
+    position: [-31, 0.45, -16],
     headFacing: 'SW',
-    approachTile: [-33, 0, -12],
+    approachTile: [-32.3, 0, -16],
+    dndLight: false,
+  },
+  {
+    id: 'nap_bed_10',
+    label: 'Nap Bed 10 (Bunk 3 Upper)',
+    type: 'bunk_upper',
+    position: [-31, 1.45, -16],
+    headFacing: 'SW',
+    approachTile: [-32.3, 0, -16],
+    dndLight: false,
+  },
+  {
+    id: 'nap_bed_11',
+    label: 'Nap Bed 11 (Bunk 4 Lower)',
+    type: 'bunk_lower',
+    position: [-31, 0.45, -13],
+    headFacing: 'SW',
+    approachTile: [-32.3, 0, -13],
+    dndLight: false,
+  },
+  {
+    id: 'nap_bed_12',
+    label: 'Nap Bed 12 (Bunk 4 Upper)',
+    type: 'bunk_upper',
+    position: [-31, 1.45, -13],
+    headFacing: 'SW',
+    approachTile: [-32.3, 0, -13],
+    dndLight: false,
+  },
+  // South Sleep Pods
+  {
+    id: 'nap_bed_13',
+    label: 'Nap Bed 13 (Sleep Pod Alpha)',
+    type: 'single',
+    position: [-37, 0.45, -11],
+    headFacing: 'SE',
+    approachTile: [-37, 0, -12.3],
+    dndLight: true,
+  },
+  {
+    id: 'nap_bed_14',
+    label: 'Nap Bed 14 (Sleep Pod Beta)',
+    type: 'single',
+    position: [-34.5, 0.45, -11],
+    headFacing: 'SE',
+    approachTile: [-34.5, 0, -12.3],
+    dndLight: true,
+  },
+  {
+    id: 'nap_bed_15',
+    label: 'Nap Bed 15 (Sleep Pod Gamma)',
+    type: 'single',
+    position: [-32, 0.45, -11],
+    headFacing: 'SE',
+    approachTile: [-32, 0, -12.3],
+    dndLight: true,
+  },
+  {
+    id: 'nap_bed_16',
+    label: 'Nap Bed 16 (Sleep Pod Delta)',
+    type: 'single',
+    position: [-29.8, 0.45, -11],
+    headFacing: 'SE',
+    approachTile: [-29.8, 0, -12.3],
     dndLight: true,
   },
 ]
@@ -235,21 +311,21 @@ export const SERVER_RACKS: ServerRackSlot[] = [
   },
 ]
 
-// 24 Dining Seats arranged across 6 four-person cafeteria tables
-export const CAFETERIA_SEATS: DiningSeat[] = Array.from({ length: 24 }, (_, i) => {
+// 32 Dining Seats arranged across 8 four-person cafeteria tables
+export const CAFETERIA_SEATS: DiningSeat[] = Array.from({ length: 32 }, (_, i) => {
   const tableIdx = Math.floor(i / 4) + 1
   const seatIdx = (i % 4) + 1
-  const tableRow = Math.floor((tableIdx - 1) / 3) // 0 or 1
-  const tableCol = (tableIdx - 1) % 3 // 0, 1, 2
+  const tableRow = Math.floor((tableIdx - 1) / 4) // 0 or 1
+  const tableCol = (tableIdx - 1) % 4 // 0, 1, 2, 3
 
-  const tableBaseX = -38 + tableCol * 4
-  const tableBaseZ = 12 + tableRow * 4
+  const tableBaseX = -39.5 + tableCol * 3.0
+  const tableBaseZ = 14.2 + tableRow * 4.2
 
   const offsets: Record<number, [number, number]> = {
-    1: [-0.9, 0],
-    2: [0.9, 0],
-    3: [0, -0.9],
-    4: [0, 0.9],
+    1: [-0.85, 0],
+    2: [0.85, 0],
+    3: [0, -0.85],
+    4: [0, 0.85],
   }
   const [ox, oz] = offsets[seatIdx] || [0, 0]
 

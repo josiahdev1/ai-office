@@ -778,6 +778,12 @@ class AgentNeedsManager {
     return rec
   }
 
+  public getDeterministicNeeds(agentId: string): AgentNeeds {
+    const fixedNow = new Date('2026-11-12T12:00:00Z')
+    const rec = this.getNeedsRecord(agentId, fixedNow)
+    return computeCurrentNeeds(rec, fixedNow)
+  }
+
   public getCurrentNeeds(agentId: string, now: Date = new Date()): AgentNeeds {
     const rec = this.getNeedsRecord(agentId, now)
     return computeCurrentNeeds(rec, now)

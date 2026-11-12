@@ -59,7 +59,7 @@ export default function OfficeCanvas3D({
         <OrthographicCamera
           makeDefault
           position={[43.5, 42, 50]}
-          zoom={13.5}
+          zoom={11.5}
           near={0.1}
           far={1000}
         />

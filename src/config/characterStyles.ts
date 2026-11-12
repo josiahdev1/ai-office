@@ -496,6 +496,32 @@ export const CHARACTER_STYLES: Record<string, CharacterStyleConfig> = {
     accessory: 'headphones',
     accessoryColor: '#818cf8',
   },
+  chef_maria: {
+    agentId: 'chef_maria',
+    gender: 'female',
+    spriteKey: 'chef_female_toque',
+    hairStyle: 'bob',
+    hairColor: '#451a03',
+    outfitColor: '#ea580c', // Bright Chef Orange Apron & Crisp White Toque
+    sleeveColor: '#c2410c',
+    bottomColor: '#1c1917',
+    skinColor: '#fed7aa',
+    accessory: 'cap',
+    accessoryColor: '#f8fafc',
+  },
+  barista_ken: {
+    agentId: 'barista_ken',
+    gender: 'male',
+    spriteKey: 'barista_male_apron',
+    hairStyle: 'parted',
+    hairColor: '#1e293b',
+    outfitColor: '#78350f', // Warm Coffee Barista Brown Apron
+    sleeveColor: '#92400e',
+    bottomColor: '#0f172a',
+    skinColor: '#fcd34d',
+    accessory: 'cap',
+    accessoryColor: '#b45309',
+  },
 }
 
 const FALLBACK_PALETTES: Omit<CharacterStyleConfig, 'agentId'>[] = [

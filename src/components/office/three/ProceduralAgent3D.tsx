@@ -343,6 +343,22 @@ export function ProceduralAgent3D({
         // Server rack inspection animation: reaching to check telemetry and patch cables
         leftArmRef.current.rotation.x = 0.85 + Math.sin(t * 4) * 0.15
         rightArmRef.current.rotation.x = 0.5 + Math.cos(t * 4) * 0.12
+      } else if (agent.id === 'chef_maria') {
+        // Chef Maria: active buffet food prep and serving stirring gestures
+        leftArmRef.current.rotation.x = 0.6 + Math.sin(t * 3) * 0.15
+        rightArmRef.current.rotation.x = 0.8 + Math.cos(t * 4) * 0.2
+      } else if (agent.id === 'barista_ken') {
+        // Barista Ken: espresso machine lever pull & milk steaming gestures
+        leftArmRef.current.rotation.x = 0.7 + Math.sin(t * 3.5) * 0.15
+        rightArmRef.current.rotation.x = 0.65 + Math.cos(t * 3.5) * 0.15
+      } else if (effectiveMode === 'CAFETERIA' && !isWalking) {
+        // Dining at Cafeteria Table: holding fork/spoon to eat
+        leftArmRef.current.rotation.x = 0.5
+        rightArmRef.current.rotation.x = 0.65 + Math.sin(t * 3) * 0.2
+      } else if (effectiveMode === 'PANTRY' && !isWalking) {
+        // Drinking coffee at Pantry: lifting cup to mouth
+        leftArmRef.current.rotation.x = 0.2
+        rightArmRef.current.rotation.x = 0.75 + Math.sin(t * 1.5) * 0.15
       } else {
         leftArmRef.current.rotation.x = isSeated ? 0.5 : 0.15
         rightArmRef.current.rotation.x = isSeated ? 0.5 : 0.15
@@ -372,7 +388,9 @@ export function ProceduralAgent3D({
     agent.id === 'boss' ||
     agent.id === 'cleaner_1' ||
     agent.id === 'cleaner_2' ||
-    agent.id === 'server_admin'
+    agent.id === 'server_admin' ||
+    agent.id === 'chef_maria' ||
+    agent.id === 'barista_ken'
 
   return (
     <group>

@@ -340,6 +340,10 @@ export default function OfficeCanvas2D({
       }
 
       const preset = CAMERA_PRESETS[currentMode] || CAMERA_PRESETS.OVERVIEW
+      let targetPresetZoom = preset.zoom
+      if (currentMode === 'OVERVIEW') {
+        targetPresetZoom = Math.min(12.5, Math.max(8.0, Math.min(width / 140, height / 72)))
+      }
       const lerpFactor = 1 - Math.exp(-(diving ? 6.5 : 5.0) * dt)
       if (diving) {
         cam.targetX += (0 - cam.targetX) * lerpFactor
@@ -348,7 +352,7 @@ export default function OfficeCanvas2D({
       } else {
         cam.targetX += (preset.target[0] + cam.panOffsetX - cam.targetX) * lerpFactor
         cam.targetZ += (preset.target[2] + cam.panOffsetZ - cam.targetZ) * lerpFactor
-        cam.zoom += (preset.zoom * cam.zoomMultiplier - cam.zoom) * lerpFactor
+        cam.zoom += (targetPresetZoom * cam.zoomMultiplier - cam.zoom) * lerpFactor
       }
 
       const targetX = cam.targetX
@@ -1060,7 +1064,7 @@ export default function OfficeCanvas2D({
       })
 
       // D. NAP ROOM / WELLNESS SUITE ([-35, 0, -16])
-      for (const bed of WELLNESS_BEDS.slice(0, 3)) {
+      for (const bed of WELLNESS_BEDS) {
         const bx = bed.position[0]
         const bz = bed.position[2]
         enqueue(bx, bz, 0.4, () => {
@@ -1102,21 +1106,21 @@ export default function OfficeCanvas2D({
 
       // F. GRAND CAFETERIA ([-35, 0, 16])
       // Hot Meal Buffet Serving Counter (8.4m)
-      enqueue(-35, 11, 0.6, () => {
-        drawBox(-35, 0.5, 11, 8.4, 0.92, 1.2, '#94a3b8', 0, 1, '#cbd5e1')
-        drawBox(-35, 0.95, 11.4, 8.2, 0.45, 0.04, '#38bdf8', 0, 0.4, '#7dd3fc')
+      enqueue(-35, 12, 0.6, () => {
+        drawBox(-35, 0.5, 12, 8.4, 0.92, 1.2, '#94a3b8', 0, 1, '#cbd5e1')
+        drawBox(-35, 0.95, 12.4, 8.2, 0.45, 0.04, '#38bdf8', 0, 0.4, '#7dd3fc')
         // 5 Steam Trays (Rice, Adobo, Sinigang, Veggies, Fruits)
         const trayColors = ['#f8fafc', '#78350f', '#ca8a04', '#15803d', '#f59e0b']
         const trayOffsets = [-3.0, -1.5, 0, 1.5, 3.0]
         trayOffsets.forEach((tx, tidx) => {
-          drawBox(-35 + tx, 0.98, 11, 1.1, 0.06, 0.65, '#cbd5e1')
-          drawBox(-35 + tx, 1.02, 11, 0.95, 0.04, 0.55, trayColors[tidx])
+          drawBox(-35 + tx, 0.98, 12, 1.1, 0.06, 0.65, '#cbd5e1')
+          drawBox(-35 + tx, 1.02, 12, 0.95, 0.04, 0.55, trayColors[tidx])
         })
       })
-      // 6 Dining Tables with 24 Molded Dining Chairs
+      // 8 Dining Tables with 32 Molded Dining Chairs (Matching 3D CAFETERIA_SEATS)
       const cafeTableCoords: [number, number][] = [
-        [-38, 14], [-34, 14], [-30.5, 14],
-        [-38, 18.5], [-34, 18.5], [-30.5, 18.5],
+        [-39.5, 14.2], [-36.5, 14.2], [-33.5, 14.2], [-30.5, 14.2],
+        [-39.5, 18.6], [-36.5, 18.6], [-33.5, 18.6], [-30.5, 18.6],
       ]
       for (const [tx, tz] of cafeTableCoords) {
         enqueue(tx, tz, 0.72, () => {
@@ -1188,7 +1192,9 @@ export default function OfficeCanvas2D({
           agent.id === 'boss' ||
           agent.id === 'cleaner_1' ||
           agent.id === 'cleaner_2' ||
-          agent.id === 'server_admin'
+          agent.id === 'server_admin' ||
+          agent.id === 'chef_maria' ||
+          agent.id === 'barista_ken'
 
         if (!hasDedicatedFurniture) {
           // Permanent Chair at Home Desk

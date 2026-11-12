@@ -202,6 +202,44 @@ export const DEFAULT_SERVER_ADMIN_AGENT: OfficeAgentRow = {
   progress: 95,
 }
 
+export const DEFAULT_CHEF_MARIA_AGENT: OfficeAgentRow = {
+  id: 'chef_maria',
+  name: 'Chef Maria',
+  role: 'Executive Head Chef & Culinary Lead',
+  department: 'FACILITIES_WELLNESS',
+  desk_x: 2,
+  desk_y: 28,
+  current_x: 2,
+  current_y: 28,
+  status: 'active',
+  current_task: 'Preparing farm-to-table organic hot buffet and supervising serving lines',
+  current_room: 'Grand Cafeteria',
+  model: 'gemini-2.0-flash',
+  color: '#f59e0b',
+  kind: 'resident',
+  sub_state: 'working',
+  progress: 90,
+}
+
+export const DEFAULT_BARISTA_KEN_AGENT: OfficeAgentRow = {
+  id: 'barista_ken',
+  name: 'Barista Ken',
+  role: 'Master Barista & Beverage Specialist',
+  department: 'FACILITIES_WELLNESS',
+  desk_x: 12,
+  desk_y: 28,
+  current_x: 12,
+  current_y: 28,
+  status: 'active',
+  current_task: 'Crafting artisan espresso beverages and cold brew for engineering teams',
+  current_room: 'Pantry & Canteen',
+  model: 'gemini-2.0-flash',
+  color: '#d97706',
+  kind: 'resident',
+  sub_state: 'working',
+  progress: 88,
+}
+
 // =============================================================================
 // 3. Status Converters
 // =============================================================================

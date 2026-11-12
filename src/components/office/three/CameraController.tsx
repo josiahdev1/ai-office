@@ -64,6 +64,15 @@ export function CameraController({
       }
     }
 
+    // For OVERVIEW mode, calculate dynamic responsive auto-fit zoom based on viewport size
+    if (!isDivingToJarvis && (mode === 'OVERVIEW' || !CAMERA_PRESETS[mode])) {
+      const w = state.size.width
+      const h = state.size.height
+      const fitZoom = Math.min(12.5, Math.max(8.0, Math.min(w / 140, h / 72)))
+      targetZoom.current = fitZoom
+      targetVec.current.set(-7.5, 0, 0)
+    }
+
     // Faster lerp during cinematic fly-in/out (~1.5s)
     const speed = isDivingToJarvis ? 6.5 : 4.5
     const factor = Math.min(delta * speed, 1.0)

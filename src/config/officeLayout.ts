@@ -30,6 +30,8 @@ export interface AgentWorkstation3D {
   allHandsPos: [number, number, number]
   pantryPos: [number, number, number]
   gymPos: [number, number, number]
+  cafeteriaPos?: [number, number, number]
+  napBedPos?: [number, number, number]
 }
 
 export const ROOMS_3D: Record<string, Room3DConfig> = {
@@ -328,8 +330,94 @@ const gymSlots: [number, number, number][] = [
   [0, 0, 19.0],
 ]
 
+// 32 Dedicated Cafeteria Dining Seats across 8 four-person tables in Grand Cafeteria
+export const cafeteriaSlots: [number, number, number][] = [
+  // Table 1 ([-39.5, 0, 14.2])
+  [-40.35, 0, 14.2],
+  [-38.65, 0, 14.2],
+  [-39.5, 0, 13.35],
+  [-39.5, 0, 15.05],
+  // Table 2 ([-36.5, 0, 14.2])
+  [-37.35, 0, 14.2],
+  [-35.65, 0, 14.2],
+  [-36.5, 0, 13.35],
+  [-36.5, 0, 15.05],
+  // Table 3 ([-33.5, 0, 14.2])
+  [-34.35, 0, 14.2],
+  [-32.65, 0, 14.2],
+  [-33.5, 0, 13.35],
+  [-33.5, 0, 15.05],
+  // Table 4 ([-30.5, 0, 14.2])
+  [-31.35, 0, 14.2],
+  [-29.65, 0, 14.2],
+  [-30.5, 0, 13.35],
+  [-30.5, 0, 15.05],
+  // Table 5 ([-39.5, 0, 18.6])
+  [-40.35, 0, 18.6],
+  [-38.65, 0, 18.6],
+  [-39.5, 0, 17.75],
+  [-39.5, 0, 19.45],
+  // Table 6 ([-36.5, 0, 18.6])
+  [-37.35, 0, 18.6],
+  [-35.65, 0, 18.6],
+  [-36.5, 0, 17.75],
+  [-36.5, 0, 19.45],
+  // Table 7 ([-33.5, 0, 18.6])
+  [-34.35, 0, 18.6],
+  [-32.65, 0, 18.6],
+  [-33.5, 0, 17.75],
+  [-33.5, 0, 19.45],
+  // Table 8 ([-30.5, 0, 18.6])
+  [-31.35, 0, 18.6],
+  [-29.65, 0, 18.6],
+  [-30.5, 0, 17.75],
+  [-30.5, 0, 19.45],
+]
+
+// 32 Dedicated Individual Rest Beds & Pods in Nap Room ([-35, 0, -16])
+export const napBedSlots: [number, number, number][] = [
+  [-38.5, 0, -18.2], // Bed 1 approach
+  [-35.5, 0, -18.2], // Bed 2 approach
+  [-32.5, 0, -18.2], // Bed 3 approach
+  [-29.8, 0, -18.2], // Bed 4 approach
+  [-37.2, 0, -16],   // Bed 5 & 6 bunk approach
+  [-37.2, 0, -13],   // Bed 7 & 8 bunk approach
+  [-32.3, 0, -16],   // Bed 9 & 10 bunk approach
+  [-32.3, 0, -13],   // Bed 11 & 12 bunk approach
+  [-37.0, 0, -12.3], // Sleep Pod 13
+  [-34.5, 0, -12.3], // Sleep Pod 14
+  [-32.0, 0, -12.3], // Sleep Pod 15
+  [-29.8, 0, -12.3], // Sleep Pod 16
+  [-38.0, 0, -14.5], // Extra resting slot 17
+  [-35.0, 0, -14.5], // Extra resting slot 18
+  [-32.0, 0, -14.5], // Extra resting slot 19
+  [-30.0, 0, -14.5], // Extra resting slot 20
+  [-38.5, 0, -19.5],
+  [-35.5, 0, -19.5],
+  [-32.5, 0, -19.5],
+  [-29.8, 0, -19.5],
+  [-37, 0, -11],
+  [-34.5, 0, -11],
+  [-32, 0, -11],
+  [-29.8, 0, -11],
+  [-38.5, 0, -16],
+  [-38.5, 0, -13],
+  [-31, 0, -16],
+  [-31, 0, -13],
+  [-33, 0, -18],
+  [-33, 0, -14],
+  [-37, 0, -18],
+  [-37, 0, -14],
+]
+
+export const CANTEEN_BUFFET_QUEUE_WAYPOINTS: [number, number, number][] = [
+  [-31, 0, 13], // 1. Tray & utensil station
+  [-33, 0, 13], // 2. Buffet queue line
+  [-35, 0, 13], // 3. Hot meal serving counter (staffed by Chef Maria)
+]
+
 /**
- * 24 Database Agents Assigned to Specific 3D & 2D Workstations
+ * 30 Database Agents Assigned to Specific 3D & 2D Workstations
  */
 export const AGENT_WORKSTATIONS_3D: Record<string, AgentWorkstation3D> = {
   // 1. Engineering Core (NW Room: [-16, 0, -16])
@@ -653,6 +741,32 @@ export const AGENT_WORKSTATIONS_3D: Record<string, AgentWorkstation3D> = {
     pantryPos: pantrySlots[27],
     gymPos: gymSlots[27],
   },
+  chef_maria: {
+    agentId: 'chef_maria',
+    name: 'Chef Maria',
+    department: 'FACILITIES_WELLNESS',
+    room: 'Grand Cafeteria',
+    deskPos: [-35, 0, 12.2],
+    facing: 'SE',
+    allHandsPos: allHandsSlots[28],
+    pantryPos: [-35, 0, 12.2],
+    gymPos: gymSlots[28],
+    cafeteriaPos: [-35, 0, 12.2],
+    napBedPos: napBedSlots[28],
+  },
+  barista_ken: {
+    agentId: 'barista_ken',
+    name: 'Barista Ken',
+    department: 'FACILITIES_WELLNESS',
+    room: 'Pantry & Canteen',
+    deskPos: [-16, 0, 13.5],
+    facing: 'SE',
+    allHandsPos: allHandsSlots[29],
+    pantryPos: [-16, 0, 13.5],
+    gymPos: gymSlots[29],
+    cafeteriaPos: cafeteriaSlots[29],
+    napBedPos: napBedSlots[29],
+  },
 }
 
 export type DepartmentMode =
@@ -676,8 +790,8 @@ export interface CameraPreset {
 
 export const CAMERA_PRESETS: Record<DepartmentMode, CameraPreset> = {
   OVERVIEW: {
-    target: [-6.5, 0, 0],
-    zoom: 13.5,
+    target: [-7.5, 0, 0],
+    zoom: 11.5,
   },
   FOCUS_WORK: {
     target: [-8, 0, -14],
@@ -843,12 +957,23 @@ export function getAgentTargetPosition(
     case 'ALL_HANDS':
       return ws.allHandsPos
     case 'PANTRY':
-    case 'CAFETERIA':
       return ws.pantryPos
+    case 'CAFETERIA': {
+      if (ws.cafeteriaPos) return ws.cafeteriaPos
+      const agentKeys = Object.keys(AGENT_WORKSTATIONS_3D)
+      const idx = agentKeys.indexOf(ws.agentId)
+      const safeIdx = idx >= 0 ? idx : 0
+      return cafeteriaSlots[safeIdx % cafeteriaSlots.length]
+    }
     case 'GYM':
       return ws.gymPos
-    case 'NAP_ROOM':
-      return [-35, 0, -16]
+    case 'NAP_ROOM': {
+      if (ws.napBedPos) return ws.napBedPos
+      const agentKeys = Object.keys(AGENT_WORKSTATIONS_3D)
+      const idx = agentKeys.indexOf(ws.agentId)
+      const safeIdx = idx >= 0 ? idx : 0
+      return napBedSlots[safeIdx % napBedSlots.length]
+    }
     case 'MENS_CR':
       return [-35, 0, -8]
     case 'WOMENS_CR':
@@ -858,7 +983,8 @@ export function getAgentTargetPosition(
         ws.agentId === 'cleaner_2' ||
         ws.agentId === 'mary_grace' ||
         ws.agentId === 'gloria' ||
-        ws.agentId === 'bonnie'
+        ws.agentId === 'bonnie' ||
+        ws.agentId === 'chef_maria'
       return isFemale ? [-35, 0, -2] : [-35, 0, -8]
     }
     case 'SERVER_ROOM':

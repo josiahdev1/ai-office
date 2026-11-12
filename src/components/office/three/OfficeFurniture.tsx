@@ -1086,7 +1086,7 @@ export function OfficeFurniture() {
       {/* ========================================================================= */}
       <group position={[-35, 0, 16]} name="GrandCafeteriaProps">
         {/* Hot Meal Food Buffet Serving Line along North wall */}
-        <group position={[0, 0.5, -5.0]}>
+        <group position={[0, 0.5, -4.0]}>
           {/* Stainless Counter Base */}
           <mesh castShadow receiveShadow>
             <boxGeometry args={[8.4, 0.92, 1.2]} />
@@ -1126,14 +1126,16 @@ export function OfficeFurniture() {
           ))}
         </group>
 
-        {/* 6 Dining Tables with 24 Dining Chairs (Matching CAFETERIA_SEATS) */}
+        {/* 8 Dining Tables with 32 Dining Chairs (Matching CAFETERIA_SEATS) */}
         {[
-          { x: -3, z: -2 },
-          { x: 1, z: -2 },
-          { x: 4.5, z: -2 },
-          { x: -3, z: 2.5 },
-          { x: 1, z: 2.5 },
-          { x: 4.5, z: 2.5 },
+          { x: -4.5, z: -1.8 },
+          { x: -1.5, z: -1.8 },
+          { x: 1.5, z: -1.8 },
+          { x: 4.5, z: -1.8 },
+          { x: -4.5, z: 2.6 },
+          { x: -1.5, z: 2.6 },
+          { x: 1.5, z: 2.6 },
+          { x: 4.5, z: 2.6 },
         ].map((tbl, tidx) => (
           <group key={`cafe-table-${tidx}`} position={[tbl.x, 0, tbl.z]}>
             {/* Table Surface */}

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, Suspense } from 'react'
+import React, { useState, useEffect, useRef, Suspense, useSyncExternalStore } from 'react'
 import dynamic from 'next/dynamic'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Agent, Approval, AgentStatus } from '@/components/office/types'
@@ -258,7 +258,12 @@ function HQCommandPage() {
   const [autonomyMode, setAutonomyMode] = useState<AutonomyMode>('STANDING_POLICY')
   const [cleaningRoomSelection, setCleaningRoomSelection] = useState<string>('CAFETERIA')
   const [cleaningKindSelection, setCleaningKindSelection] = useState<CleaningTaskKind>('wipe_tables')
-  const [, setFacilityTick] = useState<number>(0)
+  const [_facilityTick, setFacilityTick] = useState<number>(0)
+  const hasMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   // JARVIS Orchestrator State & Cinematic Transition Phase
   const [jarvisPhase, setJarvisPhase] = useState<JarvisTransitionPhase>('closed')
@@ -2695,7 +2700,9 @@ function HQCommandPage() {
 
                 {/* Human-Like Agent Needs & Next Plan (Simulated Layer) */}
                 {(() => {
-                  const needs = needsManager.getCurrentNeeds(selectedAgent.id)
+                  const needs = hasMounted
+                    ? needsManager.getCurrentNeeds(selectedAgent.id)
+                    : needsManager.getDeterministicNeeds(selectedAgent.id)
                   const plan = needsManager.getPlan(selectedAgent.id)
                   const tiredness = getTirednessVisualState(needs)
                   const nextAction = evaluateNextAction(selectedAgent.id, needs, plan)
@@ -2747,7 +2754,7 @@ function HQCommandPage() {
                         <div>
                           <div className="flex justify-between text-slate-400 pb-0.5">
                             <span>ENERGY</span>
-                            <span className="font-bold text-slate-200">{Math.round(needs.energy)}%</span>
+                            <span suppressHydrationWarning className="font-bold text-slate-200">{Math.round(needs.energy)}%</span>
                           </div>
                           <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
                             <div
@@ -2760,7 +2767,7 @@ function HQCommandPage() {
                         <div>
                           <div className="flex justify-between text-slate-400 pb-0.5">
                             <span>HUNGER</span>
-                            <span className="font-bold text-slate-200">{Math.round(needs.hunger)}%</span>
+                            <span suppressHydrationWarning className="font-bold text-slate-200">{Math.round(needs.hunger)}%</span>
                           </div>
                           <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
                             <div
@@ -2773,7 +2780,7 @@ function HQCommandPage() {
                         <div>
                           <div className="flex justify-between text-slate-400 pb-0.5">
                             <span>THIRST</span>
-                            <span className="font-bold text-slate-200">{Math.round(needs.thirst)}%</span>
+                            <span suppressHydrationWarning className="font-bold text-slate-200">{Math.round(needs.thirst)}%</span>
                           </div>
                           <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
                             <div
@@ -2786,7 +2793,7 @@ function HQCommandPage() {
                         <div>
                           <div className="flex justify-between text-slate-400 pb-0.5">
                             <span>BLADDER</span>
-                            <span className="font-bold text-slate-200">{Math.round(needs.bladder)}%</span>
+                            <span suppressHydrationWarning className="font-bold text-slate-200">{Math.round(needs.bladder)}%</span>
                           </div>
                           <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
                             <div
@@ -2799,7 +2806,7 @@ function HQCommandPage() {
                         <div>
                           <div className="flex justify-between text-slate-400 pb-0.5">
                             <span>HEALTH</span>
-                            <span className="font-bold text-slate-200">{Math.round(needs.health)}%</span>
+                            <span suppressHydrationWarning className="font-bold text-slate-200">{Math.round(needs.health)}%</span>
                           </div>
                           <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
                             <div
@@ -2812,7 +2819,7 @@ function HQCommandPage() {
                         <div>
                           <div className="flex justify-between text-slate-400 pb-0.5">
                             <span>MORALE</span>
-                            <span className="font-bold text-slate-200">{Math.round(needs.morale)}%</span>
+                            <span suppressHydrationWarning className="font-bold text-slate-200">{Math.round(needs.morale)}%</span>
                           </div>
                           <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
                             <div
@@ -2825,9 +2832,9 @@ function HQCommandPage() {
 
                       {/* Hidden stats: Caffeine & Sleep Debt */}
                       <div className="flex items-center justify-between font-mono text-[8px] text-slate-500 pt-0.5 border-t border-slate-900">
-                        <span>Caffeine: {needs.caffeine}%</span>
-                        <span>Sleep Debt: {needs.sleepDebt}%</span>
-                        <span>Speed: {tiredness.walkSpeedMultiplier}x</span>
+                        <span suppressHydrationWarning>Caffeine: {needs.caffeine}%</span>
+                        <span suppressHydrationWarning>Sleep Debt: {needs.sleepDebt}%</span>
+                        <span suppressHydrationWarning>Speed: {tiredness.walkSpeedMultiplier}x</span>
                       </div>
 
                       {/* Quick Wellness & Pin Control Buttons */}
