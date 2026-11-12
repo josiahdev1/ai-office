@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Agent, Approval } from '@/components/office/types'
+import { Agent, Approval, AgentStatus } from '@/components/office/types'
 import {
   DepartmentMode,
   AGENT_WORKSTATIONS_3D,
@@ -12,6 +12,7 @@ import {
 import {
   getCharacterStyle,
   getAgentStatusBadge,
+  isAgentActivelyWorking,
 } from '@/config/characterStyles'
 import OfficeCanvas2D from '@/components/office/OfficeCanvas2D'
 import { sfx } from '@/components/office/audio'
@@ -22,6 +23,7 @@ import {
   OfficeLogRecord,
 } from '@/lib/supabase/officeService'
 import { formatPHTTime } from '@/lib/office/db-map'
+import { formatIloiloClock } from '@/lib/office/clock'
 import type { JarvisCoreState } from '@/components/jarvis/ArcReactor'
 import { AVAILABLE_MODELS } from '@/lib/jarvis/orchestrator'
 
@@ -92,51 +94,13 @@ const DEFAULT_AGENTS: Agent[] = Object.values(AGENT_WORKSTATIONS_3D).map((ws) =>
   role: ws.department,
   room: ws.room,
   department: ws.department,
-  status: 'working',
-  current_task: 'Architecting High-Throughput Pipelines',
-  current_file: 'src/components/office/OfficeCanvas3D.tsx',
-  progress_pct: 82,
+  status: 'available',
+  current_task: undefined,
+  current_file: undefined,
+  progress_pct: 0,
   model: DEFAULT_AGENT_MODELS[ws.agentId] || 'gemini-2.0-flash',
   updated_at: new Date().toISOString(),
 }))
-
-const DEPARTMENT_TASK_CYCLES: Record<string, string[]> = {
-  ENGINEERING: [
-    'Architect & implement core changes for high-throughput streaming',
-    'Optimize distributed state cache & Realtime sync latency',
-    'Execute Playwright end-to-end integration tests & verify HUD',
-    'Harden PostgreSQL RLS policies & connection pool auto-scaling',
-    'Refactor Three.js canvas buffer geometry for 60 FPS isometric viewport',
-    'Implement automated CI/CD canary matrix in GitHub Actions',
-  ],
-  INTELLIGENCE: [
-    'Benchmark Gemini 3.1 Flash vs local SLM latency & throughput',
-    'Tune dynamic system prompt injections for autonomous agent decisions',
-    'Evaluate vector embeddings & collective brain knowledge retrieval',
-    'Synthesize executive telemetry digest & operational risk signals',
-  ],
-  'QA & SECOPS': [
-    'Audit API endpoints against OWASP Top 10 security standards',
-    'Execute synthetic load testing across 24 concurrent agent websockets',
-    'Verify zero secret leakage in client bundle & environment manifests',
-    'Regression test A* pathfinding walkability across office layout',
-  ],
-  COMMAND: [
-    'Orchestrate sprint priorities & unblock cross-functional agent pipelines',
-    'Review high-risk production go-signal approvals & audit logs',
-    'Align quarterly roadmap deliverables across Engineering and Intelligence',
-  ],
-  OPERATIONS: [
-    'Automate customer support ticket categorization & SLA routing',
-    'Synchronize Zapier CRM webhook leads & customer journey automations',
-    'Monitor infrastructure uptime & database resource saturation',
-  ],
-  GROWTH: [
-    'Analyze user engagement analytics & optimize conversion funnels',
-    'A/B test onboarding copy & product landing pages',
-    'Tune paid acquisition budget & creative RoAS attribution models',
-  ],
-}
 
 // Contextual non-looping engineering & operational milestones
 const CONTEXTUAL_EVENTS: {
@@ -366,7 +330,7 @@ function HQCommandPage() {
 
   useEffect(() => {
     function updateClock() {
-      setPhtTime(formatPHTTime())
+      setPhtTime(formatIloiloClock(new Date()))
     }
     updateClock()
     const timer = setInterval(updateClock, 1000)
@@ -599,34 +563,23 @@ function HQCommandPage() {
     }
   }, [])
 
-  // 4. Real-time Autonomous Agent Progress & Task Completion Engine
+  // 4. Real-time Autonomous Agent Progress & Task Completion Engine (Real tasks only)
   useEffect(() => {
     const progressTimer = setInterval(() => {
       setAgents((prevAgents) => {
         let changed = false
         const updated = prevAgents.map((ag) => {
-          // Only advance agents who are actively working at their desks or stations
-          const isWorking =
-            ag.status === 'working' ||
-            ag.status === 'active' ||
-            ag.sub_state === 'typing' ||
-            ag.sub_state === 'seated'
-
-          if (!isWorking) return ag
+          // Working is REAL: only advance agents who have an actual task assigned
+          if (!isAgentActivelyWorking(ag)) return ag
 
           const currentPct = typeof ag.progress_pct === 'number' ? ag.progress_pct : 0
-          // Advance progress by 2% - 5% per cycle
-          const increment = Math.floor(Math.random() * 4) + 2
+          const increment = 3
           const nextPct = currentPct + increment
 
           if (nextPct >= 100) {
             changed = true
-            const completedTask = ag.current_task || 'Assigned Sprint Objective'
+            const completedTask = ag.current_task || 'Assigned Task'
             const dept = (ag.department || 'ENGINEERING').toUpperCase()
-            const taskCycle =
-              DEPARTMENT_TASK_CYCLES[dept] || DEPARTMENT_TASK_CYCLES.ENGINEERING
-            const nextTaskIdx = Math.floor(Math.random() * taskCycle.length)
-            const nextTask = taskCycle[nextTaskIdx]
 
             // 100% Completion Milestone Event
             const completionLog = `${formatPHTTime()} [TASK_COMPLETE] ${ag.name} completed: "${completedTask}" (100% Milestone)`
@@ -637,7 +590,7 @@ function HQCommandPage() {
             // Log activity to Supabase
             void officeSupabase.logActivity(
               'TASK_COMPLETE',
-              `${ag.name} completed: "${completedTask}" -> Next: "${nextTask}"`,
+              `${ag.name} completed: "${completedTask}"`,
               { id: ag.id, name: ag.name },
               'success'
             )
@@ -648,22 +601,24 @@ function HQCommandPage() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 title: `${ag.name}: Task Completed`,
-                content: `Agent ${ag.name} (${dept}) completed task: "${completedTask}". Transitioned to: "${nextTask}".`,
+                content: `Agent ${ag.name} (${dept}) completed task: "${completedTask}". Now available.`,
                 category: 'task_completion',
                 agentName: ag.name,
               }),
             }).catch(() => {})
 
-            // Persist reset progress and next task to Supabase
+            // Agent transitions to AVAILABLE upon completing task
             void officeSupabase.updateAgent(ag.id, {
-              progress_pct: 0,
-              current_task: nextTask,
+              status: 'available',
+              progress_pct: 100,
+              current_task: undefined,
             })
 
             return {
               ...ag,
-              progress_pct: 0,
-              current_task: nextTask,
+              status: 'available' as AgentStatus,
+              progress_pct: 100,
+              current_task: undefined,
             }
           }
 
@@ -684,7 +639,7 @@ function HQCommandPage() {
         if (!changed) return prevAgents
         return updated
       })
-    }, 3200)
+    }, 4000)
 
     return () => clearInterval(progressTimer)
   }, [])
@@ -988,21 +943,28 @@ function HQCommandPage() {
     ? getCharacterStyle(selectedAgent.id, selectedAgent.name)
     : null
   const selectedBadge = selectedAgent
-    ? getAgentStatusBadge(selectedAgent.status, selectedEffectiveMode)
+    ? getAgentStatusBadge(
+        selectedAgent.status,
+        selectedEffectiveMode,
+        selectedAgent.current_task
+      )
     : null
 
-  // Real-time Campus Live Counter metrics (Working, Eating, In The Gym, In Meeting, On Break, Arriving, Waiting On You, Open Tasks, Accessories)
+  // Real-time Campus Live Counter metrics (Working is REAL: must have active task; otherwise Available)
   const campusCounters = React.useMemo(() => {
     let working = 0
+    let available = 0
     let eating = 0
     let inGym = 0
     let inMeeting = 0
     let onBreak = 0
     let arriving = 0
+    let resting = 0
+    let sleeping = 0
     let waitingOnYou = approvals.length
     let accessories = 0
 
-    agents.forEach((ag, idx) => {
+    agents.forEach((ag) => {
       const style = getCharacterStyle(ag.id, ag.name)
       if (
         style.accessory === 'cap' ||
@@ -1022,8 +984,11 @@ function HQCommandPage() {
 
       const effMode = agentRouteOverrides[ag.id] || currentMode
       const taskLower = (ag.current_task || '').toLowerCase()
+      const isWorking = isAgentActivelyWorking(ag)
 
-      if (effMode === 'GYM' || ag.status === 'at_gym' || ag.status === 'gym') {
+      if (isWorking) {
+        working++
+      } else if (effMode === 'GYM' || ag.status === 'at_gym' || ag.status === 'gym') {
         inGym++
       } else if (effMode === 'ALL_HANDS' || ag.status === 'in_meeting') {
         inMeeting++
@@ -1032,32 +997,40 @@ function HQCommandPage() {
           taskLower.includes('eat') ||
           taskLower.includes('canteen') ||
           taskLower.includes('meal') ||
-          taskLower.includes('lunch') ||
-          (currentMode === 'PANTRY' && idx % 2 === 0)
+          taskLower.includes('lunch')
         ) {
           eating++
         } else {
           onBreak++
         }
+      } else if (ag.status === 'sleeping') {
+        sleeping++
+      } else if (ag.status === 'resting') {
+        resting++
       } else {
-        working++
+        available++
       }
     })
 
-    const openTasks = Math.max(8, Math.round(working * 0.35) + approvals.length)
+    const openTasks =
+      agents.filter((a) => isAgentActivelyWorking(a)).length +
+      approvals.filter((a) => !a.status || a.status === 'pending').length
 
     return {
       working,
+      available,
       eating,
       inGym,
       inMeeting,
       onBreak,
       arriving,
+      resting,
+      sleeping,
       waitingOnYou,
       openTasks,
       accessories,
     }
-  }, [agents, agentRouteOverrides, currentMode, approvals.length])
+  }, [agents, agentRouteOverrides, currentMode, approvals])
 
   return (
     <main className="flex h-screen w-screen flex-col overflow-hidden bg-[#080b12] text-slate-100 font-sans select-none">
@@ -1615,6 +1588,19 @@ function HQCommandPage() {
                   {campusCounters.working}
                 </span>
               </button>
+
+              <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
+                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: '#06b6d4', boxShadow: '0 0 8px #06b6d4' }}
+                  />
+                  AVAILABLE
+                </span>
+                <span className="font-black" style={{ color: '#06b6d4' }}>
+                  {campusCounters.available}
+                </span>
+              </div>
 
               <button
                 type="button"

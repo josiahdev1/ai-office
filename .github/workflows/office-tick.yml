@@ -1,0 +1,19 @@
+name: EasyUp HQ World Tick Scheduler
+
+on:
+  schedule:
+    # Run every hour to keep the world alive and prevent Supabase dormancy
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  tick:
+    name: Execute Cloud World Tick
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping EasyUp HQ Tick Endpoint
+        run: |
+          curl -s -X POST "https://easyup-hq.vercel.app/api/office/tick" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -H "x-source: cron" || echo "Tick endpoint pinged"

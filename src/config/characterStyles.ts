@@ -498,9 +498,31 @@ export function getCharacterStyle(agentId: string, agentName?: string): Characte
  * - Pink (#ec4899)   = Gym / Rec Break
  * - Gray (#94a3b8)   = Idle at Desk
  */
+export function isAgentActivelyWorking(agent: {
+  status?: string
+  current_task?: string | null
+}): boolean {
+  if (!agent.current_task || agent.current_task.trim().length === 0) return false
+  const s = (agent.status || '').toLowerCase()
+  return s === 'working' || s === 'coding' || s === 'busy'
+}
+
+/**
+ * Visual Status Dot Color & Label Mapping:
+ * - Green (#22c55e)  = Actively Working (has real task)
+ * - Cyan (#06b6d4)   = Available (no current task, ready for assignment)
+ * - Orange (#f97316) = Needs Approval (Go-Signal Required)
+ * - Blue (#3b82f6)   = Inter-agent Discussion / Standup
+ * - Yellow (#eab308) = Coffee / Pantry Break
+ * - Amber (#f59e0b)  = Eating / Cafeteria
+ * - Pink (#ec4899)   = Gym / Rec Break
+ * - Purple (#a855f7) = Resting / Sleeping
+ * - Slate (#94a3b8)  = Idle at Desk
+ */
 export function getAgentStatusBadge(
   status: string | undefined,
-  effectiveMode: DepartmentMode
+  effectiveMode: DepartmentMode,
+  currentTask?: string | null
 ): { dotHex: string; dotTailwind: string; label: string } {
   const st = (status || '').toLowerCase()
   if (st === 'awaiting_approval') {
@@ -517,11 +539,18 @@ export function getAgentStatusBadge(
       label: 'In Standup / Scrum',
     }
   }
-  if (effectiveMode === 'GYM' || st === 'gym' || st === 'rec') {
+  if (effectiveMode === 'GYM' || st === 'gym' || st === 'rec' || st === 'at_gym') {
     return {
       dotHex: '#ec4899',
       dotTailwind: 'bg-pink-500',
       label: 'Gym / Rec Break',
+    }
+  }
+  if (st === 'eating' || st === 'cafeteria') {
+    return {
+      dotHex: '#f59e0b',
+      dotTailwind: 'bg-amber-500',
+      label: 'Eating / Cafeteria',
     }
   }
   if (effectiveMode === 'PANTRY' || st === 'on_break' || st === 'pantry' || st === 'coffee') {
@@ -531,6 +560,34 @@ export function getAgentStatusBadge(
       label: 'Coffee / Pantry Break',
     }
   }
+  if (st === 'sleeping' || st === 'nap') {
+    return {
+      dotHex: '#6366f1',
+      dotTailwind: 'bg-indigo-500',
+      label: 'Sleeping in Bed',
+    }
+  }
+  if (st === 'resting' || st === 'rest') {
+    return {
+      dotHex: '#a855f7',
+      dotTailwind: 'bg-purple-500',
+      label: 'Resting / Recharge',
+    }
+  }
+  if (st === 'in_cr') {
+    return {
+      dotHex: '#0ea5e9',
+      dotTailwind: 'bg-sky-500',
+      label: 'In Comfort Room',
+    }
+  }
+  if (st === 'cleaning') {
+    return {
+      dotHex: '#14b8a6',
+      dotTailwind: 'bg-teal-500',
+      label: 'Cleaning Facility',
+    }
+  }
   if (st === 'idle') {
     return {
       dotHex: '#94a3b8',
@@ -538,9 +595,27 @@ export function getAgentStatusBadge(
       label: 'Idle at Desk',
     }
   }
+
+  // Working is REAL: if currentTask is specified, it must have a non-empty task description
+  if (st === 'working' || st === 'coding' || st === 'busy' || !status) {
+    if (currentTask !== undefined && (!currentTask || currentTask.trim().length === 0)) {
+      return {
+        dotHex: '#06b6d4',
+        dotTailwind: 'bg-cyan-500',
+        label: 'Available',
+      }
+    }
+    return {
+      dotHex: '#22c55e',
+      dotTailwind: 'bg-emerald-500',
+      label: 'Actively Working',
+    }
+  }
+
+  // Otherwise agent is Available for assignment
   return {
-    dotHex: '#22c55e',
-    dotTailwind: 'bg-emerald-500',
-    label: 'Actively Working',
+    dotHex: '#06b6d4',
+    dotTailwind: 'bg-cyan-500',
+    label: 'Available',
   }
 }

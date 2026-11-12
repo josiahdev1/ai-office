@@ -12,6 +12,7 @@ import { OfficeFurniture } from './OfficeFurniture'
 import { ProceduralAgent3D } from './ProceduralAgent3D'
 import { CameraController } from './CameraController'
 import { JarvisCoreState } from '@/components/jarvis/ArcReactor'
+import { computeSolarLighting } from '@/lib/office/clock'
 
 export interface OfficeSceneProps {
   agents: Agent[]
@@ -40,41 +41,9 @@ export function OfficeScene({
   onClickCore,
   isDivingToJarvis = false,
 }: OfficeSceneProps) {
-  // Compute real Philippine Standard Time (PHT, Asia/Manila, UTC+8) for lighting
+  // Compute real astronomical solar lighting for Iloilo City (PHT, Asia/Manila, UTC+8)
   const lighting = useMemo(() => {
-    const now = new Date()
-    const utc = now.getTime() + now.getTimezoneOffset() * 60000
-    const phtDate = new Date(utc + 3600000 * 8)
-    const phtHour = phtDate.getHours() + phtDate.getMinutes() / 60
-
-    // Daytime (06:00 - 17:30)
-    if (phtHour >= 6 && phtHour < 17.5) {
-      return {
-        sunColor: '#fff8e7',
-        sunIntensity: 1.8,
-        ambientColor: '#cbd5e1',
-        ambientIntensity: 0.75,
-        sunPosition: [40, 60, 30] as [number, number, number],
-      }
-    }
-    // Sunset / Golden Hour (17:30 - 19:00)
-    if (phtHour >= 17.5 && phtHour < 19.0) {
-      return {
-        sunColor: '#fb923c',
-        sunIntensity: 1.5,
-        ambientColor: '#fdba74',
-        ambientIntensity: 0.55,
-        sunPosition: [30, 40, 45] as [number, number, number],
-      }
-    }
-    // Night Mode (19:00 - 06:00)
-    return {
-      sunColor: '#60a5fa',
-      sunIntensity: 0.65,
-      ambientColor: '#334155',
-      ambientIntensity: 0.55,
-      sunPosition: [30, 50, 40] as [number, number, number],
-    }
+    return computeSolarLighting(new Date())
   }, [])
 
   const renderedAgents = useMemo(() => {

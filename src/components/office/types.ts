@@ -20,6 +20,12 @@ export type AgentStatus =
   | 'in_meeting'
   | 'gym'
   | 'at_gym'
+  | 'available'
+  | 'sleeping'
+  | 'resting'
+  | 'eating'
+  | 'in_cr'
+  | 'cleaning'
 
 
 export type AgentSubState =

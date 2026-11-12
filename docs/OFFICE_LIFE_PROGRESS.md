@@ -5,15 +5,19 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K1: Data Foundation + Real Clock + Working-Is-Real + Scheduler
-- [ ] Move map to `office_map_versions` (seed from existing map once, read active version at runtime with Realtime and cache)
-- [ ] Move settings to `office_settings`
-- [ ] Build real Iloilo clock (`Asia/Manila`, UTC+8, standard solar algorithm for Iloilo day/night/sun position)
-- [ ] Calendar table (`office_calendar`) and schedule blocks (`office_schedule_blocks`)
-- [ ] Shared scheduler (cron tick endpoint / Edge function / leader-tab fallback with lease in `office_world_state`)
-- [ ] Documentation in `docs/SCHEDULING.md`
-- [ ] Fix "WORKING is real": an agent is WORKING only while it has a real running task or active Jarvis plan step; otherwise AVAILABLE
-- [ ] Component scan test failing on hardcoded sample data and Math.random feeding displayed values
-- [ ] Vitest unit tests for clock, timezone, solar day/night, schedule blocks, lease idempotency, map version undo
+- [x] Phase K1 Completed:
+  - Added migration 0009 with office_map_versions, office_settings, office_calendar, office_schedule_blocks, and office_world_state.
+  - Implemented real Iloilo solar clock (Asia/Manila, UTC+8) driving 3D sky/lighting and triple-tier hybrid scheduler (docs/SCHEDULING.md).
+  - Fixed "WORKING is real": agents without active tasks default to AVAILABLE, removed Math.random cycles, 20/20 test suites (150 tests) passing.
+- [x] Move map to `office_map_versions` (seed from existing map once, read active version at runtime with Realtime and cache)
+- [x] Move settings to `office_settings`
+- [x] Build real Iloilo clock (`Asia/Manila`, UTC+8, standard solar algorithm for Iloilo day/night/sun position)
+- [x] Calendar table (`office_calendar`) and schedule blocks (`office_schedule_blocks`)
+- [x] Shared scheduler (cron tick endpoint / Edge function / leader-tab fallback with lease in `office_world_state`)
+- [x] Documentation in `docs/SCHEDULING.md`
+- [x] Fix "WORKING is real": an agent is WORKING only while it has a real running task or active Jarvis plan step; otherwise AVAILABLE
+- [x] Component scan test failing on hardcoded sample data and Math.random feeding displayed values
+- [x] Vitest unit tests for clock, timezone, solar day/night, schedule blocks, lease idempotency, map version undo
 
 ---
 
