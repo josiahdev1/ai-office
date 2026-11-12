@@ -2,10 +2,11 @@
 
 import React, { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { OrthographicCamera } from '@react-three/drei'
+import { OrthographicCamera, PerspectiveCamera } from '@react-three/drei'
 import { Agent } from '@/components/office/types'
 import { DepartmentMode } from '@/config/officeLayout'
-import { OfficeScene } from './three/OfficeScene'
+import { OfficeScene, OfficeLightingTheme } from './three/OfficeScene'
+import { CameraViewMode } from './three/CameraController'
 import { JarvisCoreState } from '@/components/jarvis/ArcReactor'
 
 export interface OfficeCanvas3DProps {
@@ -23,6 +24,10 @@ export interface OfficeCanvas3DProps {
   coreState?: JarvisCoreState
   onClickCore?: () => void
   isDivingToJarvis?: boolean
+  cameraViewMode?: CameraViewMode
+  onToggleWalkMode?: () => void
+  lightingTheme?: OfficeLightingTheme
+  zoomStep?: { delta: number; nonce: number }
   className?: string
 }
 
@@ -37,11 +42,21 @@ export default function OfficeCanvas3D({
   coreState = 'idle',
   onClickCore,
   isDivingToJarvis = false,
+  cameraViewMode = 'isometric',
+  onToggleWalkMode,
+  lightingTheme = 'auto',
+  zoomStep,
   className = '',
 }: OfficeCanvas3DProps) {
+  const isWalkMode = cameraViewMode === 'walk'
+  const bgColor = lightingTheme === 'day' ? '#dbeafe' : '#080b12'
+
   return (
-    <div className={`relative h-full w-full select-none overflow-hidden bg-[#080b12] ${className}`}>
-      {/* Three.js 3D Isometric Viewport (Native WebGL Sprite Nameplates = Zero Pan/Zoom Lag) */}
+    <div
+      className={`relative h-full w-full select-none overflow-hidden ${className}`}
+      style={{ backgroundColor: bgColor }}
+    >
+      {/* Three.js 3D Viewport (Isometric Orthographic or Eye-Level Walk-Inside Perspective) */}
       <Canvas
         shadows
         dpr={[1, 2]}
@@ -53,16 +68,25 @@ export default function OfficeCanvas3D({
         }}
         className="h-full w-full"
       >
-        <color attach="background" args={['#080b12']} />
+        <color attach="background" args={[bgColor]} />
 
-        {/* Isometric Orthographic Camera */}
-        <OrthographicCamera
-          makeDefault
-          position={[43.5, 42, 50]}
-          zoom={11.5}
-          near={0.1}
-          far={1000}
-        />
+        {isWalkMode ? (
+          <PerspectiveCamera
+            makeDefault
+            position={[0, 1.65, 11.5]}
+            fov={62}
+            near={0.1}
+            far={300}
+          />
+        ) : (
+          <OrthographicCamera
+            makeDefault
+            position={[43.5, 42, 50]}
+            zoom={11.5}
+            near={0.1}
+            far={1000}
+          />
+        )}
 
         <Suspense fallback={null}>
           <OfficeScene
@@ -75,17 +99,37 @@ export default function OfficeCanvas3D({
             coreState={coreState}
             onClickCore={onClickCore}
             isDivingToJarvis={isDivingToJarvis}
+            cameraViewMode={cameraViewMode}
+            lightingTheme={lightingTheme}
+            zoomStep={zoomStep}
           />
         </Suspense>
       </Canvas>
 
-      {/* Floating Bottom Viewport HUD Controls */}
-      <div className="pointer-events-none absolute bottom-4 left-4 z-30 flex flex-wrap items-center gap-2">
+      {/* Floating Bottom-Left Viewport HUD Controls */}
+      <div className="pointer-events-none absolute bottom-4 left-4 z-20 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[11px] text-slate-300 shadow-xl backdrop-blur-md">
           <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="tracking-wide text-slate-400">VIEWPORT (3D WEBGL):</span>
+          <span className="tracking-wide text-slate-400">
+            {isWalkMode ? 'WALK-INSIDE 3D:' : 'VIEWPORT (3D):'}
+          </span>
           <span className="font-bold text-cyan-300">{mode.replace('_', ' ')}</span>
         </div>
+
+        {onToggleWalkMode && (
+          <button
+            type="button"
+            data-testid="walk-inside-toggle-btn"
+            onClick={onToggleWalkMode}
+            className={`pointer-events-auto cursor-pointer flex items-center gap-1.5 rounded-lg border px-3 py-1.5 font-mono text-[11px] font-bold shadow-xl backdrop-blur-md transition-all whitespace-nowrap ${
+              isWalkMode
+                ? 'border-emerald-400 bg-emerald-500 text-slate-950'
+                : 'border-slate-700/80 bg-slate-900/90 text-slate-200 hover:border-cyan-400 hover:text-cyan-300'
+            }`}
+          >
+            <span>{isWalkMode ? 'Exit Walk [V]' : 'Walk Inside [V]'}</span>
+          </button>
+        )}
 
         {onClickCore && (
           <button
@@ -95,28 +139,28 @@ export default function OfficeCanvas3D({
             className="pointer-events-auto cursor-pointer flex items-center gap-1.5 rounded-lg border border-cyan-400/70 bg-cyan-950/90 px-3 py-1.5 font-mono text-[11px] font-bold text-cyan-200 shadow-[0_0_16px_rgba(0,229,255,0.28)] backdrop-blur-md transition-all hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
           >
             <span className="h-2 w-2 rounded-full bg-cyan-300 animate-ping" />
-            <span>JARVIS CORE [J]</span>
+            <span>JARVIS [J]</span>
           </button>
         )}
 
-        {onResetCamera && (
+        {onResetCamera && !isWalkMode && (
           <button
             type="button"
             onClick={onResetCamera}
             className="pointer-events-auto cursor-pointer rounded-lg border border-slate-800/80 bg-slate-900/90 px-3 py-1.5 font-mono text-[11px] font-medium text-slate-300 shadow-xl backdrop-blur-md transition-all hover:bg-slate-800 hover:text-white whitespace-nowrap"
           >
-            Reset Camera ⟲
+            Reset ⟲
           </button>
         )}
       </div>
 
       {/* Help tooltip */}
-      <div className="pointer-events-none absolute bottom-4 right-4 z-30 hidden sm:flex items-center gap-1.5 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[10px] text-slate-400 shadow-xl backdrop-blur-md">
-        <span>Click Brain Core or Press J for JARVIS</span>
-        <span>•</span>
-        <span>Click Agent to Route</span>
-        <span>•</span>
-        <span>Drag / Scroll</span>
+      <div className="pointer-events-none absolute bottom-4 right-4 z-20 hidden 2xl:flex items-center gap-1.5 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[10px] text-slate-400 shadow-xl backdrop-blur-md">
+        {isWalkMode ? (
+          <span>WASD / Arrows to Walk • Drag to Look • V to Exit Walk</span>
+        ) : (
+          <span>J for JARVIS • V to Walk Inside • F for Fullscreen</span>
+        )}
       </div>
     </div>
   )

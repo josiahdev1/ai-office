@@ -260,7 +260,29 @@ function HQCommandPage() {
   const [cleaningRoomSelection, setCleaningRoomSelection] = useState<string>('CAFETERIA')
   const [cleaningKindSelection, setCleaningKindSelection] = useState<CleaningTaskKind>('wipe_tables')
   const [isNavMenuOpen, setIsNavMenuOpen] = useState<boolean>(false)
+  const [cameraViewMode, setCameraViewMode] = useState<'isometric' | 'walk'>('isometric')
+  const [lightingTheme, setLightingTheme] = useState<'auto' | 'day' | 'night'>('auto')
+  const [isCanvasFullscreen, setIsCanvasFullscreen] = useState<boolean>(false)
+  const [zoomStep, setZoomStep] = useState<{ delta: number; nonce: number }>({ delta: 0, nonce: 0 })
   const navMenuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    function handleGlobalHotkeys(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault()
+        setIsCanvasFullscreen((prev) => !prev)
+      } else if (e.key === 'v' || e.key === 'V') {
+        e.preventDefault()
+        setCameraViewMode((prev) => (prev === 'isometric' ? 'walk' : 'isometric'))
+      } else if (e.key === 'Escape') {
+        setIsCanvasFullscreen(false)
+      }
+    }
+    window.addEventListener('keydown', handleGlobalHotkeys)
+    return () => window.removeEventListener('keydown', handleGlobalHotkeys)
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -1114,246 +1136,473 @@ function HQCommandPage() {
   }, [agents, agentRouteOverrides, currentMode, approvals])
 
   return (
-    <main className="flex h-screen w-screen flex-col overflow-hidden bg-[#080b12] text-slate-100 font-sans select-none">
+    <main className="flex h-screen w-screen overflow-hidden bg-[#080b12] text-slate-100 font-sans select-none">
       {/* ========================================================================= */}
-      {/* 1. EXECUTIVE COMMAND HEADER (bg-[#0a0d14]) */}
+      {/* 1. LEFT NAVIGATION SIDEBAR (Reference Image 2 Workspace Architecture)     */}
       {/* ========================================================================= */}
-      <header className="flex h-14 w-full shrink-0 items-center justify-between gap-2 border-b border-slate-800/80 bg-[#0a0d14] px-3 shadow-2xl z-30">
-        {/* Left: Branding & Status */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 border border-cyan-500/30 shrink-0">
-            <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00e5ff]" />
-          </div>
-          <div className="whitespace-nowrap">
-            <div className="font-mono text-xs font-black tracking-wider text-slate-100 uppercase whitespace-nowrap">
-              EASYUP SOFTWARE SOLUTION // HQ COMMAND
-            </div>
-            <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-400 whitespace-nowrap">
-              <span>ILOILO CITY</span>
-              <span>•</span>
-              <span className="text-cyan-400 font-medium">BRANCH: office-v3</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Digital Clock, Menu Popover, Roster Button, 3D/2D Switcher */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          {/* Digital Clock (Asia/Manila) */}
-          <div className="hidden md:flex flex-col items-end whitespace-nowrap">
-            <span className="font-mono text-xs font-bold text-slate-200 tracking-wider whitespace-nowrap">
-              {phtTime || '00:00:00 AM PHT'}
-            </span>
-            <span className="font-mono text-[9px] text-slate-500 font-semibold tracking-wider whitespace-nowrap">
-              PHT • 1X WORK PACE
-            </span>
-          </div>
-
-          {/* Clean Menu Popover (Camera & Rooms + Operations & Logs) */}
-          <div className="relative" ref={navMenuRef}>
-            <button
-              type="button"
-              data-testid="nav-menu-button"
-              onClick={() => setIsNavMenuOpen((prev) => !prev)}
-              className={`cursor-pointer flex items-center gap-1.5 rounded-lg border px-3 py-1.5 font-mono text-xs font-bold tracking-tight transition-all whitespace-nowrap ${
-                isNavMenuOpen
-                  ? 'border-cyan-400 bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                  : 'border-slate-800 bg-slate-950/80 text-slate-200 hover:bg-slate-900 hover:border-slate-700'
-              }`}
-            >
-              <span>☰</span>
-              <span>MENU</span>
-              <span className="text-[10px] opacity-70">▾</span>
-              {reminderManager.getUnacknowledgedMissed().length > 0 && (
-                <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
-              )}
-            </button>
-
-            {/* Popover Dropdown Menu */}
-            {isNavMenuOpen && (
-              <div
-                data-testid="nav-menu-popover"
-                className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-slate-800 bg-[#0d121f] p-3 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 duration-100"
-              >
-                {/* Section 1: Camera & Rooms */}
-                <div className="pb-2.5 mb-2.5 border-b border-slate-800/80">
-                  <div className="font-mono text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                    <span>CAMERA & ROOMS</span>
-                    <span className="text-[9px] text-cyan-400 font-semibold">{currentMode}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {modeButtons.map((btn) => {
-                      const isActive = currentMode === btn.mode
-                      return (
-                        <button
-                          key={btn.mode}
-                          type="button"
-                          onClick={() => {
-                            handleGlobalModeChange(btn.mode)
-                            setIsNavMenuOpen(false)
-                          }}
-                          className={`cursor-pointer rounded-lg px-2.5 py-1.5 font-mono text-[11px] font-bold tracking-tight text-left transition-all whitespace-nowrap ${
-                            isActive
-                              ? 'bg-cyan-500 text-slate-950 shadow-sm'
-                              : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
-                          }`}
-                        >
-                          {btn.label}
-                        </button>
-                      )
-                    })}
-                  </div>
+      {!isCanvasFullscreen && (
+        <aside
+          data-testid="left-nav-sidebar"
+          className="hidden lg:flex w-52 shrink-0 flex-col justify-between border-r border-slate-800/80 bg-[#0a0d14] p-3 z-30"
+        >
+          <div className="flex flex-col gap-4">
+            {/* Brand Identity */}
+            <div className="flex items-center gap-2.5 px-1.5 py-1">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/15 border border-cyan-500/30 shrink-0">
+                <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00e5ff]" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-mono text-xs font-black tracking-wider text-slate-100 uppercase truncate">
+                  EasyUp HQ
                 </div>
-
-                {/* Section 2: Operations & Logs */}
-                <div>
-                  <div className="font-mono text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                    OPERATIONS & LOGS
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <button
-                      type="button"
-                      data-testid="add-dept-button"
-                      onClick={() => {
-                        setIsAddDeptModalOpen(true)
-                        setIsNavMenuOpen(false)
-                      }}
-                      className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all whitespace-nowrap"
-                    >
-                      <span>+ ADD DEPARTMENT</span>
-                      <span className="text-[10px] text-cyan-500">NEW</span>
-                    </button>
-                    <button
-                      type="button"
-                      data-testid="open-agent-log-button"
-                      onClick={() => {
-                        setIsAgentLogDrawerOpen(true)
-                        setIsNavMenuOpen(false)
-                      }}
-                      className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all whitespace-nowrap"
-                    >
-                      <span>AGENT ACTIVITY LOG</span>
-                      <span>📋</span>
-                    </button>
-                    <button
-                      type="button"
-                      data-testid="open-brain-log-button"
-                      onClick={() => {
-                        setIsBrainLogOpen(true)
-                        setIsNavMenuOpen(false)
-                      }}
-                      className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/20 transition-all whitespace-nowrap"
-                    >
-                      <span>THE BRAIN LEARNING LOG</span>
-                      <span>🧠</span>
-                    </button>
-                    <button
-                      type="button"
-                      data-testid="open-reminders-button"
-                      onClick={() => {
-                        setIsRemindersOpen(true)
-                        setIsNavMenuOpen(false)
-                      }}
-                      className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-amber-300 border border-amber-500/40 hover:bg-amber-500/20 transition-all whitespace-nowrap"
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <span>OFFICE REMINDERS</span>
-                        {reminderManager.getUnacknowledgedMissed().length > 0 && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
-                        )}
-                      </span>
-                      <span>⏰</span>
-                    </button>
-                  </div>
+                <div className="font-mono text-[10px] text-cyan-400 truncate">
+                  branch: office-v3
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Primary Vertical Navigation */}
+            <nav className="flex flex-col gap-1 font-mono text-xs">
+              <button
+                type="button"
+                onClick={() => handleGlobalModeChange('OVERVIEW')}
+                className={`cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold transition-all whitespace-nowrap ${
+                  currentMode === 'OVERVIEW'
+                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+                    : 'text-slate-300 hover:bg-slate-900 hover:text-white border border-transparent'
+                }`}
+              >
+                <span>Office / HQ</span>
+                <span className="text-[10px] text-emerald-400">{agents.length}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={enterJarvis}
+                className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold text-slate-300 hover:bg-slate-900 hover:text-cyan-300 transition-all whitespace-nowrap"
+              >
+                <span>Jarvis Core</span>
+                <span className="text-[10px] text-cyan-400">[J]</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleGlobalModeChange('ALL_HANDS')}
+                className={`cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold transition-all whitespace-nowrap ${
+                  currentMode === 'ALL_HANDS'
+                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+                    : 'text-slate-300 hover:bg-slate-900 hover:text-white border border-transparent'
+                }`}
+              >
+                <span>Workflows / Plan</span>
+                <span className="text-[10px] text-slate-500">HQ</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsAddDeptModalOpen(true)}
+                className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold text-slate-300 hover:bg-slate-900 hover:text-white transition-all whitespace-nowrap"
+              >
+                <span>Departments</span>
+                <span className="text-[10px] text-cyan-400">+</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleGlobalModeChange('SERVER_ROOM')}
+                className={`cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold transition-all whitespace-nowrap ${
+                  currentMode === 'SERVER_ROOM'
+                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+                    : 'text-slate-300 hover:bg-slate-900 hover:text-white border border-transparent'
+                }`}
+              >
+                <span>Server Room</span>
+                <span className="text-[10px] text-amber-400">NOC</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsAgentLogDrawerOpen(true)}
+                className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold text-slate-300 hover:bg-slate-900 hover:text-amber-300 transition-all whitespace-nowrap"
+              >
+                <span>Agent Log</span>
+                <span className="text-[10px] text-slate-500">Live</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsBrainLogOpen(true)}
+                className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold text-slate-300 hover:bg-slate-900 hover:text-cyan-300 transition-all whitespace-nowrap"
+              >
+                <span>Brain Log</span>
+                <span className="text-[10px] text-cyan-500">AI</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsRemindersOpen(true)}
+                className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold text-slate-300 hover:bg-slate-900 hover:text-amber-300 transition-all whitespace-nowrap"
+              >
+                <span>Reminders</span>
+                {reminderManager.getUnacknowledgedMissed().length > 0 ? (
+                  <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+                ) : (
+                  <span className="text-[10px] text-slate-500">PHT</span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsRosterOpen((prev) => !prev)}
+                className={`cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold transition-all whitespace-nowrap ${
+                  isRosterOpen
+                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                    : 'text-slate-300 hover:bg-slate-900 hover:text-emerald-300 border border-transparent'
+                }`}
+              >
+                <span>Agent Roster</span>
+                <span className="text-[10px] text-emerald-400">{agents.length}</span>
+              </button>
+            </nav>
           </div>
 
-          {/* Clickable Live Roster Button */}
-          <button
-            type="button"
-            onClick={() => setIsRosterOpen((prev) => !prev)}
-            className={`cursor-pointer flex items-center gap-2 rounded-lg border px-3 py-1.5 font-mono text-xs font-bold transition-all whitespace-nowrap ${
-              isRosterOpen
-                ? 'border-cyan-400 bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                : 'border-emerald-500/40 bg-emerald-950/50 text-emerald-400 hover:bg-emerald-900/60 hover:border-emerald-400'
-            }`}
-          >
-            <span
-              className={`h-2 w-2 rounded-full ${
-                isRosterOpen ? 'bg-slate-950' : 'bg-emerald-400 animate-ping'
-              }`}
-            />
-            <span className="whitespace-nowrap">
-              {agents.length > 0 ? `${agents.length} AGENTS ROSTER` : '30+ AGENTS ROSTER'} ▾
-            </span>
-          </button>
+          {/* Bottom Sidebar: Lighting Theme Switcher & Lead Architect Profile */}
+          <div className="flex flex-col gap-3 border-t border-slate-800/80 pt-3">
+            <div>
+              <div className="mb-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Office Lighting
+              </div>
+              <div className="grid grid-cols-3 gap-1 rounded-lg border border-slate-800 bg-slate-950 p-1 font-mono text-[10px]">
+                {(['auto', 'day', 'night'] as const).map((themeOpt) => (
+                  <button
+                    key={themeOpt}
+                    type="button"
+                    data-testid={`lighting-theme-${themeOpt}`}
+                    onClick={() => setLightingTheme(themeOpt)}
+                    className={`cursor-pointer rounded-md py-1 font-bold capitalize transition-all whitespace-nowrap ${
+                      lightingTheme === themeOpt
+                        ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {themeOpt}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {/* Segmented 3D / 2D Parity Viewport Switcher */}
-          <div className="flex items-center rounded-lg border border-slate-700/80 bg-slate-950/90 p-0.5 font-mono text-[11px]">
-            <button
-              type="button"
-              onClick={() => router.push('/')}
-              className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all whitespace-nowrap ${
-                !is2DView
-                  ? 'bg-cyan-500 text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              3D View
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push('/?v=2')}
-              className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all whitespace-nowrap ${
-                is2DView
-                  ? 'bg-cyan-500 text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              2D View
-            </button>
+            <div className="flex items-center gap-2.5 rounded-lg border border-slate-800/80 bg-slate-950/80 px-2.5 py-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-500/20 border border-cyan-400/40 font-mono text-[10px] font-black text-cyan-300 shrink-0">
+                JL
+              </div>
+              <div className="min-w-0">
+                <div className="font-mono text-[11px] font-bold text-slate-200 truncate">
+                  Josiah
+                </div>
+                <div className="font-mono text-[9px] text-slate-500 truncate">
+                  Lead Architect
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </header>
+        </aside>
+      )}
 
       {/* ========================================================================= */}
-      {/* 2. MAIN COCKPIT BODY (70% 3D/2D Viewport + 30% Sidebar Console)          */}
+      {/* 2. RIGHT WORKSPACE COLUMN (Top KPI Strip + Canvas + Right Agent Tree)     */}
       {/* ========================================================================= */}
-      <div className="relative flex flex-1 overflow-hidden">
-        {/* Left / Center: Synchronized 3D or 2D Isometric Viewport */}
-        <section className="relative flex-1 h-full overflow-hidden">
-          {is2DView ? (
-            <OfficeCanvas2D
-              agents={agents}
-              mode={currentMode}
-              agentRouteOverrides={agentRouteOverrides}
-              selectedAgentId={selectedAgent?.id}
-              onSelectAgent={(ag) => setSelectedAgent(ag)}
-              onArriveAgent={handleAgentArrive}
-              onResetCamera={() => handleGlobalModeChange('OVERVIEW')}
-              coreState={jarvisCoreState}
-              onClickCore={enterJarvis}
-              isDivingToJarvis={
-                jarvisPhase === 'entering' || jarvisPhase === 'inside'
-              }
-            />
-          ) : (
-            <OfficeCanvas3D
-              agents={agents}
-              mode={currentMode}
-              agentRouteOverrides={agentRouteOverrides}
-              selectedAgentId={selectedAgent?.id}
-              onSelectAgent={(ag) => setSelectedAgent(ag)}
-              onArriveAgent={handleAgentArrive}
-              onResetCamera={() => handleGlobalModeChange('OVERVIEW')}
-              coreState={jarvisCoreState}
-              onClickCore={enterJarvis}
-              isDivingToJarvis={
-                jarvisPhase === 'entering' || jarvisPhase === 'inside'
-              }
-            />
-          )}
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+        {!isCanvasFullscreen && (
+          <header className="flex h-14 w-full shrink-0 items-center justify-between gap-2 border-b border-slate-800/80 bg-[#0a0d14] px-3 shadow-2xl z-30">
+            {/* Left: Compact KPI Telemetry Strip */}
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex lg:hidden items-center gap-2 shrink-0">
+                <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-pulse" />
+                <span className="font-mono text-xs font-black text-slate-100 uppercase whitespace-nowrap">
+                  EASYUP HQ
+                </span>
+              </div>
+
+              <div className="hidden md:flex items-center gap-3 font-mono text-[11px] whitespace-nowrap">
+                <div className="flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950/80 px-2.5 py-1">
+                  <span className="text-slate-500 font-bold">ACTIVE</span>
+                  <span className="font-black text-emerald-400">{campusCounters.working}</span>
+                </div>
+                <div className="flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950/80 px-2.5 py-1">
+                  <span className="text-slate-500 font-bold">AVAILABLE</span>
+                  <span className="font-black text-cyan-400">{campusCounters.available}</span>
+                </div>
+                <div className="hidden xl:flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950/80 px-2.5 py-1">
+                  <span className="text-slate-500 font-bold">WELLNESS</span>
+                  <span className="font-black text-amber-400">
+                    {campusCounters.eating + campusCounters.resting + campusCounters.inGym}
+                  </span>
+                </div>
+                <div className="hidden xl:flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950/80 px-2.5 py-1">
+                  <span className="text-slate-500 font-bold">PHT</span>
+                  <span className="font-bold text-slate-200">{phtTime || '00:00 AM PHT'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Menu, Zoom/Recenter, View Mode (3D / Walk 3D / 2D), Fullscreen */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Zoom & Recenter Group */}
+              <div className="hidden sm:flex items-center rounded-lg border border-slate-800 bg-slate-950/90 p-0.5 font-mono text-xs">
+                <button
+                  type="button"
+                  title="Zoom In"
+                  onClick={() => setZoomStep((prev) => ({ delta: 3, nonce: prev.nonce + 1 }))}
+                  className="cursor-pointer rounded-md px-2 py-1 font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors whitespace-nowrap"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  title="Zoom Out"
+                  onClick={() => setZoomStep((prev) => ({ delta: -3, nonce: prev.nonce + 1 }))}
+                  className="cursor-pointer rounded-md px-2 py-1 font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors whitespace-nowrap"
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  title="Recenter Overview"
+                  onClick={() => {
+                    setCameraViewMode('isometric')
+                    handleGlobalModeChange('OVERVIEW')
+                  }}
+                  className="cursor-pointer rounded-md px-2 py-1 text-[11px] font-bold text-slate-300 hover:bg-slate-800 hover:text-cyan-300 transition-colors whitespace-nowrap"
+                >
+                  Recenter
+                </button>
+              </div>
+
+              {/* Clean Menu Popover */}
+              <div className="relative" ref={navMenuRef}>
+                <button
+                  type="button"
+                  data-testid="nav-menu-button"
+                  onClick={() => setIsNavMenuOpen((prev) => !prev)}
+                  className={`cursor-pointer flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs font-bold tracking-tight transition-all whitespace-nowrap ${
+                    isNavMenuOpen
+                      ? 'border-cyan-400 bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                      : 'border-slate-800 bg-slate-950/80 text-slate-200 hover:bg-slate-900 hover:border-slate-700'
+                  }`}
+                >
+                  <span>☰</span>
+                  <span>MENU</span>
+                  <span className="text-[10px] opacity-70">▾</span>
+                </button>
+
+                {isNavMenuOpen && (
+                  <div
+                    data-testid="nav-menu-popover"
+                    className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-slate-800 bg-[#0d121f] p-3 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 duration-100"
+                  >
+                    <div className="pb-2.5 mb-2.5 border-b border-slate-800/80">
+                      <div className="font-mono text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                        <span>CAMERA & ROOMS</span>
+                        <span className="text-[9px] text-cyan-400 font-semibold">{currentMode}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {modeButtons.map((btn) => {
+                          const isActive = currentMode === btn.mode
+                          return (
+                            <button
+                              key={btn.mode}
+                              type="button"
+                              onClick={() => {
+                                handleGlobalModeChange(btn.mode)
+                                setIsNavMenuOpen(false)
+                              }}
+                              className={`cursor-pointer rounded-lg px-2.5 py-1.5 font-mono text-[11px] font-bold tracking-tight text-left transition-all whitespace-nowrap ${
+                                isActive
+                                  ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                                  : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
+                              }`}
+                            >
+                              {btn.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="font-mono text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                        OPERATIONS & LOGS
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <button
+                          type="button"
+                          data-testid="add-dept-button"
+                          onClick={() => {
+                            setIsAddDeptModalOpen(true)
+                            setIsNavMenuOpen(false)
+                          }}
+                          className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all whitespace-nowrap"
+                        >
+                          <span>+ ADD DEPARTMENT</span>
+                          <span className="text-[10px] text-cyan-500">NEW</span>
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="open-agent-log-button"
+                          onClick={() => {
+                            setIsAgentLogDrawerOpen(true)
+                            setIsNavMenuOpen(false)
+                          }}
+                          className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all whitespace-nowrap"
+                        >
+                          <span>AGENT ACTIVITY LOG</span>
+                          <span>📋</span>
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="open-brain-log-button"
+                          onClick={() => {
+                            setIsBrainLogOpen(true)
+                            setIsNavMenuOpen(false)
+                          }}
+                          className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/20 transition-all whitespace-nowrap"
+                        >
+                          <span>THE BRAIN LEARNING LOG</span>
+                          <span>🧠</span>
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="open-reminders-button"
+                          onClick={() => {
+                            setIsRemindersOpen(true)
+                            setIsNavMenuOpen(false)
+                          }}
+                          className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-amber-300 border border-amber-500/40 hover:bg-amber-500/20 transition-all whitespace-nowrap"
+                        >
+                          <span>OFFICE REMINDERS</span>
+                          <span>⏰</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Segmented 3D Iso / Walk 3D / 2D Switcher */}
+              <div className="flex items-center rounded-lg border border-slate-700/80 bg-slate-950/90 p-0.5 font-mono text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCameraViewMode('isometric')
+                    if (is2DView) router.push('/')
+                  }}
+                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all whitespace-nowrap ${
+                    !is2DView && cameraViewMode === 'isometric'
+                      ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  3D View
+                </button>
+                <button
+                  type="button"
+                  data-testid="header-walk-3d-btn"
+                  onClick={() => {
+                    setCameraViewMode('walk')
+                    if (is2DView) router.push('/')
+                  }}
+                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all whitespace-nowrap ${
+                    !is2DView && cameraViewMode === 'walk'
+                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Walk 3D
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push('/?v=2')}
+                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all whitespace-nowrap ${
+                    is2DView
+                      ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  2D View
+                </button>
+              </div>
+
+              {/* True Fullscreen Office-Only Toggle */}
+              <button
+                type="button"
+                data-testid="fullscreen-toggle-btn"
+                onClick={() => setIsCanvasFullscreen(true)}
+                title="Fullscreen Office-Only Mode [F]"
+                className="cursor-pointer flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/90 px-2.5 py-1.5 font-mono text-[11px] font-bold text-slate-200 hover:border-cyan-400 hover:text-cyan-300 transition-all whitespace-nowrap"
+              >
+                <span>⛶</span>
+                <span className="hidden sm:inline">Fullscreen</span>
+              </button>
+            </div>
+          </header>
+        )}
+
+        {/* ======================================================================= */}
+        {/* 3. MAIN COCKPIT BODY (Canvas + Wing Switcher + Right Agent Tree)        */}
+        {/* ======================================================================= */}
+        <div className="relative flex flex-1 min-h-0 overflow-hidden">
+          <div className="relative flex flex-1 flex-col min-w-0 h-full overflow-hidden">
+            {/* Synchronized 3D or 2D Isometric Viewport */}
+            <section className="relative flex-1 min-h-0 overflow-hidden">
+              {isCanvasFullscreen && (
+                <button
+                  type="button"
+                  data-testid="exit-fullscreen-btn"
+                  onClick={() => setIsCanvasFullscreen(false)}
+                  className="cursor-pointer fixed top-4 right-4 z-50 flex items-center gap-2 rounded-full border border-cyan-400/70 bg-slate-950/90 px-3.5 py-1.5 font-mono text-xs font-bold text-cyan-200 shadow-2xl backdrop-blur-md hover:bg-cyan-500 hover:text-slate-950 transition-all whitespace-nowrap"
+                >
+                  <span>Exit Fullscreen [F]</span>
+                </button>
+              )}
+
+              {is2DView ? (
+                <OfficeCanvas2D
+                  agents={agents}
+                  mode={currentMode}
+                  agentRouteOverrides={agentRouteOverrides}
+                  selectedAgentId={selectedAgent?.id}
+                  onSelectAgent={(ag) => setSelectedAgent(ag)}
+                  onArriveAgent={handleAgentArrive}
+                  onResetCamera={() => handleGlobalModeChange('OVERVIEW')}
+                  coreState={jarvisCoreState}
+                  onClickCore={enterJarvis}
+                  isDivingToJarvis={
+                    jarvisPhase === 'entering' || jarvisPhase === 'inside'
+                  }
+                  zoomStep={zoomStep}
+                />
+              ) : (
+                <OfficeCanvas3D
+                  agents={agents}
+                  mode={currentMode}
+                  agentRouteOverrides={agentRouteOverrides}
+                  selectedAgentId={selectedAgent?.id}
+                  onSelectAgent={(ag) => setSelectedAgent(ag)}
+                  onArriveAgent={handleAgentArrive}
+                  onResetCamera={() => handleGlobalModeChange('OVERVIEW')}
+                  coreState={jarvisCoreState}
+                  onClickCore={enterJarvis}
+                  isDivingToJarvis={
+                    jarvisPhase === 'entering' || jarvisPhase === 'inside'
+                  }
+                  cameraViewMode={cameraViewMode}
+                  onToggleWalkMode={() =>
+                    setCameraViewMode((prev) => (prev === 'isometric' ? 'walk' : 'isometric'))
+                  }
+                  lightingTheme={lightingTheme}
+                  zoomStep={zoomStep}
+                />
+              )}
 
           {/* Cinematic 1.5s Fly-In / Fly-Out Bloom Transition Overlay (Skippable on Click) */}
           {(jarvisPhase === 'entering' || jarvisPhase === 'exiting') && (
@@ -1384,7 +1633,7 @@ function HQCommandPage() {
           {jarvisPhase === 'closed' && (
             <div
               data-testid="office-jarvis-voice-hud"
-              className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex max-w-xl items-center gap-3 rounded-full border border-cyan-500/40 bg-slate-950/85 px-4 py-2 text-xs font-mono backdrop-blur-md shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all"
+              className="pointer-events-auto absolute top-3 left-1/2 -translate-x-1/2 z-30 flex max-w-xl items-center gap-3 rounded-full border border-cyan-500/40 bg-slate-950/85 px-4 py-2 text-xs font-mono backdrop-blur-md shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all"
             >
               <div className="flex items-center gap-2 shrink-0">
                 <span className="relative flex h-3 w-3">
@@ -1457,6 +1706,45 @@ function HQCommandPage() {
             </div>
           )}
         </section>
+
+            {/* Wing & Floor Quick-Switcher Bar (Reference Image 2 bottom wing cards) */}
+            {!isCanvasFullscreen && (
+              <div
+                data-testid="wing-quick-switcher"
+                className="hidden md:flex flex-wrap items-center gap-1.5 border-t border-slate-800/80 bg-[#0a0d14] px-3 py-1.5 shrink-0"
+              >
+                {[
+                  { mode: 'OVERVIEW' as DepartmentMode, label: 'Main Campus', sub: `${agents.length} agents` },
+                  { mode: 'ALL_HANDS' as DepartmentMode, label: 'The Brain', sub: 'Core' },
+                  { mode: 'SERVER_ROOM' as DepartmentMode, label: 'Server Room', sub: 'NOC' },
+                  { mode: 'CAFETERIA' as DepartmentMode, label: 'Cafeteria & CR', sub: 'West Wing' },
+                  { mode: 'GYM' as DepartmentMode, label: 'Gym & Pantry', sub: 'Wellness' },
+                ].map((wing) => {
+                  const isActive = currentMode === wing.mode
+                  return (
+                    <button
+                      key={wing.mode}
+                      type="button"
+                      onClick={() => handleGlobalModeChange(wing.mode)}
+                      className={`cursor-pointer flex items-center gap-1.5 rounded-lg border px-2.5 py-1 font-mono text-left transition-all whitespace-nowrap ${
+                        isActive
+                          ? 'border-cyan-400/60 bg-cyan-500/15 text-cyan-200 shadow-sm'
+                          : 'border-slate-800 bg-slate-950/70 text-slate-300 hover:border-slate-700 hover:bg-slate-900'
+                      }`}
+                    >
+                      <span
+                        className={`h-2 w-2 rounded-full shrink-0 ${
+                          isActive ? 'bg-cyan-400' : 'bg-slate-600'
+                        }`}
+                      />
+                      <span className="text-[11px] font-bold">{wing.label}</span>
+                      <span className="hidden 2xl:inline text-[10px] text-slate-500">{wing.sub}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
 
         {/* Full-Screen Jarvis Holographic Interior Chamber (Persistently mounted so Always-On Voice works seamlessly across entering & exiting JARVIS) */}
         <JarvisInterior
@@ -2018,8 +2306,9 @@ function HQCommandPage() {
           </div>
         )}
 
-        {/* Right: 30% Width Sidebar Console */}
-        <aside className="w-full md:w-[390px] lg:w-[430px] shrink-0 border-l border-slate-800/80 bg-[#0d111c] flex flex-col overflow-y-auto shadow-2xl z-20">
+        {/* Right: Agent Hierarchy & Operations Console */}
+        {!isCanvasFullscreen && (
+          <aside className="w-full md:w-88 lg:w-96 xl:w-104 shrink-0 border-l border-slate-800/80 bg-[#0d111c] flex flex-col overflow-y-auto shadow-2xl z-20">
           {/* Section 0: CAMPUS LIVE COUNTER (Real-Time Activity & Telemetry Breakdown) */}
           <div className="border-b border-slate-800/80 p-3.5 shrink-0 bg-slate-950/50">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800/70">
@@ -3074,6 +3363,8 @@ function HQCommandPage() {
             </div>
           </div>
         </aside>
+        )}
+      </div>
       </div>
 
       {/* Add Department Wizard Modal */}

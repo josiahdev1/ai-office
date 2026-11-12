@@ -51,6 +51,7 @@ export interface OfficeCanvas2DProps {
   coreState?: JarvisCoreState
   onClickCore?: () => void
   isDivingToJarvis?: boolean
+  zoomStep?: { delta: number; nonce: number }
   className?: string
 }
 
@@ -89,6 +90,7 @@ export default function OfficeCanvas2D({
   coreState = 'idle',
   onClickCore,
   isDivingToJarvis = false,
+  zoomStep,
   className = '',
 }: OfficeCanvas2DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -162,6 +164,14 @@ export default function OfficeCanvas2D({
     zoomMultiplier: 1,
     lastMode: mode,
   })
+
+  useEffect(() => {
+    if (!zoomStep || zoomStep.nonce === 0) return
+    camStateRef.current.zoomMultiplier = Math.max(
+      0.55,
+      Math.min(3.5, camStateRef.current.zoomMultiplier + (zoomStep.delta > 0 ? 0.18 : -0.18))
+    )
+  }, [zoomStep])
   const savedCamBeforeDiveRef = useRef<{
     targetX: number
     targetZ: number
@@ -603,8 +613,11 @@ export default function OfficeCanvas2D({
       drawBox(-8, -0.7, 0, 102, 0.8, 86, '#14532d', 0, 1, '#166534')
       drawBox(0, -0.62, 0, 51.5, 1.15, 51.5, '#334155', 0, 1, '#475569')
       drawBox(-34, -0.62, 0, 22, 1.15, 51.5, '#334155', 0, 1, '#475569')
+      drawBox(-43.5, -0.62, 4.25, 7.2, 1.15, 8.5, '#334155', 0, 1, '#475569')
       drawBox(0, -0.58, 0, 47.6, 1.2, 47.6, '#0f172a', 0, 1, '#1e293b')
       drawBox(-34, -0.58, 0, 20, 1.2, 47.6, '#0f172a', 0, 1, '#1e293b')
+      drawBox(-43.5, -0.58, 4.25, 5.8, 1.2, 6.9, '#0f172a', 0, 1, '#1e293b')
+      drawBox(-43.6, 0.015, 4.25, 5.2, 0.03, 6.5, '#0b1324', 0, 1, '#1e293b')
 
       // South Dual-Lane Asphalt Highway (Z = 29.8)
       drawBox(0, -0.25, 29.8, 80, 0.12, 6.8, '#1e293b', 0, 1, '#334155')
@@ -705,11 +718,16 @@ export default function OfficeCanvas2D({
       }
       drawBox(0, 2.25, -22.92, 18, 0.85, 0.08, '#0f172a', 0, 1, '#00e5ff')
 
-      // Wellness Wing West Exterior Wall (x = -41.2)
-      drawBox(-41.2, 1.4, 0, 0.4, 2.8, 46.8, '#1e293b', 0, 1, '#334155')
-      for (const wz of [-16, -2, 6, 16]) {
+      // Wellness Wing West Exterior Wall (split around expanded Server Room West Bay z = 1..7.5)
+      drawBox(-41.2, 1.4, -11.2, 0.4, 2.8, 24.4, '#1e293b', 0, 1, '#334155')
+      drawBox(-41.2, 1.4, 15.45, 0.4, 2.8, 15.9, '#1e293b', 0, 1, '#334155')
+      drawBox(-46.2, 1.4, 4.25, 0.4, 2.8, 6.9, '#1e293b', 0, 1, '#334155')
+      drawBox(-43.7, 1.4, 1.0, 5.2, 2.8, 0.3, '#1e293b', 0, 1, '#334155')
+      drawBox(-43.7, 1.4, 7.5, 5.2, 2.8, 0.3, '#1e293b', 0, 1, '#334155')
+      for (const wz of [-16, -2, 16]) {
         drawBox(-40.98, 1.6, wz, 0.06, 1.6, 6, '#38bdf8', 0, 0.55, '#7dd3fc')
       }
+      drawBox(-45.98, 1.6, 4.25, 0.06, 1.5, 4.4, '#38bdf8', 0, 0.55, '#7dd3fc')
 
       // =========================================================================
       // LAYER 4: Depth-Sorted 3D Scene Queue (Interior + Vehicles + Streetlights)
@@ -785,15 +803,15 @@ export default function OfficeCanvas2D({
         // West Wing Dividing Walls (Nap Room, Men's CR, Women's CR, Server Room, Facilities, Cafeteria)
         [-35, 1.0, -11, 12, 2.0, 0.3],
         [-35, 1.0, -5, 12, 2.0, 0.3],
-        [-35, 1.0, 1, 12, 2.0, 0.3],
-        [-35, 1.0, 6, 12, 2.0, 0.3],
+        [-37.5, 1.0, 1, 17.2, 2.0, 0.3],
+        [-37.5, 1.0, 7.5, 17.2, 2.0, 0.3],
         [-35, 1.0, 11, 12, 2.0, 0.3],
         // West Wing East Corridor Wall with 6 Doorways
         [-28.9, 1.0, -19.5, 0.3, 2.0, 5.0],
         [-28.9, 1.0, -12, 0.3, 2.0, 6.0],
         [-28.9, 1.0, -5, 0.3, 2.0, 4.0],
         [-28.9, 1.0, 0.75, 0.3, 2.0, 3.5],
-        [-28.9, 1.0, 6, 0.3, 2.0, 3.0],
+        [-28.9, 1.0, 6.75, 0.3, 2.0, 2.5],
         [-28.9, 1.0, 12.25, 0.3, 2.0, 5.5],
         [-28.9, 1.0, 19.5, 0.3, 2.0, 5.0],
       ]
@@ -989,23 +1007,20 @@ export default function OfficeCanvas2D({
       // 4C-2. WEST WING PROPS (Server Room, Men's CR, Women's CR, Nap Room, Facilities, Cafeteria)
       // =========================================================================
 
-      // A. SERVER ROOM & INFRASTRUCTURE NOC ([-35, 0, 3.5])
+      // A. EXPANDED SERVER ROOM & INFRASTRUCTURE NOC ([-37.5, 0, 4.25])
       // Door Sign: RESTRICTED ACCESS SERVER ROOM
       enqueue(-29.2, 3.5, 2.1, () => {
         drawBox(-29.2, 2.1, 3.5, 0.08, 0.35, 1.2, '#451a03', 0, 1, '#f59e0b')
         drawBox(-29.25, 2.1, 3.5, 0.02, 0.22, 1.0, '#f59e0b')
       })
 
-      // 3 Server Racks with Live Status LEDs
+      // 6 Dual-Aisle Server Racks with Live Status LEDs
       for (const rack of SERVER_RACKS) {
         const rx = rack.position[0]
         const rz = rack.position[2]
         enqueue(rx, rz, 1.25, () => {
-          // Chassis
           drawBox(rx, 1.25, rz, 1.2, 2.5, 0.8, '#090d16', 0, 1, '#334155')
-          // Glass front door frame
           drawBox(rx, 1.25, rz + 0.41, 1.05, 2.3, 0.04, '#1e293b', 0, 0.85, '#0ea5e9')
-          // Draw horizontal blade slots with blinking LEDs
           for (let sidx = 0; sidx < 5; sidx++) {
             const slotY = 0.45 + sidx * 0.4
             drawBox(rx, slotY, rz + 0.42, 0.95, 0.16, 0.02, '#334155')
@@ -1019,37 +1034,45 @@ export default function OfficeCanvas2D({
         })
       }
 
-      // CRAC Chiller Unit
-      enqueue(-33, 5, 1.1, () => {
-        drawBox(-33, 1.1, 5, 1.4, 2.2, 1.0, '#334155', 0, 1, '#475569')
-        drawBox(-33, 1.9, 5.51, 0.6, 0.25, 0.02, '#0284c7')
-        drawBox(-33, 1.1, 5.51, 0.9, 1.0, 0.02, '#0f172a')
+      // Dual CRAC Chiller Units
+      for (const [cx, cz] of [
+        [-45, 4.25],
+        [-35.5, 6.35],
+      ]) {
+        enqueue(cx, cz, 1.1, () => {
+          drawBox(cx, 1.1, cz, 1.4, 2.2, 1.0, '#334155', 0, 1, '#475569')
+          drawBox(cx, 1.9, cz + 0.51, 0.6, 0.25, 0.02, '#0284c7')
+          drawBox(cx, 1.1, cz + 0.51, 0.9, 1.0, 0.02, '#0f172a')
+        })
+      }
+
+      // NOC Telemetry Wall Display
+      enqueue(-36, 1.2, 1.45, () => {
+        drawBox(-36, 1.45, 1.2, 3.4, 1.4, 0.08, '#090d16', 0, 1, '#0284c7')
+        drawBox(-36, 1.45, 1.25, 3.2, 1.22, 0.02, '#082f49')
       })
 
-      // Overhead Cable Trays
-      enqueue(-35, 3.5, 2.45, () => {
-        drawBox(-35, 2.45, 3.5, 5.0, 0.06, 0.4, '#475569')
-        drawBox(-35, 2.5, 3.4, 4.8, 0.03, 0.03, '#f97316')
-        drawBox(-35, 2.5, 3.5, 4.8, 0.03, 0.03, '#0ea5e9')
-        drawBox(-35, 2.5, 3.6, 4.8, 0.03, 0.03, '#eab308')
-      })
+      // Dual Overhead Cable Trays
+      for (const tz of [2.1, 6.3]) {
+        enqueue(-39.5, tz, 2.45, () => {
+          drawBox(-39.5, 2.45, tz, 10.5, 0.06, 0.4, '#475569')
+          drawBox(-39.5, 2.5, tz - 0.1, 10.2, 0.03, 0.03, '#f97316')
+          drawBox(-39.5, 2.5, tz, 10.2, 0.03, 0.03, '#0ea5e9')
+          drawBox(-39.5, 2.5, tz + 0.1, 10.2, 0.03, 0.03, '#eab308')
+        })
+      }
 
-      // Server Admin Terminal Workstation (Rex's Permanent NOC Station)
-      enqueue(-33, 2.5, 0.75, () => {
-        // Table
-        drawBox(-33, 0.38, 2.5, 1.6, 0.76, 0.85, '#1e293b', 0, 1, '#334155')
-        // Matrix Green Terminal Monitor
-        drawBox(-33.1, 0.95, 2.25, 0.7, 0.42, 0.04, '#090d16', 0.15, 1, '#10b981')
-        drawBox(-33.1, 0.95, 2.27, 0.66, 0.38, 0.02, '#052e16')
-        // Cyber Blue Metrics Monitor
-        drawBox(-33.1, 0.95, 2.75, 0.7, 0.42, 0.04, '#090d16', -0.15, 1, '#0ea5e9')
-        drawBox(-33.1, 0.95, 2.73, 0.66, 0.38, 0.02, '#082f49')
-        // Keyboard & Mouse
-        drawBox(-32.8, 0.77, 2.5, 0.18, 0.02, 0.45, '#0f172a')
-        drawBox(-32.8, 0.77, 2.8, 0.1, 0.02, 0.06, '#38bdf8')
-        // Ergonomic task chair
-        drawBox(-32, 0.45, 2.5, 0.45, 0.08, 0.45, '#0f172a')
-        drawBox(-31.8, 0.85, 2.5, 0.06, 0.7, 0.45, '#1e293b')
+      // Server Admin Terminal Workstation (Rex's Permanent NOC Station at [-32.5, 0, 3.8])
+      enqueue(-32.5, 3.8, 0.75, () => {
+        drawBox(-32.5, 0.38, 3.8, 1.6, 0.76, 0.85, '#1e293b', 0, 1, '#334155')
+        drawBox(-32.6, 0.95, 3.55, 0.7, 0.42, 0.04, '#090d16', 0.15, 1, '#10b981')
+        drawBox(-32.6, 0.95, 3.57, 0.66, 0.38, 0.02, '#052e16')
+        drawBox(-32.6, 0.95, 4.05, 0.7, 0.42, 0.04, '#090d16', -0.15, 1, '#0ea5e9')
+        drawBox(-32.6, 0.95, 4.03, 0.66, 0.38, 0.02, '#082f49')
+        drawBox(-32.3, 0.77, 3.8, 0.18, 0.02, 0.45, '#0f172a')
+        drawBox(-32.3, 0.77, 4.1, 0.1, 0.02, 0.06, '#38bdf8')
+        drawBox(-31.5, 0.45, 3.8, 0.45, 0.08, 0.45, '#0f172a')
+        drawBox(-31.3, 0.85, 3.8, 0.06, 0.7, 0.45, '#1e293b')
       })
 
       // B. MEN'S COMFORT ROOM ([-35, 0, -8])

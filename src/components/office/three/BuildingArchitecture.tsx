@@ -96,7 +96,7 @@ function LowPolyVehicle({
   )
 }
 
-export function BuildingArchitecture() {
+export function BuildingArchitecture({ isWalkMode = false }: { isWalkMode?: boolean }) {
   const carRefs = useRef<(THREE.Group | null)[]>([])
   const treeRefs = useRef<(THREE.Group | null)[]>([])
 
@@ -133,8 +133,8 @@ export function BuildingArchitecture() {
       {/* 1. EXTERIOR CAMPUS LAWN, SIDEWALK, HIGHWAY & PARKING LOT              */}
       {/* ===================================================================== */}
       {/* Exterior Green Lawn Campus */}
-      <mesh position={[0, -0.7, 0]} receiveShadow>
-        <boxGeometry args={[86, 0.8, 86]} />
+      <mesh position={[-8, -0.7, 0]} receiveShadow>
+        <boxGeometry args={[102, 0.8, 86]} />
         <meshStandardMaterial color="#14532d" roughness={0.95} />
       </mesh>
 
@@ -148,6 +148,11 @@ export function BuildingArchitecture() {
         <boxGeometry args={[22, 1.15, 51.5]} />
         <meshStandardMaterial color="#334155" roughness={0.85} />
       </mesh>
+      {/* Expanded Server Room West Bay Concrete Apron */}
+      <mesh position={[-43.5, -0.62, 4.25]} receiveShadow>
+        <boxGeometry args={[7.2, 1.15, 8.5]} />
+        <meshStandardMaterial color="#334155" roughness={0.85} />
+      </mesh>
 
       {/* Main Building Foundation Slab */}
       <mesh position={[0, -0.58, 0]} receiveShadow>
@@ -157,6 +162,11 @@ export function BuildingArchitecture() {
       {/* Wellness Wing Foundation Slab */}
       <mesh position={[-34, -0.58, 0]} receiveShadow>
         <boxGeometry args={[20, 1.2, 47.6]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.9} />
+      </mesh>
+      {/* Expanded Server Room West Bay Foundation Slab */}
+      <mesh position={[-43.5, -0.58, 4.25]} receiveShadow>
+        <boxGeometry args={[5.8, 1.2, 6.9]} />
         <meshStandardMaterial color="#0f172a" roughness={0.9} />
       </mesh>
 
@@ -397,12 +407,34 @@ export function BuildingArchitecture() {
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
 
-        {/* Wellness Wing West Exterior Wall */}
-        <mesh position={[-41.2, 1.4, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.4, 2.8, 46.8]} />
+        {/* Wellness Wing West Exterior Wall (split around expanded Server Room West Bay z = 1..7.5) */}
+        <mesh position={[-41.2, 1.4, -11.2]} castShadow receiveShadow>
+          <boxGeometry args={[0.4, 2.8, 24.4]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
-        {[-16, -2, 6, 16].map((z) => (
+        <mesh position={[-41.2, 1.4, 15.45]} castShadow receiveShadow>
+          <boxGeometry args={[0.4, 2.8, 15.9]} />
+          <meshStandardMaterial color="#1e293b" roughness={0.8} />
+        </mesh>
+        {/* Expanded Server Room West Bay Outer Wall (x = -46.2) & Returns */}
+        <mesh position={[-46.2, 1.4, 4.25]} castShadow receiveShadow>
+          <boxGeometry args={[0.4, 2.8, 6.9]} />
+          <meshStandardMaterial color="#1e293b" roughness={0.8} />
+        </mesh>
+        <mesh position={[-43.7, 1.4, 1.0]} castShadow receiveShadow>
+          <boxGeometry args={[5.2, 2.8, 0.3]} />
+          <meshStandardMaterial color="#1e293b" roughness={0.8} />
+        </mesh>
+        <mesh position={[-43.7, 1.4, 7.5]} castShadow receiveShadow>
+          <boxGeometry args={[5.2, 2.8, 0.3]} />
+          <meshStandardMaterial color="#1e293b" roughness={0.8} />
+        </mesh>
+        {/* Expanded Server Room Floor */}
+        <mesh position={[-43.6, 0.015, 4.25]} receiveShadow>
+          <boxGeometry args={[5.2, 0.03, 6.5]} />
+          <meshStandardMaterial color="#0b1324" roughness={0.65} />
+        </mesh>
+        {[-16, -2, 16].map((z) => (
           <mesh key={`w-win-wellness-${z}`} position={[-41.15, 1.6, z]} rotation={[0, Math.PI / 2, 0]}>
             <planeGeometry args={[6, 1.6]} />
             <meshStandardMaterial
@@ -415,6 +447,17 @@ export function BuildingArchitecture() {
             />
           </mesh>
         ))}
+        <mesh position={[-46.15, 1.6, 4.25]} rotation={[0, Math.PI / 2, 0]}>
+          <planeGeometry args={[4.4, 1.5]} />
+          <meshStandardMaterial
+            color="#38bdf8"
+            emissive="#0284c7"
+            emissiveIntensity={0.25}
+            transparent
+            opacity={0.4}
+            roughness={0.1}
+          />
+        </mesh>
 
         <mesh position={[0, 2.2, -22.95]}>
           <planeGeometry args={[18, 0.9]} />
@@ -532,13 +575,13 @@ export function BuildingArchitecture() {
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
         {/* 3. Women's CR / Server Room Fire/Acoustic Wall */}
-        <mesh position={[-35, 1.0, 1]} castShadow receiveShadow>
-          <boxGeometry args={[12, 2.0, 0.3]} />
+        <mesh position={[-37.5, 1.0, 1]} castShadow receiveShadow>
+          <boxGeometry args={[17.2, 2.0, 0.3]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
-        {/* 4. Server Room / Facilities Enclosure Wall */}
-        <mesh position={[-35, 1.0, 6]} castShadow receiveShadow>
-          <boxGeometry args={[12, 2.0, 0.3]} />
+        {/* 4. Server Room / Facilities Enclosure Wall (shifted to z = 7.5 for expanded Server Room) */}
+        <mesh position={[-37.5, 1.0, 7.5]} castShadow receiveShadow>
+          <boxGeometry args={[17.2, 2.0, 0.3]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
         {/* 5. Facilities / Grand Cafeteria Hygiene Wall */}
@@ -564,8 +607,8 @@ export function BuildingArchitecture() {
           <boxGeometry args={[0.3, 2.0, 3.5]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
-        <mesh position={[-28.9, 1.0, 6]} castShadow receiveShadow>
-          <boxGeometry args={[0.3, 2.0, 3.0]} />
+        <mesh position={[-28.9, 1.0, 6.75]} castShadow receiveShadow>
+          <boxGeometry args={[0.3, 2.0, 2.5]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
         <mesh position={[-28.9, 1.0, 12.25]} castShadow receiveShadow>
@@ -587,7 +630,7 @@ export function BuildingArchitecture() {
           [-14, -28],
           [14, -28],
           [28, -28],
-          [-48, 0],   // Safely outside West perimeter
+          [-51, 0],   // Safely outside expanded Server Room West Bay
           [-48, 14],  // Safely outside SW cafeteria
           [-48, 25],
           [-14, 25.2],
@@ -614,6 +657,39 @@ export function BuildingArchitecture() {
           </group>
         ))}
       </group>
+
+      {/* ===================================================================== */}
+      {/* 8. WALK-MODE ACOUSTIC DROP CEILING & RECESSED LED STRIP GRID          */}
+      {/*    (Hidden in Isometric 3D so top-down view stays 100% unobstructed)  */}
+      {/* ===================================================================== */}
+      {isWalkMode && (
+        <group name="WalkModeCeilingGrid">
+          {/* Main Building Acoustic Ceiling Deck */}
+          <mesh position={[0, 3.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[46.4, 46.4]} />
+            <meshStandardMaterial color="#e2e8f0" roughness={0.9} side={THREE.DoubleSide} />
+          </mesh>
+          {/* Wellness Wing Acoustic Ceiling Deck */}
+          <mesh position={[-34, 3.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[19, 46.4]} />
+            <meshStandardMaterial color="#e2e8f0" roughness={0.9} side={THREE.DoubleSide} />
+          </mesh>
+          {/* Linear Recessed LED Light Troffers (Reference Image 1 aesthetic) */}
+          {[-18, -10, -2, 6, 14].map((lz) =>
+            [-16, -6, 4, 14].map((lx) => (
+              <mesh key={`led-panel-${lx}-${lz}`} position={[lx, 2.98, lz]}>
+                <boxGeometry args={[4.2, 0.04, 0.45]} />
+                <meshStandardMaterial
+                  color="#f8fafc"
+                  emissive="#e0f2fe"
+                  emissiveIntensity={1.1}
+                  roughness={0.2}
+                />
+              </mesh>
+            ))
+          )}
+        </group>
+      )}
     </group>
   )
 }

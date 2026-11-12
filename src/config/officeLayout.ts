@@ -713,7 +713,7 @@ export const AGENT_WORKSTATIONS_3D: Record<string, AgentWorkstation3D> = {
     name: 'Cleaner 1',
     department: 'FACILITIES_WELLNESS',
     room: 'Facilities & Janitorial',
-    deskPos: [-33, 0, 5],
+    deskPos: [-33, 0, 9.0],
     facing: 'SW',
     allHandsPos: allHandsSlots[25],
     pantryPos: pantrySlots[25],
@@ -724,7 +724,7 @@ export const AGENT_WORKSTATIONS_3D: Record<string, AgentWorkstation3D> = {
     name: 'Cleaner 2',
     department: 'FACILITIES_WELLNESS',
     room: 'Facilities & Janitorial',
-    deskPos: [-37, 0, 5],
+    deskPos: [-37, 0, 9.0],
     facing: 'SE',
     allHandsPos: allHandsSlots[26],
     pantryPos: pantrySlots[26],
@@ -735,7 +735,7 @@ export const AGENT_WORKSTATIONS_3D: Record<string, AgentWorkstation3D> = {
     name: 'Rex',
     department: 'ENGINEERING',
     room: 'Server Room',
-    deskPos: [-33, 0, 2.5],
+    deskPos: [-32.5, 0, 3.8],
     facing: 'NW',
     allHandsPos: allHandsSlots[27],
     pantryPos: pantrySlots[27],
@@ -847,8 +847,8 @@ export const CAMERA_PRESETS: Record<DepartmentMode, CameraPreset> = {
     zoom: 32,
   },
   SERVER_ROOM: {
-    target: [-35, 0, 3.5],
-    zoom: 32,
+    target: [-38, 0, 4.2],
+    zoom: 25,
   },
 }
 
@@ -1048,7 +1048,7 @@ export const BOSS_PATROL_ROUTE: [number, number, number][] = [
 ]
 
 export const CLEANER_1_PATROL_ROUTE: [number, number, number][] = [
-  [-35, 0, 8.5], // Facilities Room
+  [-35, 0, 9.0], // Facilities Room
   [-35, 0, 16], // Grand Cafeteria
   [-35, 0, -8], // Men's CR
   [-35, 0, -2], // Women's CR
@@ -1057,19 +1057,20 @@ export const CLEANER_1_PATROL_ROUTE: [number, number, number][] = [
 ]
 
 export const CLEANER_2_PATROL_ROUTE: [number, number, number][] = [
-  [-35, 0, 8.5], // Facilities Room
+  [-35, 0, 9.0], // Facilities Room
   [0, 0, 16], // Gym & Rec
   [-16, 0, 16], // SecOps & Intelligence
-  [-35, 0, 3.5], // Server Room
+  [-36, 0, 4.2], // Expanded Server Room
   [16, 0, -16], // Operations Hub
   [0, 0, 0], // Center Concourse
 ]
 
 export const SERVER_ADMIN_PATROL_ROUTE: [number, number, number][] = [
-  [-33, 0, 2.5], // Workstation PC Desk
-  [-36, 0, 2.5], // Primary Compute Rack 01
-  [-36, 0, 4.5], // Database Storage Array 02
-  [-35, 0, 4.0], // Inference Accelerator 03
+  [-32.5, 0, 3.8], // Workstation PC Desk
+  [-37.5, 0, 3.5], // North Rack Aisle East
+  [-43.5, 0, 3.5], // North Rack Aisle West
+  [-43.5, 0, 5.0], // South Rack Aisle West
+  [-37.5, 0, 5.0], // South Rack Aisle East
 ]
 
 export const COACH_MIGUEL_PATROL_ROUTE: [number, number, number][] = [

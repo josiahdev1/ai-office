@@ -116,8 +116,12 @@ export function isWorldTileWalkable(gx: number, gz: number): boolean {
       if (!isConnector) return false
     }
 
-    // Outer boundary of wellness wing
-    if (gx < -41 || gz < -21 || gz > 21) {
+    // Outer boundary of wellness wing (expanded Server Room west bay extends to gx = -46 for gz in [1, 7])
+    const inExpandedServerBay = gz >= 1 && gz <= 7 && gx >= -46 && gx <= -29
+    if (gz < -21 || gz > 21) {
+      return false
+    }
+    if (gx < -41 && !inExpandedServerBay) {
       return false
     }
 
@@ -133,14 +137,14 @@ export function isWorldTileWalkable(gx: number, gz: number): boolean {
       // 1. Nap Room door: z in [-17, -15]
       // 2. Men's CR door: z in [-9, -7]
       // 3. Women's CR door: z in [-3, -1]
-      // 4. Server Room door: z in [2, 4]
-      // 5. Facilities door: z in [7, 9]
+      // 4. Server Room door: z in [2, 5]
+      // 5. Facilities door: z in [8, 10]
       // 6. Cafeteria door: z in [15, 17]
       const isNapDoor = gz >= -17 && gz <= -15
       const isMensCrDoor = gz >= -9 && gz <= -7
       const isWomensCrDoor = gz >= -3 && gz <= -1
-      const isServerDoor = gz >= 2 && gz <= 4
-      const isFacDoor = gz >= 7 && gz <= 9
+      const isServerDoor = gz >= 2 && gz <= 5
+      const isFacDoor = gz >= 8 && gz <= 10
       const isCafeDoor = gz >= 15 && gz <= 17
       if (!isNapDoor && !isMensCrDoor && !isWomensCrDoor && !isServerDoor && !isFacDoor && !isCafeDoor) {
         return false
@@ -154,8 +158,8 @@ export function isWorldTileWalkable(gx: number, gz: number): boolean {
     if (gz === -5 && gx <= -29) return false
     // Wall between Women's CR and Server Room at gz = 1
     if (gz === 1 && gx <= -29) return false
-    // Wall between Server Room and Facilities at gz = 6
-    if (gz === 6 && gx <= -29) return false
+    // Wall between Server Room and Facilities at gz = 7
+    if (gz === 7 && gx <= -29) return false
     // Wall between Facilities and Cafeteria at gz = 11
     if (gz === 11 && gx <= -29) return false
   }

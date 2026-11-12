@@ -824,11 +824,11 @@ export function OfficeFurniture() {
       </group>
 
       {/* ========================================================================= */}
-      {/* 12C. SERVER ROOM & DATA CENTER PROPS ([-35, 0, 3.5])                      */}
+      {/* 12C. EXPANDED SERVER ROOM & DATA CENTER PROPS ([-37.5, 0, 4.25])          */}
       {/* ========================================================================= */}
-      <group position={[-35, 0, 3.5]} name="ServerRoomProps">
+      <group position={[-37.5, 0, 4.25]} name="ServerRoomProps">
         {/* Door Sign: RESTRICTED ACCESS SERVER ROOM */}
-        <group position={[5.8, 2.1, -0.5]}>
+        <group position={[8.3, 2.1, -0.75]}>
           <mesh>
             <boxGeometry args={[0.08, 0.35, 1.2]} />
             <meshStandardMaterial color="#451a03" roughness={0.4} metalness={0.6} />
@@ -839,10 +839,10 @@ export function OfficeFurniture() {
           </mesh>
         </group>
 
-        {/* Server Racks with Blinking Activity LEDs */}
+        {/* 6 Dual-Aisle Server Racks with Blinking Activity LEDs */}
         {SERVER_RACKS.map((rack) => {
-          const rx = rack.position[0] - (-35)
-          const rz = rack.position[2] - 3.5
+          const rx = rack.position[0] - (-37.5)
+          const rz = rack.position[2] - 4.25
           return (
             <group key={rack.id} position={[rx, 1.25, rz]}>
               {/* Heavy Metal Rack Chassis */}
@@ -858,12 +858,10 @@ export function OfficeFurniture() {
               {/* Internal Blade Server Drawers */}
               {[-0.8, -0.4, 0, 0.4, 0.8].map((slotY, sidx) => (
                 <group key={`blade-${sidx}`} position={[0, slotY, 0.42]}>
-                  {/* Blade Frame */}
                   <mesh>
                     <boxGeometry args={[0.95, 0.18, 0.02]} />
                     <meshStandardMaterial color="#334155" metalness={0.7} />
                   </mesh>
-                  {/* Status LEDs */}
                   <mesh position={[-0.35, 0, 0.015]}>
                     <boxGeometry args={[0.08, 0.04, 0.02]} />
                     <meshBasicMaterial
@@ -884,60 +882,73 @@ export function OfficeFurniture() {
           )
         })}
 
-        {/* Industrial CRAC Chiller Cooling Unit */}
-        <group position={[2.0, 1.1, 1.5]}>
-          <mesh castShadow receiveShadow>
-            <boxGeometry args={[1.4, 2.2, 1.0]} />
-            <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+        {/* Dual Industrial CRAC Chiller Cooling Units */}
+        {[
+          [-7.5, 1.1, 0],
+          [2.0, 1.1, 2.1],
+        ].map(([cx, cy, cz], idx) => (
+          <group key={`crac-${idx}`} position={[cx, cy, cz]}>
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[1.4, 2.2, 1.0]} />
+              <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+            </mesh>
+            <mesh position={[-0.71, 0, 0]}>
+              <planeGeometry args={[0.8, 1.8]} />
+              <meshStandardMaterial color="#0f172a" roughness={0.9} />
+            </mesh>
+            <mesh position={[0, 0.8, 0.51]}>
+              <planeGeometry args={[0.6, 0.25]} />
+              <meshStandardMaterial color="#0284c7" emissive="#0284c7" emissiveIntensity={0.8} />
+            </mesh>
+          </group>
+        ))}
+
+        {/* NOC Telemetry Wall Display (North Acoustic Wall) */}
+        <group position={[1.5, 1.45, -3.05]}>
+          <mesh>
+            <boxGeometry args={[3.4, 1.4, 0.08]} />
+            <meshStandardMaterial color="#090d16" metalness={0.8} />
           </mesh>
-          {/* Intake Louver Grills */}
-          <mesh position={[-0.71, 0, 0]}>
-            <planeGeometry args={[0.8, 1.8]} />
-            <meshStandardMaterial color="#0f172a" roughness={0.9} />
-          </mesh>
-          {/* Cooling Status LED / Digital Gauges */}
-          <mesh position={[0, 0.8, 0.51]}>
-            <planeGeometry args={[0.6, 0.25]} />
-            <meshStandardMaterial color="#0284c7" emissive="#0284c7" emissiveIntensity={0.8} />
+          <mesh position={[0, 0, 0.045]}>
+            <planeGeometry args={[3.2, 1.22]} />
+            <meshStandardMaterial color="#082f49" emissive="#0284c7" emissiveIntensity={0.55} />
           </mesh>
         </group>
 
-        {/* Suspended Overhead Cable Trays */}
-        <group position={[-1.0, 2.45, 0]}>
-          <mesh>
-            <boxGeometry args={[5.0, 0.06, 0.4]} />
-            <meshStandardMaterial color="#475569" metalness={0.9} roughness={0.3} />
-          </mesh>
-          {/* Colorful Bundled Network Cables (Fiber & CAT6) */}
-          <mesh position={[0, 0.05, -0.1]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.03, 0.03, 4.8, 8]} />
-            <meshStandardMaterial color="#f97316" />
-          </mesh>
-          <mesh position={[0, 0.05, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.03, 0.03, 4.8, 8]} />
-            <meshStandardMaterial color="#0ea5e9" />
-          </mesh>
-          <mesh position={[0, 0.05, 0.1]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.03, 0.03, 4.8, 8]} />
-            <meshStandardMaterial color="#eab308" />
-          </mesh>
-        </group>
+        {/* Dual Suspended Overhead Cable Trays */}
+        {[-2.15, 2.05].map((tz, idx) => (
+          <group key={`cable-tray-${idx}`} position={[-2.0, 2.45, tz]}>
+            <mesh>
+              <boxGeometry args={[10.5, 0.06, 0.4]} />
+              <meshStandardMaterial color="#475569" metalness={0.9} roughness={0.3} />
+            </mesh>
+            <mesh position={[0, 0.05, -0.1]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.03, 0.03, 10.2, 8]} />
+              <meshStandardMaterial color="#f97316" />
+            </mesh>
+            <mesh position={[0, 0.05, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.03, 0.03, 10.2, 8]} />
+              <meshStandardMaterial color="#0ea5e9" />
+            </mesh>
+            <mesh position={[0, 0.05, 0.1]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.03, 0.03, 10.2, 8]} />
+              <meshStandardMaterial color="#eab308" />
+            </mesh>
+          </group>
+        ))}
 
         {/* Server Admin Terminal Workstation Desk (Rex) */}
-        {/* World deskPos: [-33, 0, 2.5] -> rx = 2.0, rz = -1.0 */}
-        <group position={[2.0, 0, -1.0]}>
-          {/* Heavy Workstation Table */}
+        {/* World deskPos: [-32.5, 0, 3.8] -> rx = 5.0, rz = -0.45 */}
+        <group position={[5.0, 0, -0.45]}>
           <mesh position={[0, 0.38, 0]} castShadow receiveShadow>
             <boxGeometry args={[1.6, 0.76, 0.85]} />
             <meshStandardMaterial color="#1e293b" metalness={0.5} roughness={0.4} />
           </mesh>
-          {/* Dual Curved Ultrawide Monitors */}
           <group position={[-0.1, 0.95, -0.2]} rotation={[0, 0.15, 0]}>
             <mesh castShadow>
               <boxGeometry args={[0.7, 0.42, 0.04]} />
               <meshStandardMaterial color="#090d16" metalness={0.8} />
             </mesh>
-            {/* Terminal Screen (Glowing Green Matrix / CLI) */}
             <mesh position={[0, 0, 0.025]}>
               <planeGeometry args={[0.66, 0.38]} />
               <meshStandardMaterial color="#052e16" emissive="#10b981" emissiveIntensity={0.6} />
@@ -948,13 +959,11 @@ export function OfficeFurniture() {
               <boxGeometry args={[0.7, 0.42, 0.04]} />
               <meshStandardMaterial color="#090d16" metalness={0.8} />
             </mesh>
-            {/* Metrics Screen (Glowing Blue Graphs) */}
             <mesh position={[0, 0, 0.025]}>
               <planeGeometry args={[0.66, 0.38]} />
               <meshStandardMaterial color="#082f49" emissive="#0ea5e9" emissiveIntensity={0.6} />
             </mesh>
           </group>
-          {/* Mechanical Keyboard & Mouse */}
           <mesh position={[0.2, 0.77, 0]}>
             <boxGeometry args={[0.18, 0.02, 0.45]} />
             <meshStandardMaterial color="#0f172a" />

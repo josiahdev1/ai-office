@@ -10,9 +10,11 @@ import { BuildingArchitecture } from './BuildingArchitecture'
 import { BrainCore } from './BrainCore'
 import { OfficeFurniture } from './OfficeFurniture'
 import { ProceduralAgent3D } from './ProceduralAgent3D'
-import { CameraController } from './CameraController'
+import { CameraController, CameraViewMode } from './CameraController'
 import { JarvisCoreState } from '@/components/jarvis/ArcReactor'
 import { computeSolarLighting } from '@/lib/office/clock'
+
+export type OfficeLightingTheme = 'auto' | 'day' | 'night'
 
 export interface OfficeSceneProps {
   agents: Agent[]
@@ -28,6 +30,9 @@ export interface OfficeSceneProps {
   coreState?: JarvisCoreState
   onClickCore?: () => void
   isDivingToJarvis?: boolean
+  cameraViewMode?: CameraViewMode
+  lightingTheme?: OfficeLightingTheme
+  zoomStep?: { delta: number; nonce: number }
 }
 
 export function OfficeScene({
@@ -40,11 +45,44 @@ export function OfficeScene({
   coreState = 'idle',
   onClickCore,
   isDivingToJarvis = false,
+  cameraViewMode = 'isometric',
+  lightingTheme = 'auto',
+  zoomStep,
 }: OfficeSceneProps) {
-  // Compute real astronomical solar lighting for Iloilo City (PHT, Asia/Manila, UTC+8)
+  // Compute astronomical solar lighting for Iloilo City (or override via Day/Night switcher)
   const lighting = useMemo(() => {
+    if (lightingTheme === 'day') {
+      return {
+        phase: 'day' as const,
+        sunPosition: [28, 46, 26] as [number, number, number],
+        sunColor: '#fffbeb',
+        sunIntensity: 1.85,
+        ambientColor: '#e0f2fe',
+        ambientIntensity: 0.95,
+        skyColor: '#bae6fd',
+        windowGlowColor: '#e0f2fe',
+        windowGlowIntensity: 0.45,
+        interiorLampsOn: false,
+      }
+    }
+    if (lightingTheme === 'night') {
+      return {
+        phase: 'night' as const,
+        sunPosition: [-22, 32, -18] as [number, number, number],
+        sunColor: '#38bdf8',
+        sunIntensity: 0.65,
+        ambientColor: '#1e293b',
+        ambientIntensity: 0.48,
+        skyColor: '#080b12',
+        windowGlowColor: '#0284c7',
+        windowGlowIntensity: 0.25,
+        interiorLampsOn: true,
+      }
+    }
     return computeSolarLighting(new Date())
-  }, [])
+  }, [lightingTheme])
+
+  const isWalkMode = cameraViewMode === 'walk'
 
   const renderedAgents = useMemo(() => {
     return agents.map((agent, idx) => {
@@ -64,8 +102,11 @@ export function OfficeScene({
 
   return (
     <group name="Office3DWorld">
-      {/* 1. Real PHT Dynamic Environmental Lighting */}
-      <ambientLight color={lighting.ambientColor} intensity={lighting.ambientIntensity} />
+      {/* 1. Dynamic Environmental Lighting (Auto PHT Solar / Day / Night) */}
+      <ambientLight
+        color={lighting.ambientColor}
+        intensity={isWalkMode ? Math.max(0.85, lighting.ambientIntensity) : lighting.ambientIntensity}
+      />
       <directionalLight
         position={lighting.sunPosition}
         intensity={lighting.sunIntensity}
@@ -74,23 +115,31 @@ export function OfficeScene({
         shadow-mapSize={[2048, 2048]}
         shadow-camera-near={0.5}
         shadow-camera-far={160}
-        shadow-camera-left={-44}
-        shadow-camera-right={44}
-        shadow-camera-top={44}
-        shadow-camera-bottom={-44}
+        shadow-camera-left={-48}
+        shadow-camera-right={48}
+        shadow-camera-top={48}
+        shadow-camera-bottom={-48}
         shadow-bias={-0.0005}
       />
       <hemisphereLight
-        color="#38bdf8"
-        groundColor="#0f172a"
-        intensity={0.38}
+        color={lightingTheme === 'day' ? '#f0f9ff' : '#38bdf8'}
+        groundColor={lightingTheme === 'day' ? '#334155' : '#0f172a'}
+        intensity={lightingTheme === 'day' ? 0.65 : 0.42}
+      />
+      {isWalkMode && (
+        <pointLight position={[0, 2.8, 0]} intensity={1.4} distance={38} color="#f8fafc" />
+      )}
+
+      {/* 2. Interactive Camera Controller (Isometric Orbit + Walk-Inside Perspective + Jarvis Dive) */}
+      <CameraController
+        mode={mode}
+        isDivingToJarvis={isDivingToJarvis}
+        cameraViewMode={cameraViewMode}
+        zoomStep={zoomStep}
       />
 
-      {/* 2. Interactive Camera Controller with Mode Lerping & Jarvis Dive */}
-      <CameraController mode={mode} isDivingToJarvis={isDivingToJarvis} />
-
-      {/* 3. Procedural 3x3 Architectural Building + Outdoor Highway & Parking */}
-      <BuildingArchitecture />
+      {/* 3. Procedural Architectural Building + Walk-Mode Drop Ceiling Grid */}
+      <BuildingArchitecture isWalkMode={isWalkMode} />
 
       {/* 4. Central Command Center ("The Brain") Holographic Core */}
       <BrainCore state={coreState} onClickCore={onClickCore} />
