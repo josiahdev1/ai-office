@@ -676,8 +676,8 @@ export interface CameraPreset {
 
 export const CAMERA_PRESETS: Record<DepartmentMode, CameraPreset> = {
   OVERVIEW: {
-    target: [2, 0, 2],
-    zoom: 16.5,
+    target: [-6.5, 0, 0],
+    zoom: 13.5,
   },
   FOCUS_WORK: {
     target: [-8, 0, -14],
@@ -898,4 +898,38 @@ export function projectIso3DTo2D(
     depth: x + z + y * 0.5,
   }
 }
+
+export const BOSS_PATROL_ROUTE: [number, number, number][] = [
+  [0, 0, 0], // The Brain (Command Center)
+  [-16, 0, -16], // Engineering Core
+  [16, 0, -16], // Operations Hub
+  [16, 0, 16], // Growth Lab
+  [-16, 0, 16], // SecOps & Intelligence
+  [3.5, 0, 2.5], // Executive Stand
+]
+
+export const CLEANER_1_PATROL_ROUTE: [number, number, number][] = [
+  [-35, 0, 8.5], // Facilities Room
+  [-35, 0, 16], // Grand Cafeteria
+  [-35, 0, -8], // Men's CR
+  [-35, 0, -2], // Women's CR
+  [-35, 0, -16], // Nap Room
+  [-29, 0, 0], // Main Corridor Connector
+]
+
+export const CLEANER_2_PATROL_ROUTE: [number, number, number][] = [
+  [-35, 0, 8.5], // Facilities Room
+  [0, 0, 16], // Gym & Rec
+  [-16, 0, 16], // SecOps & Intelligence
+  [-35, 0, 3.5], // Server Room
+  [16, 0, -16], // Operations Hub
+  [0, 0, 0], // Center Concourse
+]
+
+export const SERVER_ADMIN_PATROL_ROUTE: [number, number, number][] = [
+  [-33, 0, 2.5], // Workstation PC Desk
+  [-36, 0, 2.5], // Primary Compute Rack 01
+  [-36, 0, 4.5], // Database Storage Array 02
+  [-35, 0, 4.0], // Inference Accelerator 03
+]
 

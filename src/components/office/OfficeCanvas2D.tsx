@@ -12,7 +12,17 @@ import {
   DepartmentMode,
   getAgentTargetPosition,
   projectIso3DTo2D,
+  BOSS_PATROL_ROUTE,
+  CLEANER_1_PATROL_ROUTE,
+  CLEANER_2_PATROL_ROUTE,
+  SERVER_ADMIN_PATROL_ROUTE,
 } from '@/config/officeLayout'
+import {
+  WELLNESS_BEDS,
+  MENS_CR_STALLS,
+  WOMENS_CR_STALLS,
+  SERVER_RACKS,
+} from '@/lib/office/wellnessWing'
 import {
   getCharacterStyle,
   getAgentStatusBadge,
@@ -164,6 +174,8 @@ export default function OfficeCanvas2D({
 
   // Persistent A* navigation state per agent
   const agentNavMapRef = useRef<Record<string, AgentNavState>>({})
+  // Autonomous patrol state per agent (Boss, Cleaners, Server Admin)
+  const agentRoamMapRef = useRef<Record<string, { index: number; elapsed: number }>>({})
 
   // Screen hitboxes for canvas click detection (body + canvas nameplate)
   const agentScreenBoxesRef = useRef<
@@ -264,7 +276,7 @@ export default function OfficeCanvas2D({
       const factor = e.deltaY < 0 ? 1.08 : 0.92
       camStateRef.current.zoomMultiplier = Math.min(
         2.5,
-        Math.max(0.55, camStateRef.current.zoomMultiplier * factor)
+        Math.max(0.4, camStateRef.current.zoomMultiplier * factor)
       )
     }
 
@@ -934,7 +946,196 @@ export default function OfficeCanvas2D({
         drawBox(19.5, 1.6, 9.76, 3.4, 1.55, 0.04, '#2dd4bf')
       })
 
-      // 4D. All 24 Workstations + A* Walking Characters + Canvas-Rendered Nameplates
+      // =========================================================================
+      // 4C-2. WEST WING PROPS (Server Room, Men's CR, Women's CR, Nap Room, Facilities, Cafeteria)
+      // =========================================================================
+
+      // A. SERVER ROOM & INFRASTRUCTURE NOC ([-35, 0, 3.5])
+      // Door Sign: RESTRICTED ACCESS SERVER ROOM
+      enqueue(-29.2, 3.5, 2.1, () => {
+        drawBox(-29.2, 2.1, 3.5, 0.08, 0.35, 1.2, '#451a03', 0, 1, '#f59e0b')
+        drawBox(-29.25, 2.1, 3.5, 0.02, 0.22, 1.0, '#f59e0b')
+      })
+
+      // 3 Server Racks with Live Status LEDs
+      for (const rack of SERVER_RACKS) {
+        const rx = rack.position[0]
+        const rz = rack.position[2]
+        enqueue(rx, rz, 1.25, () => {
+          // Chassis
+          drawBox(rx, 1.25, rz, 1.2, 2.5, 0.8, '#090d16', 0, 1, '#334155')
+          // Glass front door frame
+          drawBox(rx, 1.25, rz + 0.41, 1.05, 2.3, 0.04, '#1e293b', 0, 0.85, '#0ea5e9')
+          // Draw horizontal blade slots with blinking LEDs
+          for (let sidx = 0; sidx < 5; sidx++) {
+            const slotY = 0.45 + sidx * 0.4
+            drawBox(rx, slotY, rz + 0.42, 0.95, 0.16, 0.02, '#334155')
+            const blink1 = Math.sin(elapsed * 12 + rz * 2 + sidx) > 0
+            const blink2 = Math.cos(elapsed * 10 + rx * 2 + sidx) > 0
+            const led1 = sidx % 3 === 0 ? (blink1 ? '#22c55e' : '#14532d') : (blink2 ? '#0ea5e9' : '#0369a1')
+            const led2 = sidx % 2 === 0 ? (blink2 ? '#0ea5e9' : '#082f49') : (blink1 ? '#22c55e' : '#14532d')
+            drawBox(rx - 0.35, slotY, rz + 0.43, 0.08, 0.04, 0.02, led1)
+            drawBox(rx - 0.2, slotY, rz + 0.43, 0.08, 0.04, 0.02, led2)
+          }
+        })
+      }
+
+      // CRAC Chiller Unit
+      enqueue(-33, 5, 1.1, () => {
+        drawBox(-33, 1.1, 5, 1.4, 2.2, 1.0, '#334155', 0, 1, '#475569')
+        drawBox(-33, 1.9, 5.51, 0.6, 0.25, 0.02, '#0284c7')
+        drawBox(-33, 1.1, 5.51, 0.9, 1.0, 0.02, '#0f172a')
+      })
+
+      // Overhead Cable Trays
+      enqueue(-35, 3.5, 2.45, () => {
+        drawBox(-35, 2.45, 3.5, 5.0, 0.06, 0.4, '#475569')
+        drawBox(-35, 2.5, 3.4, 4.8, 0.03, 0.03, '#f97316')
+        drawBox(-35, 2.5, 3.5, 4.8, 0.03, 0.03, '#0ea5e9')
+        drawBox(-35, 2.5, 3.6, 4.8, 0.03, 0.03, '#eab308')
+      })
+
+      // Server Admin Terminal Workstation (Rex's Permanent NOC Station)
+      enqueue(-33, 2.5, 0.75, () => {
+        // Table
+        drawBox(-33, 0.38, 2.5, 1.6, 0.76, 0.85, '#1e293b', 0, 1, '#334155')
+        // Matrix Green Terminal Monitor
+        drawBox(-33.1, 0.95, 2.25, 0.7, 0.42, 0.04, '#090d16', 0.15, 1, '#10b981')
+        drawBox(-33.1, 0.95, 2.27, 0.66, 0.38, 0.02, '#052e16')
+        // Cyber Blue Metrics Monitor
+        drawBox(-33.1, 0.95, 2.75, 0.7, 0.42, 0.04, '#090d16', -0.15, 1, '#0ea5e9')
+        drawBox(-33.1, 0.95, 2.73, 0.66, 0.38, 0.02, '#082f49')
+        // Keyboard & Mouse
+        drawBox(-32.8, 0.77, 2.5, 0.18, 0.02, 0.45, '#0f172a')
+        drawBox(-32.8, 0.77, 2.8, 0.1, 0.02, 0.06, '#38bdf8')
+        // Ergonomic task chair
+        drawBox(-32, 0.45, 2.5, 0.45, 0.08, 0.45, '#0f172a')
+        drawBox(-31.8, 0.85, 2.5, 0.06, 0.7, 0.45, '#1e293b')
+      })
+
+      // B. MEN'S COMFORT ROOM ([-35, 0, -8])
+      // Door Sign: MEN'S CR
+      enqueue(-29.2, -8, 2.1, () => {
+        drawBox(-29.2, 2.1, -8, 0.08, 0.35, 1.0, '#1e3a8a', 0, 1, '#60a5fa')
+        drawBox(-29.25, 2.1, -8, 0.02, 0.2, 0.8, '#60a5fa')
+      })
+      // 3 Toilet Stalls
+      for (const stall of MENS_CR_STALLS) {
+        const sx = stall.position[0]
+        const sz = stall.position[2]
+        enqueue(sx, sz, 1.0, () => {
+          drawBox(sx, 1.0, sz, 1.3, 2.0, 1.2, '#0369a1', 0, 1, '#0284c7')
+          drawBox(sx + 0.66, 0.95, sz, 0.04, 1.9, 0.9, '#0284c7')
+          drawBox(sx + 0.69, 1.25, sz, 0.04, 0.08, 0.16, stall.isOccupied ? '#ef4444' : '#22c55e')
+        })
+      }
+      // Vanity counter, mirror, hand dryer
+      enqueue(-30.5, -8.5, 0.6, () => {
+        drawBox(-30.5, 0.45, -8.5, 0.7, 0.9, 2.8, '#e2e8f0', 0, 1, '#cbd5e1')
+        drawBox(-30.8, 1.5, -8.5, 0.04, 1.1, 2.4, '#f8fafc', 0, 1, '#38bdf8')
+        drawBox(-30.7, 1.2, -6.9, 0.2, 0.35, 0.22, '#94a3b8')
+      })
+
+      // C. WOMEN'S COMFORT ROOM ([-35, 0, -2])
+      // Door Sign: WOMEN'S CR
+      enqueue(-29.2, -2, 2.1, () => {
+        drawBox(-29.2, 2.1, -2, 0.08, 0.35, 1.0, '#831843', 0, 1, '#f472b6')
+        drawBox(-29.25, 2.1, -2, 0.02, 0.2, 0.8, '#f472b6')
+      })
+      // 3 Toilet Stalls
+      for (const stall of WOMENS_CR_STALLS) {
+        const sx = stall.position[0]
+        const sz = stall.position[2]
+        enqueue(sx, sz, 1.0, () => {
+          drawBox(sx, 1.0, sz, 1.3, 2.0, 1.2, '#be185d', 0, 1, '#9d174d')
+          drawBox(sx + 0.66, 0.95, sz, 0.04, 1.9, 0.9, '#9d174d')
+          drawBox(sx + 0.69, 1.25, sz, 0.04, 0.08, 0.16, stall.isOccupied ? '#ef4444' : '#22c55e')
+        })
+      }
+      // Vanity counter, mirror, hand dryer
+      enqueue(-30.5, -2.5, 0.6, () => {
+        drawBox(-30.5, 0.45, -2.5, 0.7, 0.9, 2.8, '#fce7f3', 0, 1, '#f472b6')
+        drawBox(-30.8, 1.5, -2.5, 0.04, 1.1, 2.4, '#f8fafc', 0, 1, '#f472b6')
+        drawBox(-30.7, 1.2, -0.9, 0.2, 0.35, 0.22, '#94a3b8')
+      })
+
+      // D. NAP ROOM / WELLNESS SUITE ([-35, 0, -16])
+      for (const bed of WELLNESS_BEDS.slice(0, 3)) {
+        const bx = bed.position[0]
+        const bz = bed.position[2]
+        enqueue(bx, bz, 0.4, () => {
+          drawBox(bx, 0.16, bz, 1.15, 0.32, 1.95, '#334155', 0, 1, '#1e293b')
+          drawBox(bx, 0.34, bz, 1.05, 0.18, 1.85, '#f8fafc')
+          drawBox(bx, 0.42, bz + 0.2, 1.02, 0.12, 1.25, '#1e1b4b')
+          drawBox(bx, 0.44, bz - 0.65, 0.7, 0.12, 0.38, '#f1f5f9')
+          drawBox(bx + 0.75, 0.22, bz - 0.65, 0.35, 0.45, 0.35, '#1e293b')
+          drawBox(bx + 0.75, 0.52, bz - 0.65, 0.14, 0.18, 0.14, '#fef08a')
+          drawBox(bx - 0.6, 0.5, bz - 0.65, 0.06, 0.06, 0.12, bed.occupiedBy ? '#ef4444' : '#22c55e')
+        })
+      }
+
+      // E. FACILITIES & JANITORIAL ROOM ([-35, 0, 8.5])
+      // Door Sign: FACILITIES
+      enqueue(-29.2, 8.5, 2.1, () => {
+        drawBox(-29.2, 2.1, 8.5, 0.08, 0.35, 1.2, '#713f12', 0, 1, '#eab308')
+        drawBox(-29.25, 2.1, 8.5, 0.02, 0.22, 1.0, '#eab308')
+      })
+      // Commercial Yellow Janitorial Cleaning Cart
+      enqueue(-34.5, 8.0, 0.5, () => {
+        drawBox(-34.5, 0.42, 8.0, 0.65, 0.8, 1.1, '#eab308', 0, 1, '#ca8a04')
+        drawBox(-34.5, 0.7, 7.8, 0.42, 0.35, 0.4, '#ca8a04')
+        drawBox(-34.5, 0.72, 8.35, 0.5, 0.6, 0.32, '#854d0e')
+      })
+      // 5-Gallon Water Bottle Multi-Tier Storage Rack
+      enqueue(-32.5, 9.5, 0.7, () => {
+        drawBox(-32.5, 0.7, 9.5, 1.4, 1.4, 0.6, '#334155', 0, 1, '#475569')
+        drawCylinder(-32.8, 0.45, 9.5, 0.14, 0.14, 0.42, '#0284c7', 8, 0.75)
+        drawCylinder(-32.2, 0.45, 9.5, 0.14, 0.14, 0.42, '#0284c7', 8, 0.75)
+        drawCylinder(-32.5, 0.95, 9.5, 0.14, 0.14, 0.42, '#0284c7', 8, 0.75)
+      })
+      // Wall Tool Bracket & Mops
+      enqueue(-37, 8.5, 1.2, () => {
+        drawBox(-37, 1.2, 8.5, 0.08, 0.08, 2.0, '#475569')
+        drawBox(-36.9, 0.9, 8.1, 0.04, 1.4, 0.04, '#059669')
+        drawBox(-36.9, 0.9, 8.9, 0.04, 1.4, 0.04, '#059669')
+      })
+
+      // F. GRAND CAFETERIA ([-35, 0, 16])
+      // Hot Meal Buffet Serving Counter (8.4m)
+      enqueue(-35, 11, 0.6, () => {
+        drawBox(-35, 0.5, 11, 8.4, 0.92, 1.2, '#94a3b8', 0, 1, '#cbd5e1')
+        drawBox(-35, 0.95, 11.4, 8.2, 0.45, 0.04, '#38bdf8', 0, 0.4, '#7dd3fc')
+        // 5 Steam Trays (Rice, Adobo, Sinigang, Veggies, Fruits)
+        const trayColors = ['#f8fafc', '#78350f', '#ca8a04', '#15803d', '#f59e0b']
+        const trayOffsets = [-3.0, -1.5, 0, 1.5, 3.0]
+        trayOffsets.forEach((tx, tidx) => {
+          drawBox(-35 + tx, 0.98, 11, 1.1, 0.06, 0.65, '#cbd5e1')
+          drawBox(-35 + tx, 1.02, 11, 0.95, 0.04, 0.55, trayColors[tidx])
+        })
+      })
+      // 6 Dining Tables with 24 Molded Dining Chairs
+      const cafeTableCoords: [number, number][] = [
+        [-38, 14], [-34, 14], [-30.5, 14],
+        [-38, 18.5], [-34, 18.5], [-30.5, 18.5],
+      ]
+      for (const [tx, tz] of cafeTableCoords) {
+        enqueue(tx, tz, 0.72, () => {
+          // Table
+          drawBox(tx, 0.72, tz, 1.8, 0.06, 1.8, '#f8fafc', 0, 1, '#e2e8f0')
+          drawCylinder(tx, 0.36, tz, 0.1, 0.12, 0.72, '#1e293b', 8)
+          // 4 Chairs around table
+          drawBox(tx - 1.1, 0.42, tz, 0.45, 0.06, 0.45, '#ea580c', 0, 1, '#c2410c')
+          drawBox(tx - 1.3, 0.75, tz, 0.06, 0.6, 0.45, '#c2410c')
+          drawBox(tx + 1.1, 0.42, tz, 0.45, 0.06, 0.45, '#ea580c', 0, 1, '#c2410c')
+          drawBox(tx + 1.3, 0.75, tz, 0.06, 0.6, 0.45, '#c2410c')
+          drawBox(tx, 0.42, tz - 1.1, 0.45, 0.06, 0.45, '#ea580c', 0, 1, '#c2410c')
+          drawBox(tx, 0.75, tz - 1.3, 0.45, 0.6, 0.06, '#c2410c')
+          drawBox(tx, 0.42, tz + 1.1, 0.45, 0.06, 0.45, '#ea580c', 0, 1, '#c2410c')
+          drawBox(tx, 0.75, tz + 1.3, 0.45, 0.6, 0.06, '#c2410c')
+        })
+      }
+
+      // 4D. Workstations + A* Walking Characters + Canvas-Rendered Nameplates
       const currentAgents = agentsRef.current
       const overrides = overridesRef.current
       const newScreenBoxes: Record<
@@ -981,69 +1182,113 @@ export default function OfficeCanvas2D({
           dz - lx * sinD + lz * cosD,
         ]
 
-        // Permanent Chair at Home Desk
-        enqueue(dx, dz, 0.4, () => {
-          drawCylinder(dx, 0.08, dz, 0.3, 0.35, 0.08, '#0f172a', 10)
-          drawBox(dx, 0.42, dz, 0.55, 0.08, 0.55, '#1e293b', deskRot)
-          const [bx, by, bz] = toDeskWorld(0, 0.78, -0.24)
-          drawBox(bx, by, bz, 0.52, 0.65, 0.06, '#0f172a', deskRot)
-        })
+        // Only draw generic white workstation desks for standard agents.
+        // Boss patrols, Cleaners roam, and Server Admin Rex has his dedicated NOC station in Server Room.
+        const hasDedicatedFurniture =
+          agent.id === 'boss' ||
+          agent.id === 'cleaner_1' ||
+          agent.id === 'cleaner_2' ||
+          agent.id === 'server_admin'
 
-        // Permanent Desk & Dual Monitors at Home Desk
-        const [deskWX, deskWY, deskWZ] = toDeskWorld(0, 0.7, 0.8)
-        enqueue(deskWX, deskWZ, 0.75, () => {
-          const [l1x, l1y, l1z] = toDeskWorld(-0.8, 0.35, 0.8)
-          const [l2x, l2y, l2z] = toDeskWorld(0.8, 0.35, 0.8)
-          drawBox(l1x, l1y, l1z, 0.06, 0.7, 0.8, '#475569', deskRot)
-          drawBox(l2x, l2y, l2z, 0.06, 0.7, 0.8, '#475569', deskRot)
-          drawBox(
-            deskWX,
-            deskWY,
-            deskWZ,
-            1.8,
-            0.06,
-            0.9,
-            '#f8fafc',
-            deskRot,
-            1,
-            '#cbd5e1'
-          )
-          const [kx, ky, kz] = toDeskWorld(0, 0.75, 0.7)
-          drawBox(kx, ky, kz, 0.6, 0.02, 0.22, '#334155', deskRot)
-          const [m1x, m1y, m1z] = toDeskWorld(0, 1.05, 1.05)
-          drawBox(m1x, m1y, m1z, 1.1, 0.6, 0.05, '#0f172a', deskRot, 1, '#00e5ff')
-          const [m1sx, m1sy, m1sz] = toDeskWorld(0, 1.05, 1.02)
-          drawBox(m1sx, m1sy, m1sz, 1.02, 0.52, 0.02, '#00e5ff', deskRot)
-          const [m2x, m2y, m2z] = toDeskWorld(0.7, 1.05, 1.0)
-          drawBox(
-            m2x,
-            m2y,
-            m2z,
-            0.65,
-            0.6,
-            0.05,
-            '#0f172a',
-            deskRot - 0.35,
-            1,
-            '#10b981'
-          )
-          const [mugX, mugY, mugZ] = toDeskWorld(-0.6, 0.78, 0.65)
-          drawCylinder(mugX, mugY, mugZ, 0.06, 0.05, 0.12, '#f1f5f9', 8)
-        })
+        if (!hasDedicatedFurniture) {
+          // Permanent Chair at Home Desk
+          enqueue(dx, dz, 0.4, () => {
+            drawCylinder(dx, 0.08, dz, 0.3, 0.35, 0.08, '#0f172a', 10)
+            drawBox(dx, 0.42, dz, 0.55, 0.08, 0.55, '#1e293b', deskRot)
+            const [bx, by, bz] = toDeskWorld(0, 0.78, -0.24)
+            drawBox(bx, by, bz, 0.52, 0.65, 0.06, '#0f172a', deskRot)
+          })
+
+          // Permanent Desk & Dual Monitors at Home Desk
+          const [deskWX, deskWY, deskWZ] = toDeskWorld(0, 0.7, 0.8)
+          enqueue(deskWX, deskWZ, 0.75, () => {
+            const [l1x, l1y, l1z] = toDeskWorld(-0.8, 0.35, 0.8)
+            const [l2x, l2y, l2z] = toDeskWorld(0.8, 0.35, 0.8)
+            drawBox(l1x, l1y, l1z, 0.06, 0.7, 0.8, '#475569', deskRot)
+            drawBox(l2x, l2y, l2z, 0.06, 0.7, 0.8, '#475569', deskRot)
+            drawBox(
+              deskWX,
+              deskWY,
+              deskWZ,
+              1.8,
+              0.06,
+              0.9,
+              '#f8fafc',
+              deskRot,
+              1,
+              '#cbd5e1'
+            )
+            const [kx, ky, kz] = toDeskWorld(0, 0.75, 0.7)
+            drawBox(kx, ky, kz, 0.6, 0.02, 0.22, '#334155', deskRot)
+            const [m1x, m1y, m1z] = toDeskWorld(0, 1.05, 1.05)
+            drawBox(m1x, m1y, m1z, 1.1, 0.6, 0.05, '#0f172a', deskRot, 1, '#00e5ff')
+            const [m1sx, m1sy, m1sz] = toDeskWorld(0, 1.05, 1.02)
+            drawBox(m1sx, m1sy, m1sz, 1.02, 0.52, 0.02, '#00e5ff', deskRot)
+            const [m2x, m2y, m2z] = toDeskWorld(0.7, 1.05, 1.0)
+            drawBox(
+              m2x,
+              m2y,
+              m2z,
+              0.65,
+              0.6,
+              0.05,
+              '#0f172a',
+              deskRot - 0.35,
+              1,
+              '#10b981'
+            )
+            const [mugX, mugY, mugZ] = toDeskWorld(-0.6, 0.78, 0.65)
+            drawCylinder(mugX, mugY, mugZ, 0.06, 0.05, 0.12, '#f1f5f9', 8)
+          })
+        }
+
+        // Autonomous Roaming Patrol Route (Boss, Cleaners, Server Admin)
+        const isDeskMode =
+          effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
+
+        let roamRoute: [number, number, number][] | null = null
+        if (agent.id === 'boss') roamRoute = BOSS_PATROL_ROUTE
+        else if (agent.id === 'cleaner_1') roamRoute = CLEANER_1_PATROL_ROUTE
+        else if (agent.id === 'cleaner_2') roamRoute = CLEANER_2_PATROL_ROUTE
+        else if (agent.id === 'server_admin') roamRoute = SERVER_ADMIN_PATROL_ROUTE
+
+        if (roamRoute && isDeskMode) {
+          if (!agentRoamMapRef.current[agent.id]) {
+            agentRoamMapRef.current[agent.id] = { index: 0, elapsed: 0 }
+          }
+          const rState = agentRoamMapRef.current[agent.id]
+          rState.elapsed += dt
+          const intervalSec =
+            agent.id === 'server_admin'
+              ? (rState.index === 0 ? 25 : 12)
+              : agent.id === 'boss'
+                ? 18
+                : 15
+          if (rState.elapsed >= intervalSec) {
+            rState.elapsed = 0
+            rState.index = (rState.index + 1) % roamRoute.length
+          }
+        }
 
         // A* Waypoint Navigation Update
         const desiredTarget = getAgentTargetPosition(ws, currentMode, routeOverride)
+        const currentRoamTarget =
+          roamRoute && isDeskMode
+            ? roamRoute[agentRoamMapRef.current[agent.id]?.index || 0]
+            : null
+
+        const effectiveTarget = currentRoamTarget || desiredTarget
+        const effectiveIsDeskMode =
+          isDeskMode && (!roamRoute || (agent.id === 'server_admin' && (agentRoamMapRef.current[agent.id]?.index || 0) === 0))
+
         let finalRot = deskRot
         if (effectiveMode === 'ALL_HANDS') {
-          finalRot = Math.atan2(0 - desiredTarget[0], 0 - desiredTarget[2])
+          finalRot = Math.atan2(0 - effectiveTarget[0], 0 - effectiveTarget[2])
         } else if (effectiveMode === 'PANTRY') {
-          finalRot = Math.atan2(-16 - desiredTarget[0], 16 - desiredTarget[2])
+          finalRot = Math.atan2(-16 - effectiveTarget[0], 16 - effectiveTarget[2])
         } else if (effectiveMode === 'GYM') {
-          finalRot = Math.atan2(0 - desiredTarget[0], 16 - desiredTarget[2])
+          finalRot = Math.atan2(0 - effectiveTarget[0], 16 - effectiveTarget[2])
         }
-
-        const isDeskMode =
-          effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
 
         if (!agentNavMapRef.current[agent.id]) {
           const initMode = currentMode
@@ -1073,9 +1318,9 @@ export default function OfficeCanvas2D({
         const staggerIdx = routeOverride ? 0 : idx
         stepAgentNavigation(
           nav,
-          desiredTarget,
+          effectiveTarget,
           finalRot,
-          isDeskMode,
+          effectiveIsDeskMode,
           dt,
           3.6,
           idx,

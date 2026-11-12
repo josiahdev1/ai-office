@@ -49,6 +49,18 @@ Tailwind's scale is based on `1 unit = 4px` (0.25rem). Avoid arbitrary pixel bra
 
 This project operates on an autonomous AI team workflow where Josiah is the lead architect accompanied by an autonomous engineering fleet. To continuously track progress, farm GitHub contributions (PRs & merges), and maintain zero-drift release integrity:
 
+## Autonomous Supabase Database & MCP Migration Rules
+
+This project uses Supabase (project ref: `spacfnutrnhzxxbkjrji`) with installed skills in `.agent/skills/supabase`, `.agent/skills/supabase-postgres-best-practices`, and `.agent/skills/supabase-realtime-data`.
+
+### 1. Mandatory Read & Zero Manual Ops
+- Before making any database schema, RLS, Realtime, or seed changes, always read `supabase/README.md` and `.agent/skills/supabase/SKILL.md` first.
+- **Zero Manual Dashboard Ops**: Never instruct Josiah to open the Supabase Web Dashboard, click SQL Editor, or manually copy-paste SQL.
+
+### 2. Autonomous MCP Execution
+- Whenever `supabase/migrations/*.sql` or `supabase/seed.sql` is created or modified, immediately apply it to project `spacfnutrnhzxxbkjrji` using the Supabase MCP tools (`apply_migration` for schema migrations and `execute_sql` for `supabase/seed.sql`).
+- After applying any migration or seed update, verify row counts and table integrity via `execute_sql` (e.g., confirming all 8 tables and 23 agents exist in `public.agents`) before marking the task complete.
+
 ### 1. Active Working Branch: `office-v3`
 - All active development, features, and fixes must be developed and committed on the `office-v3` branch.
 - Never commit broken code or secrets (`.env.local`, API keys) to any branch.

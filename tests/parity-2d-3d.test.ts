@@ -57,9 +57,9 @@ describe('2D == 3D Architectural, Pathfinding & Character Parity', () => {
     expect(PARKED_VEHICLES.length).toBeGreaterThanOrEqual(6)
     expect(HIGHWAY_CARS.length).toBeGreaterThanOrEqual(6)
     expect(STREETLIGHT_POSITIONS.length).toBeGreaterThanOrEqual(8)
-    expect(CAMERA_PRESETS.OVERVIEW.zoom).toBe(16.5)
+    expect(CAMERA_PRESETS.OVERVIEW.zoom).toBe(13.5)
 
-    const centerProj = projectIso3DTo2D(2, 0, 2, 2, 2, 16.5, 1000, 800)
+    const centerProj = projectIso3DTo2D(-6.5, 0, 0, -6.5, 0, 13.5, 1000, 800)
     expect(centerProj.px).toBeCloseTo(500, 3)
     expect(centerProj.py).toBeCloseTo(400, 3)
   })
