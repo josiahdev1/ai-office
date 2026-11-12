@@ -143,3 +143,33 @@
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
 }
+
+@keyframes viewFadeSweep {
+  0% {
+    opacity: 0.72;
+    backdrop-filter: blur(6px);
+  }
+  100% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+}
+
+.animate-view-transition {
+  animation: viewFadeSweep 340ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+button,
+[role="button"] {
+  transition:
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}

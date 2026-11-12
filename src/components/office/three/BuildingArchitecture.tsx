@@ -9,6 +9,7 @@ import {
   HIGHWAY_CARS,
   STREETLIGHT_POSITIONS,
 } from '@/config/officeLayout'
+import { DOOR_DEFINITIONS, DoorDefinition } from '@/lib/office/walkCollision'
 
 function LowPolyVehicle({
   color,
@@ -96,7 +97,202 @@ function LowPolyVehicle({
   )
 }
 
-export function BuildingArchitecture({ isWalkMode = false }: { isWalkMode?: boolean }) {
+function InteractiveDoorMesh({
+  door,
+  isOpen,
+  height = 2.45,
+}: {
+  door: DoorDefinition
+  isOpen: boolean
+  height?: number
+}) {
+  const pivotRef = useRef<THREE.Group>(null)
+  const targetRot = isOpen ? (Math.PI / 2) * door.openDirection : 0
+
+  useFrame((_, delta) => {
+    if (!pivotRef.current) return
+    const step = 1 - Math.exp(-10 * Math.min(delta, 0.05))
+    pivotRef.current.rotation.y += (targetRot - pivotRef.current.rotation.y) * step
+  })
+
+  const halfW = door.width / 2
+  const hingeOffset =
+    door.axis === 'z'
+      ? ([0, 0, door.hingeSide * halfW] as [number, number, number])
+      : ([door.hingeSide * halfW, 0, 0] as [number, number, number])
+  const leafOffset =
+    door.axis === 'z'
+      ? ([0, height / 2, -door.hingeSide * halfW] as [number, number, number])
+      : ([-door.hingeSide * halfW, height / 2, 0] as [number, number, number])
+  const leafSize: [number, number, number] =
+    door.axis === 'z'
+      ? [door.thickness, height, door.width - 0.08]
+      : [door.width - 0.08, height, door.thickness]
+  const glassSize: [number, number, number] =
+    door.axis === 'z'
+      ? [door.thickness + 0.02, height * 0.45, door.width * 0.55]
+      : [door.width * 0.55, height * 0.45, door.thickness + 0.02]
+
+  return (
+    <group position={[door.x, 0, door.z]} name={`Door-${door.id}`}>
+      {/* Overhead Frame Lintel */}
+      <mesh position={[0, height + 0.08, 0]} castShadow>
+        <boxGeometry
+          args={
+            door.axis === 'z'
+              ? [door.thickness + 0.16, 0.14, door.width + 0.16]
+              : [door.width + 0.16, 0.14, door.thickness + 0.16]
+          }
+        />
+        <meshStandardMaterial color="#0f172a" roughness={0.4} metalness={0.6} />
+      </mesh>
+      {/* Hinged Pivot */}
+      <group ref={pivotRef} position={hingeOffset}>
+        <mesh position={leafOffset} castShadow receiveShadow>
+          <boxGeometry args={leafSize} />
+          <meshStandardMaterial color="#334155" roughness={0.45} metalness={0.25} />
+        </mesh>
+        {/* Frosted Vision Glass Window */}
+        <mesh position={[leafOffset[0], height * 0.6, leafOffset[2]]}>
+          <boxGeometry args={glassSize} />
+          <meshStandardMaterial color="#38bdf8" transparent opacity={0.35} roughness={0.1} />
+        </mesh>
+        {/* Brushed Steel Lever Handle */}
+        <mesh
+          position={[
+            door.axis === 'z' ? 0.08 : -door.hingeSide * (door.width * 0.8),
+            1.02,
+            door.axis === 'z' ? -door.hingeSide * (door.width * 0.8) : 0.08,
+          ]}
+        >
+          <boxGeometry args={[0.16, 0.04, 0.16]} />
+          <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.2} />
+        </mesh>
+      </group>
+    </group>
+  )
+}
+
+const CLOUD_CLUSTERS: [number, number, number, number][] = [
+  [-65, 42, -75, 1.3],
+  [-22, 48, -90, 1.6],
+  [25, 40, -82, 1.2],
+  [70, 52, -70, 1.5],
+  [-80, 46, 20, 1.4],
+  [75, 44, 35, 1.3],
+  [10, 50, 85, 1.7],
+  [-45, 43, 80, 1.2],
+]
+
+const STAR_POSITIONS: [number, number, number][] = Array.from({ length: 36 }, (_, i) => {
+  const angle = (i / 36) * Math.PI * 2
+  const radius = 95 + (i % 4) * 14
+  const y = 38 + (i % 6) * 8
+  return [Math.cos(angle) * radius, y, Math.sin(angle) * radius]
+})
+
+function DynamicSkyDome({ isNight }: { isNight: boolean }) {
+  const cloudsRef = useRef<THREE.Group>(null)
+
+  useFrame((_, delta) => {
+    if (!cloudsRef.current) return
+    cloudsRef.current.rotation.y += delta * 0.008
+  })
+
+  return (
+    <group name="DynamicSkyDome">
+      {/* Sky Backdrop Dome */}
+      <mesh>
+        <sphereGeometry args={[210, 32, 20]} />
+        <meshBasicMaterial
+          color={isNight ? '#060c1f' : '#7dd3fc'}
+          side={THREE.BackSide}
+        />
+      </mesh>
+
+      {/* Sun (Day) or Moon (Night) */}
+      {isNight ? (
+        <group position={[-75, 62, -95]}>
+          <mesh>
+            <sphereGeometry args={[7.5, 24, 24]} />
+            <meshBasicMaterial color="#e2e8f0" />
+          </mesh>
+          <mesh>
+            <sphereGeometry args={[10.5, 20, 20]} />
+            <meshBasicMaterial color="#94a3b8" transparent opacity={0.18} />
+          </mesh>
+        </group>
+      ) : (
+        <group position={[82, 66, -92]}>
+          <mesh>
+            <sphereGeometry args={[8.5, 24, 24]} />
+            <meshBasicMaterial color="#fef08a" />
+          </mesh>
+          <mesh>
+            <sphereGeometry args={[14, 20, 20]} />
+            <meshBasicMaterial color="#fde047" transparent opacity={0.22} />
+          </mesh>
+        </group>
+      )}
+
+      {/* Twinkling Night Stars */}
+      {isNight &&
+        STAR_POSITIONS.map((pos, idx) => (
+          <mesh key={`star-${idx}`} position={pos}>
+            <sphereGeometry args={[0.45 + (idx % 3) * 0.15, 6, 6]} />
+            <meshBasicMaterial color={idx % 2 === 0 ? '#f8fafc' : '#bae6fd'} />
+          </mesh>
+        ))}
+
+      {/* Softly Drifting 3D Clouds */}
+      <group ref={cloudsRef}>
+        {CLOUD_CLUSTERS.map(([cx, cy, cz, scale], idx) => (
+          <group key={`cloud-${idx}`} position={[cx, cy, cz]} scale={scale}>
+            <mesh position={[0, 0, 0]}>
+              <sphereGeometry args={[4.2, 12, 10]} />
+              <meshStandardMaterial
+                color={isNight ? '#1e293b' : '#ffffff'}
+                emissive={isNight ? '#0f172a' : '#e0f2fe'}
+                emissiveIntensity={0.25}
+                roughness={0.95}
+              />
+            </mesh>
+            <mesh position={[3.6, -0.6, 0.4]}>
+              <sphereGeometry args={[3.1, 10, 8]} />
+              <meshStandardMaterial
+                color={isNight ? '#1e293b' : '#f8fafc'}
+                emissive={isNight ? '#0f172a' : '#e0f2fe'}
+                emissiveIntensity={0.2}
+                roughness={0.95}
+              />
+            </mesh>
+            <mesh position={[-3.5, -0.5, -0.3]}>
+              <sphereGeometry args={[3.3, 10, 8]} />
+              <meshStandardMaterial
+                color={isNight ? '#1e293b' : '#f8fafc'}
+                emissive={isNight ? '#0f172a' : '#e0f2fe'}
+                emissiveIntensity={0.2}
+                roughness={0.95}
+              />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    </group>
+  )
+}
+
+const EMPTY_OPEN_DOORS: ReadonlySet<string> = new Set()
+
+export function BuildingArchitecture({
+  isWalkMode = false,
+  openDoors = EMPTY_OPEN_DOORS,
+  isNight = false,
+}: {
+  isWalkMode?: boolean
+  openDoors?: ReadonlySet<string>
+  isNight?: boolean
+}) {
   const carRefs = useRef<(THREE.Group | null)[]>([])
   const treeRefs = useRef<(THREE.Group | null)[]>([])
 
@@ -129,6 +325,7 @@ export function BuildingArchitecture({ isWalkMode = false }: { isWalkMode?: bool
 
   return (
     <group name="BuildingArchitecture">
+      <DynamicSkyDome isNight={isNight} />
       {/* ===================================================================== */}
       {/* 1. EXTERIOR CAMPUS LAWN, SIDEWALK, HIGHWAY & PARKING LOT              */}
       {/* ===================================================================== */}
@@ -548,77 +745,135 @@ export function BuildingArchitecture({ isWalkMode = false }: { isWalkMode?: bool
       {/* ===================================================================== */}
       <group name="InteriorPartitions">
         {[
-          [-20, 0.5, -8],
-          [-12, 0.5, -8],
-          [-20, 0.5, 8],
-          [-12, 0.5, 8],
-          [20, 0.5, -8],
-          [12, 0.5, -8],
-          [20, 0.5, 8],
-          [12, 0.5, 8],
-        ].map(([px, py, pz], idx) => (
-          <mesh key={`part-${idx}`} position={[px, py, pz]}>
-            <boxGeometry args={[6, 1.0, 0.3]} />
-            <meshStandardMaterial color="#334155" roughness={0.8} />
-          </mesh>
+          [-20, -8],
+          [-12, -8],
+          [-20, 8],
+          [-12, 8],
+          [20, -8],
+          [12, -8],
+          [20, 8],
+          [12, 8],
+        ].map(([px, pz], idx) => {
+          const wallH = isWalkMode ? 3.0 : 1.0
+          return (
+            <group key={`part-${idx}`} position={[px, wallH / 2, pz]}>
+              <mesh castShadow receiveShadow>
+                <boxGeometry args={[6, wallH, 0.3]} />
+                <meshStandardMaterial color="#334155" roughness={0.8} />
+              </mesh>
+              {isWalkMode && (
+                <mesh position={[0, wallH / 2 - 0.12, 0]}>
+                  <boxGeometry args={[6.02, 0.08, 0.34]} />
+                  <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={0.35} />
+                </mesh>
+              )}
+            </group>
+          )
+        })}
+
+        {/* Walk-3D Full-Height North-South Interior Partitions (x = -8, x = 8) */}
+        {isWalkMode &&
+          [
+            [-8, -16, 14.0],
+            [-8, 0, 13.6],
+            [-8, 16, 14.0],
+            [8, -16, 14.0],
+            [8, 0, 13.6],
+            [8, 16, 14.0],
+            [-4.8, -8, 4.4],
+            [4.8, -8, 4.4],
+            [-4.8, 8, 4.4],
+            [4.8, 8, 4.4],
+          ].map(([wx, wz, len], idx) => {
+            const isEW = idx >= 6
+            return (
+              <group key={`walk-wall-${idx}`} position={[wx, 1.5, wz]}>
+                <mesh castShadow receiveShadow>
+                  <boxGeometry args={isEW ? [len, 3.0, 0.3] : [0.3, 3.0, len]} />
+                  <meshStandardMaterial color="#334155" roughness={0.8} />
+                </mesh>
+                <mesh position={[0, 1.38, 0]}>
+                  <boxGeometry args={isEW ? [len + 0.02, 0.08, 0.34] : [0.34, 0.08, len + 0.02]} />
+                  <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={0.3} />
+                </mesh>
+              </group>
+            )
+          })}
+
+        {/* Full-Height West Wing Room Dividing Walls (2.0m isometric, 3.0m Walk-3D) */}
+        {(() => {
+          const westWallH = isWalkMode ? 3.0 : 2.0
+          const westWallY = westWallH / 2
+          return (
+            <>
+              {/* 1. Nap Room / Men's CR Wall */}
+              <mesh position={[-35, westWallY, -11]} castShadow receiveShadow>
+                <boxGeometry args={[12, westWallH, 0.3]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              {/* 2. Men's CR / Women's CR Privacy Partition Wall */}
+              <mesh position={[-35, westWallY, -5]} castShadow receiveShadow>
+                <boxGeometry args={[12, westWallH, 0.3]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              {/* 3. Women's CR / Server Room Fire/Acoustic Wall */}
+              <mesh position={[-37.5, westWallY, 1]} castShadow receiveShadow>
+                <boxGeometry args={[17.2, westWallH, 0.3]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              {/* 4. Server Room / Facilities Enclosure Wall (shifted to z = 7.5 for expanded Server Room) */}
+              <mesh position={[-37.5, westWallY, 7.5]} castShadow receiveShadow>
+                <boxGeometry args={[17.2, westWallH, 0.3]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              {/* 5. Facilities / Grand Cafeteria Hygiene Wall */}
+              <mesh position={[-35, westWallY, 11]} castShadow receiveShadow>
+                <boxGeometry args={[12, westWallH, 0.3]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+
+              {/* Wellness Corridor East Enclosure Wall (x = -28.9) with 6 Dedicated Doorways */}
+              <mesh position={[-28.9, westWallY, -19.5]} castShadow receiveShadow>
+                <boxGeometry args={[0.3, westWallH, 5.0]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              <mesh position={[-28.9, westWallY, -12]} castShadow receiveShadow>
+                <boxGeometry args={[0.3, westWallH, 6.0]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              <mesh position={[-28.9, westWallY, -5]} castShadow receiveShadow>
+                <boxGeometry args={[0.3, westWallH, 4.0]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              <mesh position={[-28.9, westWallY, 0.75]} castShadow receiveShadow>
+                <boxGeometry args={[0.3, westWallH, 3.5]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              <mesh position={[-28.9, westWallY, 6.75]} castShadow receiveShadow>
+                <boxGeometry args={[0.3, westWallH, 2.5]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              <mesh position={[-28.9, westWallY, 12.25]} castShadow receiveShadow>
+                <boxGeometry args={[0.3, westWallH, 5.5]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              <mesh position={[-28.9, westWallY, 19.5]} castShadow receiveShadow>
+                <boxGeometry args={[0.3, westWallH, 5.0]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+            </>
+          )
+        })()}
+
+        {/* Interactive Hinged Room Doors (Swing 90° open/closed on [E] in Walk-3D) */}
+        {DOOR_DEFINITIONS.map((door) => (
+          <InteractiveDoorMesh
+            key={door.id}
+            door={door}
+            isOpen={openDoors.has(door.id)}
+            height={isWalkMode ? 2.5 : 1.9}
+          />
         ))}
-
-        {/* Full-Height West Wing Room Dividing Walls (Zero Sound/Visual Leakage) */}
-        {/* 1. Nap Room / Men's CR Wall */}
-        <mesh position={[-35, 1.0, -11]} castShadow receiveShadow>
-          <boxGeometry args={[12, 2.0, 0.3]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.8} />
-        </mesh>
-        {/* 2. Men's CR / Women's CR Privacy Partition Wall */}
-        <mesh position={[-35, 1.0, -5]} castShadow receiveShadow>
-          <boxGeometry args={[12, 2.0, 0.3]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.8} />
-        </mesh>
-        {/* 3. Women's CR / Server Room Fire/Acoustic Wall */}
-        <mesh position={[-37.5, 1.0, 1]} castShadow receiveShadow>
-          <boxGeometry args={[17.2, 2.0, 0.3]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.8} />
-        </mesh>
-        {/* 4. Server Room / Facilities Enclosure Wall (shifted to z = 7.5 for expanded Server Room) */}
-        <mesh position={[-37.5, 1.0, 7.5]} castShadow receiveShadow>
-          <boxGeometry args={[17.2, 2.0, 0.3]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.8} />
-        </mesh>
-        {/* 5. Facilities / Grand Cafeteria Hygiene Wall */}
-        <mesh position={[-35, 1.0, 11]} castShadow receiveShadow>
-          <boxGeometry args={[12, 2.0, 0.3]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.8} />
-        </mesh>
-
-        {/* Wellness Corridor East Enclosure Wall (x = -28.9) with 6 Dedicated Doorways */}
-        <mesh position={[-28.9, 1.0, -19.5]} castShadow receiveShadow>
-          <boxGeometry args={[0.3, 2.0, 5.0]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.8} />
-        </mesh>
-        <mesh position={[-28.9, 1.0, -12]} castShadow receiveShadow>
-          <boxGeometry args={[0.3, 2.0, 6.0]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.8} />
-        </mesh>
-        <mesh position={[-28.9, 1.0, -5]} castShadow receiveShadow>
-          <boxGeometry args={[0.3, 2.0, 4.0]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.8} />
-        </mesh>
-        <mesh position={[-28.9, 1.0, 0.75]} castShadow receiveShadow>
-          <boxGeometry args={[0.3, 2.0, 3.5]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.8} />
-        </mesh>
-        <mesh position={[-28.9, 1.0, 6.75]} castShadow receiveShadow>
-          <boxGeometry args={[0.3, 2.0, 2.5]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.8} />
-        </mesh>
-        <mesh position={[-28.9, 1.0, 12.25]} castShadow receiveShadow>
-          <boxGeometry args={[0.3, 2.0, 5.5]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.8} />
-        </mesh>
-        <mesh position={[-28.9, 1.0, 19.5]} castShadow receiveShadow>
-          <boxGeometry args={[0.3, 2.0, 5.0]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.8} />
-        </mesh>
       </group>
 
       {/* ===================================================================== */}

@@ -1489,14 +1489,14 @@ function HQCommandPage() {
               </div>
 
               {/* Segmented 3D Iso / Walk 3D / 2D Switcher */}
-              <div className="flex items-center rounded-lg border border-slate-700/80 bg-slate-950/90 p-0.5 font-mono text-[11px]">
+              <div className="flex items-center rounded-lg border border-slate-700/80 bg-slate-950/90 p-0.5 font-mono text-xs">
                 <button
                   type="button"
                   onClick={() => {
                     setCameraViewMode('isometric')
                     if (is2DView) router.push('/')
                   }}
-                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all whitespace-nowrap ${
+                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all duration-200 ease-out whitespace-nowrap ${
                     !is2DView && cameraViewMode === 'isometric'
                       ? 'bg-cyan-500 text-slate-950 shadow-sm'
                       : 'text-slate-400 hover:text-slate-200'
@@ -1511,7 +1511,7 @@ function HQCommandPage() {
                     setCameraViewMode('walk')
                     if (is2DView) router.push('/')
                   }}
-                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all whitespace-nowrap ${
+                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all duration-200 ease-out whitespace-nowrap ${
                     !is2DView && cameraViewMode === 'walk'
                       ? 'bg-emerald-500 text-slate-950 shadow-sm'
                       : 'text-slate-400 hover:text-slate-200'
@@ -1522,7 +1522,7 @@ function HQCommandPage() {
                 <button
                   type="button"
                   onClick={() => router.push('/?v=2')}
-                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all whitespace-nowrap ${
+                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all duration-200 ease-out whitespace-nowrap ${
                     is2DView
                       ? 'bg-cyan-500 text-slate-950 shadow-sm'
                       : 'text-slate-400 hover:text-slate-200'
@@ -1538,7 +1538,7 @@ function HQCommandPage() {
                 data-testid="fullscreen-toggle-btn"
                 onClick={() => setIsCanvasFullscreen(true)}
                 title="Fullscreen Office-Only Mode [F]"
-                className="cursor-pointer flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/90 px-2.5 py-1.5 font-mono text-[11px] font-bold text-slate-200 hover:border-cyan-400 hover:text-cyan-300 transition-all whitespace-nowrap"
+                className="cursor-pointer flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/90 px-2.5 py-1.5 font-mono text-xs font-bold text-slate-200 hover:border-cyan-400 hover:text-cyan-300 transition-all duration-200 ease-out whitespace-nowrap"
               >
                 <span>⛶</span>
                 <span className="hidden sm:inline">Fullscreen</span>
@@ -1554,12 +1554,17 @@ function HQCommandPage() {
           <div className="relative flex flex-1 flex-col min-w-0 h-full overflow-hidden">
             {/* Synchronized 3D or 2D Isometric Viewport */}
             <section className="relative flex-1 min-h-0 overflow-hidden">
+              <div
+                key={`view-sweep-${is2DView ? '2d' : '3d'}-${cameraViewMode}`}
+                data-testid="view-mode-transition"
+                className="pointer-events-none absolute inset-0 z-30 bg-slate-950 animate-view-transition"
+              />
               {isCanvasFullscreen && (
                 <button
                   type="button"
                   data-testid="exit-fullscreen-btn"
                   onClick={() => setIsCanvasFullscreen(false)}
-                  className="cursor-pointer fixed top-4 right-4 z-50 flex items-center gap-2 rounded-full border border-cyan-400/70 bg-slate-950/90 px-3.5 py-1.5 font-mono text-xs font-bold text-cyan-200 shadow-2xl backdrop-blur-md hover:bg-cyan-500 hover:text-slate-950 transition-all whitespace-nowrap"
+                  className="cursor-pointer fixed top-4 right-4 z-50 flex items-center gap-2 rounded-full border border-cyan-400/70 bg-slate-950/90 px-3.5 py-1.5 font-mono text-xs font-bold text-cyan-200 shadow-2xl backdrop-blur-md hover:bg-cyan-500 hover:text-slate-950 transition-all duration-200 ease-out whitespace-nowrap"
                 >
                   <span>Exit Fullscreen [F]</span>
                 </button>

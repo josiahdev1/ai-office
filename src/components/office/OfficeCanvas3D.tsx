@@ -1,6 +1,6 @@
 'use client'
 
-import React, { Suspense } from 'react'
+import React, { Suspense, useState, useCallback } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrthographicCamera, PerspectiveCamera } from '@react-three/drei'
 import { Agent } from '@/components/office/types'
@@ -8,6 +8,7 @@ import { DepartmentMode } from '@/config/officeLayout'
 import { OfficeScene, OfficeLightingTheme } from './three/OfficeScene'
 import { CameraViewMode } from './three/CameraController'
 import { JarvisCoreState } from '@/components/jarvis/ArcReactor'
+import { DoorDefinition } from '@/lib/office/walkCollision'
 
 export interface OfficeCanvas3DProps {
   agents: Agent[]
@@ -50,6 +51,17 @@ export default function OfficeCanvas3D({
 }: OfficeCanvas3DProps) {
   const isWalkMode = cameraViewMode === 'walk'
   const bgColor = lightingTheme === 'day' ? '#dbeafe' : '#080b12'
+  const [openDoors, setOpenDoors] = useState<Set<string>>(() => new Set())
+  const [nearbyDoor, setNearbyDoor] = useState<DoorDefinition | null>(null)
+
+  const handleToggleDoor = useCallback((doorId: string) => {
+    setOpenDoors((prev) => {
+      const next = new Set(prev)
+      if (next.has(doorId)) next.delete(doorId)
+      else next.add(doorId)
+      return next
+    })
+  }, [])
 
   return (
     <div
@@ -74,9 +86,9 @@ export default function OfficeCanvas3D({
           <PerspectiveCamera
             makeDefault
             position={[0, 1.65, 11.5]}
-            fov={62}
-            near={0.1}
-            far={300}
+            fov={58}
+            near={0.15}
+            far={350}
           />
         ) : (
           <OrthographicCamera
@@ -102,6 +114,9 @@ export default function OfficeCanvas3D({
             cameraViewMode={cameraViewMode}
             lightingTheme={lightingTheme}
             zoomStep={zoomStep}
+            openDoors={openDoors}
+            onToggleDoor={handleToggleDoor}
+            onNearbyDoorChange={setNearbyDoor}
           />
         </Suspense>
       </Canvas>
@@ -154,10 +169,34 @@ export default function OfficeCanvas3D({
         )}
       </div>
 
+      {/* Subtle Walk-3D Crosshair & Interactive [E] Door Prompt */}
+      {isWalkMode && (
+        <>
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+            <div className="h-1.5 w-1.5 rounded-full bg-white/80 ring-2 ring-slate-950/60" />
+          </div>
+          {nearbyDoor && (
+            <div
+              data-testid="walk-door-prompt"
+              className="pointer-events-none absolute bottom-20 left-1/2 z-20 -translate-x-1/2 transition-all duration-200 ease-out"
+            >
+              <div className="flex items-center gap-2 rounded-full border border-sky-400/40 bg-slate-950/90 px-4 py-2 text-xs font-semibold text-white shadow-xl backdrop-blur-md">
+                <kbd className="rounded bg-sky-400 px-1.5 py-0.5 font-mono text-xs font-bold text-slate-950">
+                  E
+                </kbd>
+                <span className="whitespace-nowrap">
+                  {openDoors.has(nearbyDoor.id) ? 'Close' : 'Open'} {nearbyDoor.label}
+                </span>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       {/* Help tooltip */}
-      <div className="pointer-events-none absolute bottom-4 right-4 z-20 hidden 2xl:flex items-center gap-1.5 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[10px] text-slate-400 shadow-xl backdrop-blur-md">
+      <div className="pointer-events-none absolute bottom-4 right-4 z-20 hidden 2xl:flex items-center gap-1.5 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-xs text-slate-400 shadow-xl backdrop-blur-md">
         {isWalkMode ? (
-          <span>WASD / Arrows to Walk • Drag to Look • V to Exit Walk</span>
+          <span>WASD / Arrows to Walk • Drag to Look • E for Doors • V to Exit Walk</span>
         ) : (
           <span>J for JARVIS • V to Walk Inside • F for Fullscreen</span>
         )}

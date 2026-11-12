@@ -689,7 +689,7 @@ export default function OfficeCanvas2D({
         [-14, -28],
         [14, -28],
         [28, -28],
-        [-48, 0],
+        [-51, 0],
         [-48, 14],
         [-48, 25],
         [-14, 25.2],
@@ -803,8 +803,12 @@ export default function OfficeCanvas2D({
         // West Wing Dividing Walls (Nap Room, Men's CR, Women's CR, Server Room, Facilities, Cafeteria)
         [-35, 1.0, -11, 12, 2.0, 0.3],
         [-35, 1.0, -5, 12, 2.0, 0.3],
-        [-37.5, 1.0, 1, 17.2, 2.0, 0.3],
-        [-37.5, 1.0, 7.5, 17.2, 2.0, 0.3],
+        [-43.3, 1.0, 1, 5.6, 2.0, 0.3],
+        [-37.7, 1.0, 1, 5.6, 2.0, 0.3],
+        [-31.9, 1.0, 1, 6.0, 2.0, 0.3],
+        [-43.3, 1.0, 7.5, 5.6, 2.0, 0.3],
+        [-37.7, 1.0, 7.5, 5.6, 2.0, 0.3],
+        [-31.9, 1.0, 7.5, 6.0, 2.0, 0.3],
         [-35, 1.0, 11, 12, 2.0, 0.3],
         // West Wing East Corridor Wall with 6 Doorways
         [-28.9, 1.0, -19.5, 0.3, 2.0, 5.0],
@@ -1019,8 +1023,8 @@ export default function OfficeCanvas2D({
         const rx = rack.position[0]
         const rz = rack.position[2]
         enqueue(rx, rz, 1.25, () => {
-          drawBox(rx, 1.25, rz, 1.2, 2.5, 0.8, '#090d16', 0, 1, '#334155')
-          drawBox(rx, 1.25, rz + 0.41, 1.05, 2.3, 0.04, '#1e293b', 0, 0.85, '#0ea5e9')
+          drawBox(rx, 1.25, rz, 1.2, 2.5, 0.8, '#162033', 0, 1, '#38bdf8')
+          drawBox(rx, 1.25, rz + 0.41, 1.05, 2.3, 0.04, '#1e293b', 0, 0.92, '#38bdf8')
           for (let sidx = 0; sidx < 5; sidx++) {
             const slotY = 0.45 + sidx * 0.4
             drawBox(rx, slotY, rz + 0.42, 0.95, 0.16, 0.02, '#334155')
@@ -1040,26 +1044,28 @@ export default function OfficeCanvas2D({
         [-35.5, 6.35],
       ]) {
         enqueue(cx, cz, 1.1, () => {
-          drawBox(cx, 1.1, cz, 1.4, 2.2, 1.0, '#334155', 0, 1, '#475569')
-          drawBox(cx, 1.9, cz + 0.51, 0.6, 0.25, 0.02, '#0284c7')
+          drawBox(cx, 1.1, cz, 1.4, 2.2, 1.0, '#334155', 0, 1, '#64748b')
+          drawBox(cx, 1.9, cz + 0.51, 0.6, 0.25, 0.02, '#38bdf8')
           drawBox(cx, 1.1, cz + 0.51, 0.9, 1.0, 0.02, '#0f172a')
         })
       }
 
       // NOC Telemetry Wall Display
       enqueue(-36, 1.2, 1.45, () => {
-        drawBox(-36, 1.45, 1.2, 3.4, 1.4, 0.08, '#090d16', 0, 1, '#0284c7')
+        drawBox(-36, 1.45, 1.2, 3.4, 1.4, 0.08, '#0f172a', 0, 1, '#38bdf8')
         drawBox(-36, 1.45, 1.25, 3.2, 1.22, 0.02, '#082f49')
       })
 
-      // Dual Overhead Cable Trays
+      // Dual Overhead Cable Trays (segmented for accurate isometric depth sorting)
       for (const tz of [2.1, 6.3]) {
-        enqueue(-39.5, tz, 2.45, () => {
-          drawBox(-39.5, 2.45, tz, 10.5, 0.06, 0.4, '#475569')
-          drawBox(-39.5, 2.5, tz - 0.1, 10.2, 0.03, 0.03, '#f97316')
-          drawBox(-39.5, 2.5, tz, 10.2, 0.03, 0.03, '#0ea5e9')
-          drawBox(-39.5, 2.5, tz + 0.1, 10.2, 0.03, 0.03, '#eab308')
-        })
+        for (const tx of [-43.0, -39.5, -36.0]) {
+          enqueue(tx, tz, 2.45, () => {
+            drawBox(tx, 2.45, tz, 3.5, 0.06, 0.4, '#475569')
+            drawBox(tx, 2.5, tz - 0.1, 3.4, 0.03, 0.03, '#f97316')
+            drawBox(tx, 2.5, tz, 3.4, 0.03, 0.03, '#0ea5e9')
+            drawBox(tx, 2.5, tz + 0.1, 3.4, 0.03, 0.03, '#eab308')
+          })
+        }
       }
 
       // Server Admin Terminal Workstation (Rex's Permanent NOC Station at [-32.5, 0, 3.8])

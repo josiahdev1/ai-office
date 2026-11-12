@@ -8,6 +8,7 @@ import {
   SERVER_RACKS,
   WATER_DISPENSERS,
 } from '@/lib/office/wellnessWing'
+import { getMonitorTexture } from '@/components/office/three/MonitorTextures'
 
 export function OfficeFurniture() {
   const ledRef1 = useRef<THREE.MeshBasicMaterial>(null)
@@ -141,9 +142,11 @@ export function OfficeFurniture() {
           <mesh position={[0, 0, 0.06]}>
             <planeGeometry args={[4.0, 1.6]} />
             <meshStandardMaterial
-              color="#1d4ed8"
-              emissive="#3b82f6"
+              map={getMonitorTexture('operations')}
+              emissive="#ffffff"
+              emissiveMap={getMonitorTexture('operations')}
               emissiveIntensity={0.8}
+              roughness={0.25}
             />
           </mesh>
         </group>
@@ -430,7 +433,13 @@ export function OfficeFurniture() {
           </mesh>
           <mesh position={[0, 0, 0.03]}>
             <planeGeometry args={[1.25, 0.4]} />
-            <meshStandardMaterial color="#0891b2" emissive="#00e5ff" emissiveIntensity={0.8} />
+            <meshStandardMaterial
+              map={getMonitorTexture('executive')}
+              emissive="#ffffff"
+              emissiveMap={getMonitorTexture('executive')}
+              emissiveIntensity={0.85}
+              roughness={0.25}
+            />
           </mesh>
         </group>
         {/* Executive Leather Swivel Chair */}
@@ -911,7 +920,13 @@ export function OfficeFurniture() {
           </mesh>
           <mesh position={[0, 0, 0.045]}>
             <planeGeometry args={[3.2, 1.22]} />
-            <meshStandardMaterial color="#082f49" emissive="#0284c7" emissiveIntensity={0.55} />
+            <meshStandardMaterial
+              map={getMonitorTexture('server_admin')}
+              emissive="#ffffff"
+              emissiveMap={getMonitorTexture('server_admin')}
+              emissiveIntensity={0.85}
+              roughness={0.25}
+            />
           </mesh>
         </group>
 
@@ -951,7 +966,13 @@ export function OfficeFurniture() {
             </mesh>
             <mesh position={[0, 0, 0.025]}>
               <planeGeometry args={[0.66, 0.38]} />
-              <meshStandardMaterial color="#052e16" emissive="#10b981" emissiveIntensity={0.6} />
+              <meshStandardMaterial
+                map={getMonitorTexture('server_admin')}
+                emissive="#ffffff"
+                emissiveMap={getMonitorTexture('server_admin')}
+                emissiveIntensity={0.85}
+                roughness={0.25}
+              />
             </mesh>
           </group>
           <group position={[-0.1, 0.95, 0.2]} rotation={[0, -0.15, 0]}>
@@ -961,7 +982,13 @@ export function OfficeFurniture() {
             </mesh>
             <mesh position={[0, 0, 0.025]}>
               <planeGeometry args={[0.66, 0.38]} />
-              <meshStandardMaterial color="#082f49" emissive="#0ea5e9" emissiveIntensity={0.6} />
+              <meshStandardMaterial
+                map={getMonitorTexture('engineering')}
+                emissive="#ffffff"
+                emissiveMap={getMonitorTexture('engineering')}
+                emissiveIntensity={0.8}
+                roughness={0.25}
+              />
             </mesh>
           </group>
           <mesh position={[0.2, 0.77, 0]}>

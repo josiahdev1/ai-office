@@ -13,6 +13,7 @@ import { ProceduralAgent3D } from './ProceduralAgent3D'
 import { CameraController, CameraViewMode } from './CameraController'
 import { JarvisCoreState } from '@/components/jarvis/ArcReactor'
 import { computeSolarLighting } from '@/lib/office/clock'
+import { DoorDefinition } from '@/lib/office/walkCollision'
 
 export type OfficeLightingTheme = 'auto' | 'day' | 'night'
 
@@ -33,6 +34,9 @@ export interface OfficeSceneProps {
   cameraViewMode?: CameraViewMode
   lightingTheme?: OfficeLightingTheme
   zoomStep?: { delta: number; nonce: number }
+  openDoors?: ReadonlySet<string>
+  onToggleDoor?: (doorId: string) => void
+  onNearbyDoorChange?: (door: DoorDefinition | null) => void
 }
 
 export function OfficeScene({
@@ -48,6 +52,9 @@ export function OfficeScene({
   cameraViewMode = 'isometric',
   lightingTheme = 'auto',
   zoomStep,
+  openDoors,
+  onToggleDoor,
+  onNearbyDoorChange,
 }: OfficeSceneProps) {
   // Compute astronomical solar lighting for Iloilo City (or override via Day/Night switcher)
   const lighting = useMemo(() => {
@@ -105,7 +112,7 @@ export function OfficeScene({
       {/* 1. Dynamic Environmental Lighting (Auto PHT Solar / Day / Night) */}
       <ambientLight
         color={lighting.ambientColor}
-        intensity={isWalkMode ? Math.max(0.85, lighting.ambientIntensity) : lighting.ambientIntensity}
+        intensity={isWalkMode ? Math.max(1.15, lighting.ambientIntensity) : lighting.ambientIntensity}
       />
       <directionalLight
         position={lighting.sunPosition}
@@ -124,10 +131,17 @@ export function OfficeScene({
       <hemisphereLight
         color={lightingTheme === 'day' ? '#f0f9ff' : '#38bdf8'}
         groundColor={lightingTheme === 'day' ? '#334155' : '#0f172a'}
-        intensity={lightingTheme === 'day' ? 0.65 : 0.42}
+        intensity={lightingTheme === 'day' ? 0.65 : isWalkMode ? 0.6 : 0.42}
       />
       {isWalkMode && (
-        <pointLight position={[0, 2.8, 0]} intensity={1.4} distance={38} color="#f8fafc" />
+        <>
+          <pointLight position={[0, 2.8, 0]} intensity={1.8} distance={38} color="#f8fafc" />
+          <pointLight position={[-16, 2.8, -16]} intensity={1.4} distance={26} color="#e0f2fe" />
+          <pointLight position={[16, 2.8, -16]} intensity={1.4} distance={26} color="#e0f2fe" />
+          <pointLight position={[-16, 2.8, 16]} intensity={1.4} distance={26} color="#e0f2fe" />
+          <pointLight position={[16, 2.8, 16]} intensity={1.4} distance={26} color="#e0f2fe" />
+          <pointLight position={[-36, 2.8, 4]} intensity={1.5} distance={28} color="#e0f2fe" />
+        </>
       )}
 
       {/* 2. Interactive Camera Controller (Isometric Orbit + Walk-Inside Perspective + Jarvis Dive) */}
@@ -136,10 +150,17 @@ export function OfficeScene({
         isDivingToJarvis={isDivingToJarvis}
         cameraViewMode={cameraViewMode}
         zoomStep={zoomStep}
+        openDoors={openDoors}
+        onToggleDoor={onToggleDoor}
+        onNearbyDoorChange={onNearbyDoorChange}
       />
 
       {/* 3. Procedural Architectural Building + Walk-Mode Drop Ceiling Grid */}
-      <BuildingArchitecture isWalkMode={isWalkMode} />
+      <BuildingArchitecture
+        isWalkMode={isWalkMode}
+        openDoors={openDoors}
+        isNight={lighting.phase === 'night'}
+      />
 
       {/* 4. Central Command Center ("The Brain") Holographic Core */}
       <BrainCore state={coreState} onClickCore={onClickCore} />

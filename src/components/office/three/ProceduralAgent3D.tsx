@@ -22,6 +22,10 @@ import {
   AgentNavState,
   stepAgentNavigation,
 } from '@/config/walkwayGrid'
+import {
+  getMonitorTexture,
+  MonitorRoleTheme,
+} from '@/components/office/three/MonitorTextures'
 
 export interface ProceduralAgent3DProps {
   agent: Agent
@@ -504,9 +508,31 @@ export function ProceduralAgent3D({
             <mesh position={[0, 0, -0.025]} rotation={[0, Math.PI, 0]}>
               <planeGeometry args={[1.05, 0.55]} />
               <meshStandardMaterial
-                color="#0284c7"
-                emissive="#00e5ff"
-                emissiveIntensity={0.9}
+                map={getMonitorTexture(
+                  agent.id === 'server_admin' || agent.department === 'FACILITIES'
+                    ? ('server_admin' as MonitorRoleTheme)
+                    : agent.department === 'DESIGN'
+                    ? 'design'
+                    : agent.department === 'OPERATIONS' || agent.department === 'GROWTH'
+                    ? 'operations'
+                    : agent.department === 'EXECUTIVE'
+                    ? 'executive'
+                    : 'engineering'
+                )}
+                emissive="#ffffff"
+                emissiveMap={getMonitorTexture(
+                  agent.id === 'server_admin' || agent.department === 'FACILITIES'
+                    ? ('server_admin' as MonitorRoleTheme)
+                    : agent.department === 'DESIGN'
+                    ? 'design'
+                    : agent.department === 'OPERATIONS' || agent.department === 'GROWTH'
+                    ? 'operations'
+                    : agent.department === 'EXECUTIVE'
+                    ? 'executive'
+                    : 'engineering'
+                )}
+                emissiveIntensity={0.85}
+                roughness={0.25}
               />
             </mesh>
           </group>
@@ -520,9 +546,15 @@ export function ProceduralAgent3D({
             <mesh position={[0, 0, -0.025]} rotation={[0, Math.PI, 0]}>
               <planeGeometry args={[0.6, 0.55]} />
               <meshStandardMaterial
-                color="#059669"
-                emissive="#10b981"
-                emissiveIntensity={0.8}
+                map={getMonitorTexture(
+                  agent.department === 'DESIGN' ? 'design' : 'server_admin'
+                )}
+                emissive="#ffffff"
+                emissiveMap={getMonitorTexture(
+                  agent.department === 'DESIGN' ? 'design' : 'server_admin'
+                )}
+                emissiveIntensity={0.7}
+                roughness={0.25}
               />
             </mesh>
           </group>

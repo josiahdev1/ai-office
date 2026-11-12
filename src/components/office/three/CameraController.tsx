@@ -6,14 +6,24 @@ import { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { DepartmentMode, CAMERA_PRESETS } from './office3DData'
+import {
+  DoorDefinition,
+  findNearestDoor,
+  resolveWalkCollision,
+} from '@/lib/office/walkCollision'
 
 export type CameraViewMode = 'isometric' | 'walk'
+
+const EMPTY_OPEN_DOORS: ReadonlySet<string> = new Set()
 
 export interface CameraControllerProps {
   mode: DepartmentMode
   isDivingToJarvis?: boolean
   cameraViewMode?: CameraViewMode
   zoomStep?: { delta: number; nonce: number }
+  openDoors?: ReadonlySet<string>
+  onToggleDoor?: (doorId: string) => void
+  onNearbyDoorChange?: (door: DoorDefinition | null) => void
 }
 
 export function CameraController({
@@ -21,9 +31,24 @@ export function CameraController({
   isDivingToJarvis = false,
   cameraViewMode = 'isometric',
   zoomStep,
+  openDoors = EMPTY_OPEN_DOORS,
+  onToggleDoor,
+  onNearbyDoorChange,
 }: CameraControllerProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null)
-  const { gl } = useThree()
+  const { gl, camera } = useThree()
+  const cameraRef = useRef(camera)
+  const openDoorsRef = useRef(openDoors)
+  const onToggleDoorRef = useRef(onToggleDoor)
+  const onNearbyDoorChangeRef = useRef(onNearbyDoorChange)
+  const lastNearbyDoorIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    cameraRef.current = camera
+    openDoorsRef.current = openDoors
+    onToggleDoorRef.current = onToggleDoor
+    onNearbyDoorChangeRef.current = onNearbyDoorChange
+  }, [camera, openDoors, onToggleDoor, onNearbyDoorChange])
 
   // Desired target & zoom for Isometric Orthographic mode
   const targetVec = useRef(new THREE.Vector3(-7.5, 0, 0))
@@ -75,6 +100,13 @@ export function CameraController({
       const tag = (e.target as HTMLElement | null)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
       walkKeysRef.current[e.code] = true
+      if (e.code === 'KeyE' && !e.repeat) {
+        const cam = cameraRef.current
+        const door = findNearestDoor(cam.position.x, cam.position.z, 3.2)
+        if (door) {
+          onToggleDoorRef.current?.(door.id)
+        }
+      }
     }
     const handleKeyUp = (e: KeyboardEvent) => {
       walkKeysRef.current[e.code] = false
@@ -149,11 +181,19 @@ export function CameraController({
       const len = Math.hypot(moveX, moveZ)
       if (len > 0.001) {
         const speed = 5.5 * Math.min(delta, 0.05)
-        const nextX = Math.max(-45, Math.min(22, cam.position.x + (moveX / len) * speed))
-        const nextZ = Math.max(-22, Math.min(22, cam.position.z + (moveZ / len) * speed))
-        cam.position.set(nextX, 1.65, nextZ)
+        const rawX = Math.max(-45.5, Math.min(22.5, cam.position.x + (moveX / len) * speed))
+        const rawZ = Math.max(-22.5, Math.min(22.5, cam.position.z + (moveZ / len) * speed))
+        const resolved = resolveWalkCollision(rawX, rawZ, 0.42, openDoorsRef.current)
+        cam.position.set(resolved.x, 1.65, resolved.z)
       } else {
         cam.position.y = 1.65
+      }
+
+      const nearby = findNearestDoor(cam.position.x, cam.position.z, 3.2)
+      const nearbyId = nearby?.id ?? null
+      if (nearbyId !== lastNearbyDoorIdRef.current) {
+        lastNearbyDoorIdRef.current = nearbyId
+        onNearbyDoorChangeRef.current?.(nearby)
       }
 
       const lookTarget = new THREE.Vector3(
