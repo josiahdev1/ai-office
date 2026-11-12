@@ -2,7 +2,7 @@
 
 This directory contains the database schema, seed data, and Next.js SSR integration guide for **EasyUp Software Solution HQ** autonomous multi-agent AI office.
 
-> **AGENT / ANTIGRAVITY DIRECTIVE:** Follow the installed skills in `docs/skills/supabase` and execute automated workflows whenever direct database connection (`DATABASE_URL`) or Supabase Service Role credentials (`SUPABASE_SERVICE_ROLE_KEY`) are present in `.env.local`. When only client-side anon key is present, DDL queries (`CREATE TABLE`, `ALTER TABLE`) are executed via Supabase SQL Editor using the non-destructive script `0016_consolidated_missing_tables.sql`.
+> **AGENT / ANTIGRAVITY DIRECTIVE:** Follow the installed skills in `.agent/skills/supabase` (and `.agent/skills/supabase-postgres-best-practices`, `.agent/skills/supabase-realtime-data`) and execute automated database workflows following the `Autonomous Supabase Database & MCP Migration Rules` in `AGENTS.md`.
 
 ---
 
@@ -11,8 +11,8 @@ This directory contains the database schema, seed data, and Next.js SSR integrat
 1. **Client Anon Key (`NEXT_PUBLIC_SUPABASE_ANON_KEY`)**:
    - Used by the Next.js frontend and API routes for table operations (SELECT, INSERT, UPDATE) governed by Row Level Security (RLS).
    - PostgREST restricts anon key users from running raw DDL (`CREATE TABLE`, `DROP`, `ALTER`) by PostgreSQL security design.
-2. **Automated DDL via Service Role or DATABASE_URL**:
-   - When `SUPABASE_SERVICE_ROLE_KEY` or `DATABASE_URL` is set in `.env.local` or Supabase CLI is authenticated, schema migrations can run 100% headless.
+2. **Automated DDL & Migrations**:
+   - Follow `.agent/skills/supabase` for schema migrations, declarative schemas, and MCP execution.
 3. **Consolidated Migration Script**:
    - `supabase/migrations/0016_consolidated_missing_tables.sql` is 100% safe, additive, and non-destructive (no DROP, no CASCADE) for running in the Supabase SQL editor without warnings or errors.
 
@@ -33,7 +33,7 @@ This directory contains the database schema, seed data, and Next.js SSR integrat
 
 ## 2. Next.js SSR Client & Agent Skills Setup
 
-Ensure the Next.js application has the required Supabase SSR packages, client utilities, and AI agent skills configured (`.agents/skills/supabase` is already installed in this repo):
+Ensure the Next.js application has the required Supabase SSR packages, client utilities, and AI agent skills configured (`.agent/skills/supabase` is installed in this repo):
 
 ### A. Install Dependencies & Agent Skills
 
