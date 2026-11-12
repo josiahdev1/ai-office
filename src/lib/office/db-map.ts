@@ -159,6 +159,12 @@ export function departmentToRoom(dept: string): string {
     case 'COMMAND':
     case 'EXECUTIVE':
       return 'Command Center'
+    case 'FACILITIES':
+    case 'FACILITIES_WELLNESS':
+      return 'Facilities & Janitorial'
+    case 'SERVER':
+    case 'INFRASTRUCTURE':
+      return 'Server Room'
     default:
       return 'Engineering Core'
   }
@@ -166,6 +172,8 @@ export function departmentToRoom(dept: string): string {
 
 export function roomToDepartment(room: string): string {
   const normalized = (room || '').toLowerCase().trim()
+  if (normalized.includes('facil') || normalized.includes('janitor')) return 'FACILITIES_WELLNESS'
+  if (normalized.includes('server') || normalized.includes('infrastructure')) return 'ENGINEERING'
   if (normalized.includes('eng')) return 'ENGINEERING'
   if (normalized.includes('qa') || normalized.includes('secops') || normalized.includes('noc')) return 'QA & SECOPS'
   if (normalized.includes('growth')) return 'GROWTH'
@@ -173,6 +181,25 @@ export function roomToDepartment(room: string): string {
   if (normalized.includes('ops') || normalized.includes('operat')) return 'OPERATIONS'
   if (normalized.includes('command') || normalized.includes('exec')) return 'COMMAND'
   return 'ENGINEERING'
+}
+
+export const DEFAULT_SERVER_ADMIN_AGENT: OfficeAgentRow = {
+  id: 'server_admin',
+  name: 'Rex',
+  role: 'Systems & Infrastructure Admin',
+  department: 'ENGINEERING',
+  desk_x: 1,
+  desk_y: 3,
+  current_x: 1,
+  current_y: 3,
+  status: 'active',
+  current_task: 'Monitoring rack telemetry, cooling loops, and cluster health',
+  current_room: 'Server Room',
+  model: 'gemini-2.0-flash',
+  color: '#4f46e5',
+  kind: 'resident',
+  sub_state: 'typing',
+  progress: 95,
 }
 
 // =============================================================================

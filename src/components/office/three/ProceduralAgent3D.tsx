@@ -48,6 +48,40 @@ function getFacingAngle(facing: 'SE' | 'SW' | 'NE' | 'NW'): number {
   }
 }
 
+const BOSS_PATROL_ROUTE: [number, number, number][] = [
+  [0, 0, 0], // The Brain (Command Center)
+  [-16, 0, -16], // Engineering Core
+  [16, 0, -16], // Operations Hub
+  [16, 0, 16], // Growth Lab
+  [-16, 0, 16], // SecOps & Intelligence
+  [3.5, 0, 2.5], // Executive Stand
+]
+
+const CLEANER_1_PATROL_ROUTE: [number, number, number][] = [
+  [-35, 0, 8.5], // Facilities Room
+  [-35, 0, 16], // Grand Cafeteria
+  [-35, 0, -8], // Men's CR
+  [-35, 0, -2], // Women's CR
+  [-35, 0, -16], // Nap Room
+  [-29, 0, 0], // Main Corridor Connector
+]
+
+const CLEANER_2_PATROL_ROUTE: [number, number, number][] = [
+  [-35, 0, 8.5], // Facilities Room
+  [0, 0, 16], // Gym & Rec
+  [-16, 0, 16], // SecOps & Intelligence
+  [-35, 0, 3.5], // Server Room
+  [16, 0, -16], // Operations Hub
+  [0, 0, 0], // Center Concourse
+]
+
+const SERVER_ADMIN_PATROL_ROUTE: [number, number, number][] = [
+  [-33, 0, 2.5], // Workstation PC Desk
+  [-36, 0, 2.5], // Primary Compute Rack 01
+  [-36, 0, 4.5], // Database Storage Array 02
+  [-35, 0, 4.0], // Inference Accelerator 03
+]
+
 /**
  * Generates a crisp high-DPI CanvasTexture for the native 3D <sprite> nameplate.
  * Guarantees 0ms lag during fast camera pan/zoom because it is rendered inside WebGL.
@@ -170,6 +204,19 @@ export function ProceduralAgent3D({
     return deskRotationY
   }, [effectiveMode, targetPos, deskRotationY])
 
+  const roamRoute = useMemo(() => {
+    if (agent.id === 'boss') return BOSS_PATROL_ROUTE
+    if (agent.id === 'cleaner_1') return CLEANER_1_PATROL_ROUTE
+    if (agent.id === 'cleaner_2') return CLEANER_2_PATROL_ROUTE
+    if (agent.id === 'server_admin') return SERVER_ADMIN_PATROL_ROUTE
+    return null
+  }, [agent.id])
+
+  const roamStateRef = useRef<{ index: number; elapsed: number }>({
+    index: 0,
+    elapsed: 0,
+  })
+
   const isDeskMode = effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
 
   // Determine initial spawn position on mount from props
@@ -234,11 +281,38 @@ export function ProceduralAgent3D({
     }
     const staggerIdx = isGroupModeSwitch ? agentIndex : 0
 
+    // Autonomous Roaming Patrol Loop for Boss, Cleaners, and Server Admin
+    if (roamRoute && (effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK')) {
+      roamStateRef.current.elapsed += dt
+      // Rex spends 25s at PC desk, 12s inspecting racks. Boss spends 18s at each dept. Cleaners spend 15s cleaning each room.
+      const intervalSec =
+        agent.id === 'server_admin'
+          ? (roamStateRef.current.index === 0 ? 25 : 12)
+          : agent.id === 'boss'
+            ? 18
+            : 15
+
+      if (roamStateRef.current.elapsed >= intervalSec) {
+        roamStateRef.current.elapsed = 0
+        roamStateRef.current.index = (roamStateRef.current.index + 1) % roamRoute.length
+      }
+    }
+
+    const currentRoamTarget =
+      roamRoute && (effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK')
+        ? roamRoute[roamStateRef.current.index]
+        : null
+
+    const effectiveTargetPos = currentRoamTarget || targetPos
+    // Boss and Cleaners never sit desk-bound in an idle loop! Server admin only sits when at PC desk (roam index 0).
+    const effectiveIsDeskMode =
+      isDeskMode && (!roamRoute || (agent.id === 'server_admin' && roamStateRef.current.index === 0))
+
     stepAgentNavigation(
       nav,
-      targetPos,
+      effectiveTargetPos,
       finalStationRotationY,
-      isDeskMode,
+      effectiveIsDeskMode,
       dt,
       3.6,
       agentIndex,
@@ -272,7 +346,7 @@ export function ProceduralAgent3D({
       }
     }
 
-    // Leg & Arm Walk Cycle vs Seated Pose
+    // Leg & Arm Walk Cycle vs Seated / Standing Pose
     if (leftLegRef.current && rightLegRef.current) {
       if (isWalking) {
         leftLegRef.current.rotation.x = Math.sin(nav.walkPhase) * 0.55
@@ -287,6 +361,18 @@ export function ProceduralAgent3D({
       if (isWalking) {
         leftArmRef.current.rotation.x = -Math.sin(nav.walkPhase) * 0.45
         rightArmRef.current.rotation.x = Math.sin(nav.walkPhase) * 0.45
+      } else if (agent.id === 'cleaner_1' || agent.id === 'cleaner_2') {
+        // Continuous cleaning & sanitizing arm animation
+        leftArmRef.current.rotation.x = 0.55 + Math.sin(t * 5) * 0.2
+        rightArmRef.current.rotation.x = 0.55 + Math.cos(t * 5) * 0.2
+      } else if (agent.id === 'boss') {
+        // Boss patrol: holding clipboard with left arm, gesturing with right
+        leftArmRef.current.rotation.x = 0.7
+        rightArmRef.current.rotation.x = 0.2 + Math.sin(t * 2) * 0.15
+      } else if (agent.id === 'server_admin' && roamStateRef.current.index > 0) {
+        // Server rack inspection animation: reaching to check telemetry and patch cables
+        leftArmRef.current.rotation.x = 0.85 + Math.sin(t * 4) * 0.15
+        rightArmRef.current.rotation.x = 0.5 + Math.cos(t * 4) * 0.12
       } else {
         leftArmRef.current.rotation.x = isSeated ? 0.5 : 0.15
         rightArmRef.current.rotation.x = isSeated ? 0.5 : 0.15
@@ -312,12 +398,19 @@ export function ProceduralAgent3D({
     }
   })
 
+  const hasDedicatedFurniture =
+    agent.id === 'boss' ||
+    agent.id === 'cleaner_1' ||
+    agent.id === 'cleaner_2' ||
+    agent.id === 'server_admin'
+
   return (
     <group>
       {/* ========================================================================= */}
       {/* A. PERMANENT WORKSTATION DESK, CHAIR & MULTI-MONITORS AT HOME ROOM        */}
       {/* ========================================================================= */}
-      <group position={workstation.deskPos} rotation={[0, deskRotationY, 0]}>
+      {!hasDedicatedFurniture && (
+        <group position={workstation.deskPos} rotation={[0, deskRotationY, 0]}>
         {/* Ergonomic Chair */}
         <group position={[0, 0, 0]}>
           <mesh position={[0, 0.08, 0]} castShadow>
@@ -410,6 +503,7 @@ export function ProceduralAgent3D({
           </group>
         </group>
       </group>
+    )}
 
       {/* ========================================================================= */}
       {/* B. DISTINCT ARTICULATED CHARACTER + NATIVE WEBGL SPRITE NAMEPLATE         */}

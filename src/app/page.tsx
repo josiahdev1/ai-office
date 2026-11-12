@@ -77,6 +77,7 @@ const DEFAULT_AGENT_MODELS: Record<string, string> = {
   boss: 'gemini-2.5-pro',
   cleaner_1: 'hf-smollm2-360m',
   cleaner_2: 'hf-smollm2-360m',
+  server_admin: 'gemini-2.0-flash',
 }
 
 function modeToRoomName(mode: DepartmentMode, defaultRoom: string): string {
@@ -91,6 +92,12 @@ function modeToRoomName(mode: DepartmentMode, defaultRoom: string): string {
       return 'Nap Room & Sleep Pods'
     case 'WELLNESS':
       return 'Wellness Wing & CR'
+    case 'SERVER_ROOM':
+      return 'Server Room & NOC'
+    case 'MENS_CR':
+      return "Men's Comfort Room"
+    case 'WOMENS_CR':
+      return "Women's Comfort Room"
     case 'ALL_HANDS':
       return 'Command Center ("The Brain")'
     case 'FOCUS_WORK':

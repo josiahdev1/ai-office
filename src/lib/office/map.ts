@@ -656,6 +656,20 @@ export const ASSIGNED_DESKS: DeskSlot[] = [
   },
 ]
 
+export const SERVER_ADMIN_WORKSTATION: DeskSlot = {
+  id: 'srv-1',
+  agentId: 'server_admin',
+  name: 'Rex',
+  room: 'Server & NOC Room',
+  deskGx: 1,
+  deskGy: 3,
+  chairGx: 2,
+  chairGy: 3,
+  facing: 'NW',
+  monitors: 3,
+  floor: 0,
+}
+
 /**
  * 32 BRAIN MEETING SPOTS (Centered around The Brain table at gx=9, gy=9)
  */
@@ -775,16 +789,48 @@ export const OFFICE_FURNITURE: FurnitureItem[] = [
     color: '#0f172a',
   },
 
-  // 2. Server Room Racks (gx 2, gy 2)
+  // 2. Server Room Racks, Chiller & Admin Desk (gx 1..3, gy 1..3)
+  {
+    id: 'server_cooling_unit',
+    type: 'vending_machine',
+    gx: 1,
+    gy: 1,
+    w: 1,
+    h: 1,
+    solid: true,
+    label: 'HVAC-CHILLER',
+    color: '#334155',
+  },
   {
     id: 'server_rack_1',
     type: 'server_rack',
-    gx: 2,
+    gx: 3,
+    gy: 1,
+    w: 1,
+    h: 1,
+    solid: true,
+    label: 'SRV-RACK-01',
+  },
+  {
+    id: 'server_rack_2',
+    type: 'server_rack',
+    gx: 3,
     gy: 2,
     w: 1,
     h: 1,
     solid: true,
-    label: 'EDGE-SRV-01',
+    label: 'SRV-RACK-02',
+  },
+  {
+    id: 'server_admin_desk',
+    type: 'desk',
+    gx: 1,
+    gy: 3,
+    w: 1,
+    h: 1,
+    solid: true,
+    label: 'NOC PC WORKSTATION',
+    color: '#0f172a',
   },
 
   // 3. Pantry Bar L-Counter (gx 15..16, gy 1)

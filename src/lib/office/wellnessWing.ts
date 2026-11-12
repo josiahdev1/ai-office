@@ -140,54 +140,98 @@ export const WELLNESS_BEDS: WellnessBed[] = [
   },
 ]
 
-export const COMFORT_ROOM_STALLS: ComfortRoomStall[] = [
+export const MENS_CR_STALLS: ComfortRoomStall[] = [
   {
     id: 'cr_stall_1',
-    label: 'CR Stall 1 (Executive)',
+    label: "Men's Stall 1",
     stallNumber: 1,
-    position: [-33, 0, -4],
-    approachTile: [-32, 0, -4],
+    position: [-33, 0, -9],
+    approachTile: [-32, 0, -9],
     isOccupied: false,
   },
   {
     id: 'cr_stall_2',
-    label: 'CR Stall 2',
+    label: "Men's Stall 2",
     stallNumber: 2,
-    position: [-33, 0, -2],
-    approachTile: [-32, 0, -2],
+    position: [-33, 0, -7],
+    approachTile: [-32, 0, -7],
     isOccupied: false,
   },
   {
     id: 'cr_stall_3',
-    label: 'CR Stall 3',
+    label: "Men's Stall 3 (Accessible)",
     stallNumber: 3,
-    position: [-33, 0, 0],
-    approachTile: [-32, 0, 0],
+    position: [-37, 0, -8],
+    approachTile: [-36, 0, -8],
     isOccupied: false,
   },
+]
+
+export const WOMENS_CR_STALLS: ComfortRoomStall[] = [
   {
     id: 'cr_stall_4',
-    label: 'CR Stall 4 (Accessible)',
-    stallNumber: 4,
-    position: [-37, 0, -4],
-    approachTile: [-36, 0, -4],
+    label: "Women's Stall 1",
+    stallNumber: 1,
+    position: [-33, 0, -3],
+    approachTile: [-32, 0, -3],
     isOccupied: false,
   },
   {
     id: 'cr_stall_5',
-    label: 'CR Stall 5',
-    stallNumber: 5,
-    position: [-37, 0, -2],
-    approachTile: [-36, 0, -2],
+    label: "Women's Stall 2",
+    stallNumber: 2,
+    position: [-33, 0, -1],
+    approachTile: [-32, 0, -1],
     isOccupied: false,
   },
   {
     id: 'cr_stall_6',
-    label: 'CR Stall 6',
-    stallNumber: 6,
-    position: [-37, 0, 0],
-    approachTile: [-36, 0, 0],
+    label: "Women's Stall 3 (Accessible)",
+    stallNumber: 3,
+    position: [-37, 0, -2],
+    approachTile: [-36, 0, -2],
     isOccupied: false,
+  },
+]
+
+export const COMFORT_ROOM_STALLS: ComfortRoomStall[] = [
+  ...MENS_CR_STALLS,
+  ...WOMENS_CR_STALLS,
+]
+
+export interface ServerRackSlot {
+  id: string
+  label: string
+  position: [number, number, number]
+  approachTile: [number, number, number]
+  status: 'nominal' | 'inspected' | 'cooling'
+  ledColor: string
+}
+
+export const SERVER_RACKS: ServerRackSlot[] = [
+  {
+    id: 'rack_alpha',
+    label: 'Primary Compute Rack 01',
+    position: [-37, 0, 2.5],
+    approachTile: [-36, 0, 2.5],
+    status: 'nominal',
+    ledColor: '#22c55e',
+  },
+  {
+    id: 'rack_beta',
+    label: 'Database Storage Array 02',
+    position: [-37, 0, 4.5],
+    approachTile: [-36, 0, 4.5],
+    status: 'nominal',
+    ledColor: '#0ea5e9',
+  },
+  {
+    id: 'rack_gamma',
+    label: 'Inference Accelerator 03',
+    position: [-35, 0, 5],
+    approachTile: [-35, 0, 4],
+    status: 'nominal',
+    ledColor: '#a855f7',
   },
 ]
 
