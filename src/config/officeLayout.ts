@@ -133,21 +133,51 @@ export const ROOMS_3D: Record<string, Room3DConfig> = {
     accentColor: '#818cf8',
     description: 'Quiet dark rest pods, bunk beds, dim ambient reading lamps, and Do Not Disturb lights',
   },
+  MENS_CR: {
+    id: 'MENS_CR',
+    name: "Men's Comfort Room (CR)",
+    center: [-35, 0, -8],
+    size: [12, 5],
+    floorColor: '#0369a1', // Sky blue sanitary
+    wallColor: '#082f49',
+    accentColor: '#38bdf8',
+    description: "Men's comfort room with privacy stalls, urinals, sinks, mirrors, and high-speed hand dryers",
+  },
+  WOMENS_CR: {
+    id: 'WOMENS_CR',
+    name: "Women's Comfort Room (CR)",
+    center: [-35, 0, -2],
+    size: [12, 5],
+    floorColor: '#9d174d', // Rose sanitary
+    wallColor: '#500724',
+    accentColor: '#f472b6',
+    description: "Women's comfort room with private stalls, vanity mirrors, wash basins, and hand dryers",
+  },
   COMFORT_ROOM: {
     id: 'COMFORT_ROOM',
     name: 'Comfort Room (CR)',
-    center: [-35, 0, -2],
-    size: [12, 10],
+    center: [-35, 0, -5],
+    size: [12, 11],
     floorColor: '#0f766e', // Sanitary teal
     wallColor: '#042f2e',
     accentColor: '#2dd4bf',
-    description: '6 individual stalls with occupancy indicators, vanities, hand dryers, and mirrors',
+    description: "Dual Men's and Women's executive comfort rooms with occupancy indicators and vanities",
+  },
+  SERVER_ROOM: {
+    id: 'SERVER_ROOM',
+    name: 'Server & Infrastructure NOC',
+    center: [-35, 0, 3.5],
+    size: [12, 5],
+    floorColor: '#0f172a', // Deep slate NOC floor
+    wallColor: '#020617',
+    accentColor: '#0ea5e9', // Cyber cyan/blue
+    description: 'Server racks with blinking status LEDs, cooling units, overhead cable trays, and terminal PC desk',
   },
   FACILITIES: {
     id: 'FACILITIES',
     name: 'Facilities & Janitorial',
-    center: [-35, 0, 6],
-    size: [12, 6],
+    center: [-35, 0, 8.5],
+    size: [12, 4.5],
     floorColor: '#334155', // Slate utilitarian
     wallColor: '#1e293b',
     accentColor: '#94a3b8',
@@ -157,7 +187,7 @@ export const ROOMS_3D: Record<string, Room3DConfig> = {
     id: 'CAFETERIA',
     name: 'Grand Cafeteria',
     center: [-35, 0, 16],
-    size: [12, 12],
+    size: [12, 10],
     floorColor: '#9a3412', // Warm terracotta
     wallColor: '#431407',
     accentColor: '#f97316',
@@ -612,6 +642,17 @@ export const AGENT_WORKSTATIONS_3D: Record<string, AgentWorkstation3D> = {
     pantryPos: pantrySlots[26],
     gymPos: gymSlots[26],
   },
+  server_admin: {
+    agentId: 'server_admin',
+    name: 'Rex',
+    department: 'ENGINEERING',
+    room: 'Server Room',
+    deskPos: [-33, 0, 2.5],
+    facing: 'NW',
+    allHandsPos: allHandsSlots[27],
+    pantryPos: pantrySlots[27],
+    gymPos: gymSlots[27],
+  },
 }
 
 export type DepartmentMode =
@@ -624,6 +665,9 @@ export type DepartmentMode =
   | 'CAFETERIA'
   | 'NAP_ROOM'
   | 'COMFORT_ROOM'
+  | 'MENS_CR'
+  | 'WOMENS_CR'
+  | 'SERVER_ROOM'
 
 export interface CameraPreset {
   target: [number, number, number]
@@ -664,7 +708,19 @@ export const CAMERA_PRESETS: Record<DepartmentMode, CameraPreset> = {
     zoom: 30,
   },
   COMFORT_ROOM: {
+    target: [-35, 0, -5],
+    zoom: 32,
+  },
+  MENS_CR: {
+    target: [-35, 0, -8],
+    zoom: 32,
+  },
+  WOMENS_CR: {
     target: [-35, 0, -2],
+    zoom: 32,
+  },
+  SERVER_ROOM: {
+    target: [-35, 0, 3.5],
     zoom: 32,
   },
 }
@@ -793,8 +849,20 @@ export function getAgentTargetPosition(
       return ws.gymPos
     case 'NAP_ROOM':
       return [-35, 0, -16]
-    case 'COMFORT_ROOM':
+    case 'MENS_CR':
+      return [-35, 0, -8]
+    case 'WOMENS_CR':
       return [-35, 0, -2]
+    case 'COMFORT_ROOM': {
+      const isFemale =
+        ws.agentId === 'cleaner_2' ||
+        ws.agentId === 'mary_grace' ||
+        ws.agentId === 'gloria' ||
+        ws.agentId === 'bonnie'
+      return isFemale ? [-35, 0, -2] : [-35, 0, -8]
+    }
+    case 'SERVER_ROOM':
+      return [-35, 0, 3.5]
     case 'WELLNESS':
       return [-34, 0, 0]
     case 'FOCUS_WORK':

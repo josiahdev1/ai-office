@@ -3,22 +3,37 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import {
   WELLNESS_BEDS,
-  COMFORT_ROOM_STALLS,
+  MENS_CR_STALLS,
+  WOMENS_CR_STALLS,
+  SERVER_RACKS,
   WATER_DISPENSERS,
 } from '@/lib/office/wellnessWing'
 
 export function OfficeFurniture() {
   const ledRef1 = useRef<THREE.MeshBasicMaterial>(null)
   const ledRef2 = useRef<THREE.MeshBasicMaterial>(null)
+  const serverLedGreenRef = useRef<THREE.MeshBasicMaterial>(null)
+  const serverLedBlueRef = useRef<THREE.MeshBasicMaterial>(null)
+  const serverLedAmberRef = useRef<THREE.MeshBasicMaterial>(null)
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime()
-    // Blinking server LEDs
+    // Blinking server LEDs in Engineering
     if (ledRef1.current) {
       ledRef1.current.color.set(Math.sin(t * 8) > 0 ? '#22c55e' : '#14532d')
     }
     if (ledRef2.current) {
       ledRef2.current.color.set(Math.cos(t * 6) > 0 ? '#38bdf8' : '#0369a1')
+    }
+    // High-frequency blinking LED strips in Server Room
+    if (serverLedGreenRef.current) {
+      serverLedGreenRef.current.color.set(Math.sin(t * 10) > 0 ? '#22c55e' : '#064e3b')
+    }
+    if (serverLedBlueRef.current) {
+      serverLedBlueRef.current.color.set(Math.cos(t * 7) > 0 ? '#0ea5e9' : '#0c4a6e')
+    }
+    if (serverLedAmberRef.current) {
+      serverLedAmberRef.current.color.set(Math.sin(t * 12 + 1) > 0 ? '#f59e0b' : '#78350f')
     }
   })
 
@@ -657,24 +672,36 @@ export function OfficeFurniture() {
       </group>
 
       {/* ========================================================================= */}
-      {/* 12. COMFORT ROOM (CR) PROPS (Mid-W Wing: [-35, 0, -2])                   */}
+      {/* 12A. MEN'S COMFORT ROOM PROPS ([-35, 0, -8])                              */}
       {/* ========================================================================= */}
-      <group position={[-35, 0, -2]} name="ComfortRoomProps">
-        {/* 6 Individual Toilet Stalls */}
-        {COMFORT_ROOM_STALLS.map((stall) => {
+      <group position={[-35, 0, -8]} name="MensCRProps">
+        {/* Door Sign: MEN'S CR */}
+        <group position={[5.8, 2.1, 0]}>
+          <mesh>
+            <boxGeometry args={[0.08, 0.35, 1.0]} />
+            <meshStandardMaterial color="#1e3a8a" roughness={0.3} metalness={0.5} />
+          </mesh>
+          <mesh position={[-0.05, 0, 0]}>
+            <boxGeometry args={[0.02, 0.2, 0.8]} />
+            <meshStandardMaterial color="#60a5fa" emissive="#3b82f6" emissiveIntensity={0.6} />
+          </mesh>
+        </group>
+
+        {/* 3 Individual Toilet Stalls */}
+        {MENS_CR_STALLS.map((stall) => {
           const rx = stall.position[0] - (-35)
-          const rz = stall.position[2] - (-2)
+          const rz = stall.position[2] - (-8)
           return (
             <group key={stall.id} position={[rx, 0, rz]}>
               {/* Stall Partition Enclosure */}
               <mesh position={[0, 1.0, 0]} castShadow>
                 <boxGeometry args={[1.3, 2.0, 1.2]} />
-                <meshStandardMaterial color="#0f766e" roughness={0.7} />
+                <meshStandardMaterial color="#0369a1" roughness={0.7} />
               </mesh>
               {/* Stall Door with Chrome Handle */}
               <mesh position={[0.66, 0.95, 0]}>
                 <boxGeometry args={[0.04, 1.9, 0.9]} />
-                <meshStandardMaterial color="#115e59" roughness={0.6} metalness={0.2} />
+                <meshStandardMaterial color="#0284c7" roughness={0.6} metalness={0.2} />
               </mesh>
               {/* Occupied / Vacant Indicator Plate */}
               <mesh position={[0.69, 1.25, 0]}>
@@ -689,20 +716,94 @@ export function OfficeFurniture() {
           )
         })}
 
-        {/* Ceramic Wash Basin Counter along East Wall */}
-        <group position={[4.5, 0.45, 0]}>
+        {/* Ceramic Wash Basin Counter & Mirrors */}
+        <group position={[4.5, 0.45, -0.5]}>
           <mesh castShadow receiveShadow>
-            <boxGeometry args={[0.7, 0.9, 4.6]} />
+            <boxGeometry args={[0.7, 0.9, 2.8]} />
             <meshStandardMaterial color="#e2e8f0" roughness={0.3} />
           </mesh>
-          {/* 3 Recessed Sink Bowls */}
-          {[-1.4, 0, 1.4].map((sz, sidx) => (
-            <group key={`sink-${sidx}`} position={[0, 0.46, sz]}>
+          {[-0.8, 0.8].map((sz, sidx) => (
+            <group key={`m-sink-${sidx}`} position={[0, 0.46, sz]}>
               <mesh>
                 <boxGeometry args={[0.45, 0.02, 0.7]} />
                 <meshStandardMaterial color="#cbd5e1" metalness={0.6} />
               </mesh>
-              {/* Gooseneck Chrome Faucet */}
+              <mesh position={[-0.15, 0.12, 0]}>
+                <cylinderGeometry args={[0.02, 0.02, 0.24, 8]} />
+                <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.1} />
+              </mesh>
+            </group>
+          ))}
+          {/* Vanity Mirror */}
+          <mesh position={[-0.32, 1.05, 0]}>
+            <planeGeometry args={[0.05, 1.1]} />
+            <meshStandardMaterial color="#f8fafc" roughness={0.1} metalness={0.9} />
+          </mesh>
+          {/* Commercial Hand Dryer */}
+          <mesh position={[-0.25, 0.8, 1.6]}>
+            <boxGeometry args={[0.2, 0.35, 0.22]} />
+            <meshStandardMaterial color="#94a3b8" metalness={0.8} />
+          </mesh>
+        </group>
+      </group>
+
+      {/* ========================================================================= */}
+      {/* 12B. WOMEN'S COMFORT ROOM PROPS ([-35, 0, -2])                            */}
+      {/* ========================================================================= */}
+      <group position={[-35, 0, -2]} name="WomensCRProps">
+        {/* Door Sign: WOMEN'S CR */}
+        <group position={[5.8, 2.1, 0]}>
+          <mesh>
+            <boxGeometry args={[0.08, 0.35, 1.0]} />
+            <meshStandardMaterial color="#831843" roughness={0.3} metalness={0.5} />
+          </mesh>
+          <mesh position={[-0.05, 0, 0]}>
+            <boxGeometry args={[0.02, 0.2, 0.8]} />
+            <meshStandardMaterial color="#f472b6" emissive="#db2777" emissiveIntensity={0.6} />
+          </mesh>
+        </group>
+
+        {/* 3 Individual Toilet Stalls */}
+        {WOMENS_CR_STALLS.map((stall) => {
+          const rx = stall.position[0] - (-35)
+          const rz = stall.position[2] - (-2)
+          return (
+            <group key={stall.id} position={[rx, 0, rz]}>
+              {/* Stall Partition Enclosure */}
+              <mesh position={[0, 1.0, 0]} castShadow>
+                <boxGeometry args={[1.3, 2.0, 1.2]} />
+                <meshStandardMaterial color="#be185d" roughness={0.7} />
+              </mesh>
+              {/* Stall Door with Chrome Handle */}
+              <mesh position={[0.66, 0.95, 0]}>
+                <boxGeometry args={[0.04, 1.9, 0.9]} />
+                <meshStandardMaterial color="#9d174d" roughness={0.6} metalness={0.2} />
+              </mesh>
+              {/* Occupied / Vacant Indicator Plate */}
+              <mesh position={[0.69, 1.25, 0]}>
+                <boxGeometry args={[0.02, 0.08, 0.16]} />
+                <meshStandardMaterial
+                  color={stall.isOccupied ? '#ef4444' : '#22c55e'}
+                  emissive={stall.isOccupied ? '#ef4444' : '#22c55e'}
+                  emissiveIntensity={1.2}
+                />
+              </mesh>
+            </group>
+          )
+        })}
+
+        {/* Ceramic Wash Basin Counter & Large Mirror */}
+        <group position={[4.5, 0.45, -0.5]}>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[0.7, 0.9, 2.8]} />
+            <meshStandardMaterial color="#fce7f3" roughness={0.3} />
+          </mesh>
+          {[-0.8, 0.8].map((sz, sidx) => (
+            <group key={`w-sink-${sidx}`} position={[0, 0.46, sz]}>
+              <mesh>
+                <boxGeometry args={[0.45, 0.02, 0.7]} />
+                <meshStandardMaterial color="#cbd5e1" metalness={0.6} />
+              </mesh>
               <mesh position={[-0.15, 0.12, 0]}>
                 <cylinderGeometry args={[0.02, 0.02, 0.24, 8]} />
                 <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.1} />
@@ -711,27 +812,187 @@ export function OfficeFurniture() {
           ))}
           {/* Large Vanity Mirror */}
           <mesh position={[-0.32, 1.05, 0]}>
-            <planeGeometry args={[0.05, 1.2]} />
+            <planeGeometry args={[0.05, 1.1]} />
             <meshStandardMaterial color="#f8fafc" roughness={0.1} metalness={0.9} />
           </mesh>
           {/* Commercial Hand Dryer */}
-          <mesh position={[-0.25, 0.8, 2.7]}>
+          <mesh position={[-0.25, 0.8, 1.6]}>
             <boxGeometry args={[0.2, 0.35, 0.22]} />
             <meshStandardMaterial color="#94a3b8" metalness={0.8} />
           </mesh>
         </group>
-
-        {/* Dedicated Janitorial Cart Parking Spot (Hazard Striped Floor) */}
-        <mesh position={[3, 0.02, 3.5]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[1.5, 1.8]} />
-          <meshStandardMaterial color="#eab308" roughness={0.8} />
-        </mesh>
       </group>
 
       {/* ========================================================================= */}
-      {/* 13. FACILITIES & JANITORIAL ROOM (SW-Central: [-35, 0, 6])               */}
+      {/* 12C. SERVER ROOM & DATA CENTER PROPS ([-35, 0, 3.5])                      */}
       {/* ========================================================================= */}
-      <group position={[-35, 0, 6]} name="FacilitiesRoomProps">
+      <group position={[-35, 0, 3.5]} name="ServerRoomProps">
+        {/* Door Sign: RESTRICTED ACCESS SERVER ROOM */}
+        <group position={[5.8, 2.1, -0.5]}>
+          <mesh>
+            <boxGeometry args={[0.08, 0.35, 1.2]} />
+            <meshStandardMaterial color="#451a03" roughness={0.4} metalness={0.6} />
+          </mesh>
+          <mesh position={[-0.05, 0, 0]}>
+            <boxGeometry args={[0.02, 0.22, 1.0]} />
+            <meshStandardMaterial color="#f59e0b" emissive="#d97706" emissiveIntensity={0.8} />
+          </mesh>
+        </group>
+
+        {/* Server Racks with Blinking Activity LEDs */}
+        {SERVER_RACKS.map((rack) => {
+          const rx = rack.position[0] - (-35)
+          const rz = rack.position[2] - 3.5
+          return (
+            <group key={rack.id} position={[rx, 1.25, rz]}>
+              {/* Heavy Metal Rack Chassis */}
+              <mesh castShadow receiveShadow>
+                <boxGeometry args={[1.2, 2.5, 0.8]} />
+                <meshStandardMaterial color="#090d16" metalness={0.85} roughness={0.25} />
+              </mesh>
+              {/* Glass Perforated Front Panel */}
+              <mesh position={[0, 0, 0.41]}>
+                <planeGeometry args={[1.05, 2.3]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.5} />
+              </mesh>
+              {/* Internal Blade Server Drawers */}
+              {[-0.8, -0.4, 0, 0.4, 0.8].map((slotY, sidx) => (
+                <group key={`blade-${sidx}`} position={[0, slotY, 0.42]}>
+                  {/* Blade Frame */}
+                  <mesh>
+                    <boxGeometry args={[0.95, 0.18, 0.02]} />
+                    <meshStandardMaterial color="#334155" metalness={0.7} />
+                  </mesh>
+                  {/* Status LEDs */}
+                  <mesh position={[-0.35, 0, 0.015]}>
+                    <boxGeometry args={[0.08, 0.04, 0.02]} />
+                    <meshBasicMaterial
+                      ref={sidx % 3 === 0 ? serverLedGreenRef : sidx % 3 === 1 ? serverLedBlueRef : serverLedAmberRef}
+                      color="#22c55e"
+                    />
+                  </mesh>
+                  <mesh position={[-0.2, 0, 0.015]}>
+                    <boxGeometry args={[0.08, 0.04, 0.02]} />
+                    <meshBasicMaterial
+                      ref={sidx % 2 === 0 ? serverLedBlueRef : serverLedGreenRef}
+                      color="#0ea5e9"
+                    />
+                  </mesh>
+                </group>
+              ))}
+            </group>
+          )
+        })}
+
+        {/* Industrial CRAC Chiller Cooling Unit */}
+        <group position={[2.0, 1.1, 1.5]}>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[1.4, 2.2, 1.0]} />
+            <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+          </mesh>
+          {/* Intake Louver Grills */}
+          <mesh position={[-0.71, 0, 0]}>
+            <planeGeometry args={[0.8, 1.8]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.9} />
+          </mesh>
+          {/* Cooling Status LED / Digital Gauges */}
+          <mesh position={[0, 0.8, 0.51]}>
+            <planeGeometry args={[0.6, 0.25]} />
+            <meshStandardMaterial color="#0284c7" emissive="#0284c7" emissiveIntensity={0.8} />
+          </mesh>
+        </group>
+
+        {/* Suspended Overhead Cable Trays */}
+        <group position={[-1.0, 2.45, 0]}>
+          <mesh>
+            <boxGeometry args={[5.0, 0.06, 0.4]} />
+            <meshStandardMaterial color="#475569" metalness={0.9} roughness={0.3} />
+          </mesh>
+          {/* Colorful Bundled Network Cables (Fiber & CAT6) */}
+          <mesh position={[0, 0.05, -0.1]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.03, 0.03, 4.8, 8]} />
+            <meshStandardMaterial color="#f97316" />
+          </mesh>
+          <mesh position={[0, 0.05, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.03, 0.03, 4.8, 8]} />
+            <meshStandardMaterial color="#0ea5e9" />
+          </mesh>
+          <mesh position={[0, 0.05, 0.1]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.03, 0.03, 4.8, 8]} />
+            <meshStandardMaterial color="#eab308" />
+          </mesh>
+        </group>
+
+        {/* Server Admin Terminal Workstation Desk (Rex) */}
+        {/* World deskPos: [-33, 0, 2.5] -> rx = 2.0, rz = -1.0 */}
+        <group position={[2.0, 0, -1.0]}>
+          {/* Heavy Workstation Table */}
+          <mesh position={[0, 0.38, 0]} castShadow receiveShadow>
+            <boxGeometry args={[1.6, 0.76, 0.85]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.5} roughness={0.4} />
+          </mesh>
+          {/* Dual Curved Ultrawide Monitors */}
+          <group position={[-0.1, 0.95, -0.2]} rotation={[0, 0.15, 0]}>
+            <mesh castShadow>
+              <boxGeometry args={[0.7, 0.42, 0.04]} />
+              <meshStandardMaterial color="#090d16" metalness={0.8} />
+            </mesh>
+            {/* Terminal Screen (Glowing Green Matrix / CLI) */}
+            <mesh position={[0, 0, 0.025]}>
+              <planeGeometry args={[0.66, 0.38]} />
+              <meshStandardMaterial color="#052e16" emissive="#10b981" emissiveIntensity={0.6} />
+            </mesh>
+          </group>
+          <group position={[-0.1, 0.95, 0.2]} rotation={[0, -0.15, 0]}>
+            <mesh castShadow>
+              <boxGeometry args={[0.7, 0.42, 0.04]} />
+              <meshStandardMaterial color="#090d16" metalness={0.8} />
+            </mesh>
+            {/* Metrics Screen (Glowing Blue Graphs) */}
+            <mesh position={[0, 0, 0.025]}>
+              <planeGeometry args={[0.66, 0.38]} />
+              <meshStandardMaterial color="#082f49" emissive="#0ea5e9" emissiveIntensity={0.6} />
+            </mesh>
+          </group>
+          {/* Mechanical Keyboard & Mouse */}
+          <mesh position={[0.2, 0.77, 0]}>
+            <boxGeometry args={[0.18, 0.02, 0.45]} />
+            <meshStandardMaterial color="#0f172a" />
+          </mesh>
+          <mesh position={[0.2, 0.77, 0.3]}>
+            <boxGeometry args={[0.1, 0.02, 0.06]} />
+            <meshStandardMaterial color="#38bdf8" />
+          </mesh>
+          {/* Ergonomic Mesh Task Chair at world [-32, 0, 2.5] -> rx = 3.0, rz = -1.0 */}
+          <group position={[1.0, 0, 0]}>
+            <mesh position={[0, 0.45, 0]} castShadow>
+              <boxGeometry args={[0.45, 0.08, 0.45]} />
+              <meshStandardMaterial color="#0f172a" roughness={0.8} />
+            </mesh>
+            <mesh position={[0.2, 0.85, 0]}>
+              <boxGeometry args={[0.06, 0.7, 0.45]} />
+              <meshStandardMaterial color="#1e293b" />
+            </mesh>
+          </group>
+        </group>
+      </group>
+
+      {/* ========================================================================= */}
+      {/* 13. FACILITIES & JANITORIAL ROOM (SW-Central: [-35, 0, 8.5])              */}
+      {/* ========================================================================= */}
+      <group position={[-35, 0, 8.5]} name="FacilitiesRoomProps">
+        {/* Door Sign: FACILITIES */}
+        <group position={[5.8, 2.1, -0.5]}>
+          <mesh>
+            <boxGeometry args={[0.08, 0.35, 1.2]} />
+            <meshStandardMaterial color="#713f12" roughness={0.4} metalness={0.5} />
+          </mesh>
+          <mesh position={[-0.05, 0, 0]}>
+            <boxGeometry args={[0.02, 0.22, 1.0]} />
+            <meshStandardMaterial color="#eab308" emissive="#ca8a04" emissiveIntensity={0.7} />
+          </mesh>
+        </group>
+
         {/* Yellow Commercial Janitorial Cleaning Carts */}
         <group position={[0.5, 0.42, -0.5]}>
           {/* Yellow Chassis */}
@@ -771,12 +1032,10 @@ export function OfficeFurniture() {
           </mesh>
           {[-0.6, 0, 0.6].map((mz, midx) => (
             <group key={`mop-${midx}`} position={[0.08, -0.3, mz]}>
-              {/* Mop Handle */}
               <mesh position={[0, 0.3, 0]}>
                 <cylinderGeometry args={[0.02, 0.02, 1.4, 8]} />
                 <meshStandardMaterial color="#059669" />
               </mesh>
-              {/* String Mop Head */}
               <mesh position={[0, -0.4, 0]}>
                 <coneGeometry args={[0.12, 0.25, 8]} />
                 <meshStandardMaterial color="#e2e8f0" roughness={0.9} />
@@ -786,7 +1045,7 @@ export function OfficeFurniture() {
         </group>
 
         {/* 5-Gallon Water Bottle Multi-Tier Storage Rack */}
-        <group position={[2.5, 0.7, 1.8]}>
+        <group position={[2.5, 0.7, 1.0]}>
           <mesh castShadow receiveShadow>
             <boxGeometry args={[1.4, 1.4, 0.6]} />
             <meshStandardMaterial color="#334155" metalness={0.7} />
@@ -807,7 +1066,7 @@ export function OfficeFurniture() {
         </group>
 
         {/* Utility Shelving Unit with Chemical Supplies & Towels */}
-        <group position={[-2.5, 1.0, 2.0]}>
+        <group position={[-2.5, 1.0, 1.2]}>
           <mesh castShadow receiveShadow>
             <boxGeometry args={[2.0, 2.0, 0.55]} />
             <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.4} />

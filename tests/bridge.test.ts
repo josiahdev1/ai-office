@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { IngestEventSchema, constantTimeCompare } from '../src/lib/office/ingestSchema'
-import { mapPayloadToEvent } from '../bridge/office-hook.mjs'
+import { mapPayloadToEvent } from '../docs/bridge/office-hook.mjs'
 import { sessionRowToGuestAgent, OfficeSessionRow } from '../src/lib/office/db-map'
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
@@ -77,7 +77,7 @@ describe('Phase 12: Live Coding-Agent Bridge Test Suite', () => {
 
   describe('Hook Shim office-hook.mjs Exit-0 Guarantee', () => {
     it('always exits with code 0 even when offline or misconfigured', () => {
-      const hookScript = path.resolve(__dirname, '../bridge/office-hook.mjs')
+      const hookScript = path.resolve(__dirname, '../docs/bridge/office-hook.mjs')
       const payload = JSON.stringify({
         event: 'tool_start',
         tool_name: 'test_tool',

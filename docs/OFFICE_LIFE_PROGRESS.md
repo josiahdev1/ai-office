@@ -121,11 +121,15 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K10: Final QA
-- [ ] Full end-to-end verification checklist (a through q)
-- [ ] Visual screenshots, self-review defects & fixes, PR merge update
-- [ ] Server Room + resident Server Room agent (PC work + periodic server rack inspection loop)
-- [ ] Men's & Women's Comfort Rooms (separated/labeled stalls, sinks, dryers, routing)
-- [ ] Roaming Boss & roaming Cleaner 1 / Cleaner 2 (no desk-bound idle; continuous patrol & cleaning)
-- [ ] 2D (`?v=2`) vs 3D mode parity audit and sync/banner fix
-- [ ] Move `brain/`, `bridge/`, and `design-ref/` into `docs/` organized + consolidate `.agent/` and `.agents/` skills
-- [ ] Root `tickets/TEMPLATE.md` + chronological milestone tickets (`tickets/ticket-01-<short-task-name>.md` onward from first Antigravity chat to K10)
+- [x] Phase K10 Completed:
+  - Modeled enclosed Server Room (blinking LED racks, CRAC chiller, cable trays, Rex PC desk) and split Comfort Room into labeled Men's CR & Women's CR with A* reachability.
+  - Eliminated desk-bound idle loops for Boss, Cleaner 1, and Cleaner 2 into continuous office roaming, cleaning, and server rack inspection loops.
+  - Consolidated documentation into `docs/` (`docs/brain/`, `docs/bridge/`, `docs/design-ref/`), canonicalized `.agent/skills`, generated tickets `ticket-01` through `ticket-25` from `tickets/TEMPLATE.md`, and passed all 28 test suites (267 tests) with 2D/3D parity.
+- [x] Full end-to-end verification checklist (a through q)
+- [x] Visual screenshots, self-review defects & fixes, PR merge update
+- [x] Server Room + resident Server Room agent (PC work + periodic server rack inspection loop)
+- [x] Men's & Women's Comfort Rooms (separated/labeled stalls, sinks, dryers, routing)
+- [x] Roaming Boss & roaming Cleaner 1 / Cleaner 2 (no desk-bound idle; continuous patrol & cleaning)
+- [x] 2D (`?v=2`) vs 3D mode parity audit and sync/banner fix
+- [x] Move `brain/`, `bridge/`, and `design-ref/` into `docs/` organized + consolidate `.agent/` and `.agents/` skills
+- [x] Root `tickets/TEMPLATE.md` + chronological milestone tickets (`tickets/ticket-01-<short-task-name>.md` onward from first Antigravity chat to K10)

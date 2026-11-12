@@ -129,27 +129,35 @@ export function isWorldTileWalkable(gx: number, gz: number): boolean {
 
     // Partition between Wellness Corridor and Rooms at gx = -29
     if (gx === -29) {
-      // Doorways into the 4 rooms:
-      // Nap Room door: z in [-17, -15]
-      // CR door: z in [-3, -1]
-      // Facilities door: z in [5, 7]
-      // Cafeteria door: z in [15, 17]
+      // Doorways into the 6 rooms:
+      // 1. Nap Room door: z in [-17, -15]
+      // 2. Men's CR door: z in [-9, -7]
+      // 3. Women's CR door: z in [-3, -1]
+      // 4. Server Room door: z in [2, 4]
+      // 5. Facilities door: z in [7, 9]
+      // 6. Cafeteria door: z in [15, 17]
       const isNapDoor = gz >= -17 && gz <= -15
-      const isCrDoor = gz >= -3 && gz <= -1
-      const isFacDoor = gz >= 5 && gz <= 7
+      const isMensCrDoor = gz >= -9 && gz <= -7
+      const isWomensCrDoor = gz >= -3 && gz <= -1
+      const isServerDoor = gz >= 2 && gz <= 4
+      const isFacDoor = gz >= 7 && gz <= 9
       const isCafeDoor = gz >= 15 && gz <= 17
-      if (!isNapDoor && !isCrDoor && !isFacDoor && !isCafeDoor) {
+      if (!isNapDoor && !isMensCrDoor && !isWomensCrDoor && !isServerDoor && !isFacDoor && !isCafeDoor) {
         return false
       }
     }
 
     // Interior dividing walls between rooms in Wellness Wing (for gx <= -29):
-    // Wall between Nap Room and CR at gz = -9
-    if (gz === -9 && gx <= -29) return false
-    // Wall between CR and Facilities at gz = 3
-    if (gz === 3 && gx <= -29) return false
-    // Wall between Facilities and Cafeteria at gz = 9
-    if (gz === 9 && gx <= -29) return false
+    // Wall between Nap Room and Men's CR at gz = -11
+    if (gz === -11 && gx <= -29) return false
+    // Wall between Men's CR and Women's CR at gz = -5
+    if (gz === -5 && gx <= -29) return false
+    // Wall between Women's CR and Server Room at gz = 1
+    if (gz === 1 && gx <= -29) return false
+    // Wall between Server Room and Facilities at gz = 6
+    if (gz === 6 && gx <= -29) return false
+    // Wall between Facilities and Cafeteria at gz = 11
+    if (gz === 11 && gx <= -29) return false
   }
 
   return true

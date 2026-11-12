@@ -620,6 +620,11 @@ export default function OfficeCanvas2D({
       drawBox(-8, 0.02, 0, 2.4, 0.04, 46, '#e2e8f0')
       drawBox(8, 0.02, 0, 2.4, 0.04, 46, '#e2e8f0')
 
+      // West Wing Corridors connecting to Server Room, Wellness Wing & Comfort Rooms
+      drawBox(-26.5, 0.02, -8, 7, 0.04, 2.4, '#cbd5e1')
+      drawBox(-26.5, 0.02, 8, 7, 0.04, 2.4, '#cbd5e1')
+      drawBox(-29, 0.02, 0, 2.4, 0.04, 38, '#e2e8f0')
+
       for (const room of Object.values(ROOMS_3D)) {
         const [rx, ry, rz] = room.center
         if (room.id === 'COMMAND') {
@@ -1335,6 +1340,11 @@ export default function OfficeCanvas2D({
           <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
           <span className="tracking-wide text-slate-400">VIEWPORT (2D ISO):</span>
           <span className="font-bold text-cyan-300">{mode.replace('_', ' ')}</span>
+        </div>
+
+        <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-950/75 px-3 py-1.5 font-mono text-[11px] text-amber-200 shadow-xl backdrop-blur-md">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+          <span>⚡ 2D Canvas (Legacy Renderer) — 3D WebGL is primary. Live Supabase agents synchronized.</span>
         </div>
 
         {onClickCore && (

@@ -483,6 +483,19 @@ export const CHARACTER_STYLES: Record<string, CharacterStyleConfig> = {
     accessory: 'cap',
     accessoryColor: '#14b8a6',
   },
+  server_admin: {
+    agentId: 'server_admin',
+    gender: 'male',
+    spriteKey: 'dev_male_2',
+    hairStyle: 'spiky',
+    hairColor: '#334155',
+    outfitColor: '#4f46e5', // Indigo NOC technician hoodie
+    sleeveColor: '#4338ca',
+    bottomColor: '#1e1b4b',
+    skinColor: '#fcd34d',
+    accessory: 'headphones',
+    accessoryColor: '#818cf8',
+  },
 }
 
 const FALLBACK_PALETTES: Omit<CharacterStyleConfig, 'agentId'>[] = [
