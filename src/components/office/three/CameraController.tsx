@@ -84,7 +84,7 @@ export function CameraController({
       makeDefault
       enableDamping
       dampingFactor={0.08}
-      minZoom={18}
+      minZoom={8}
       maxZoom={95}
       minPolarAngle={Math.PI / 6}
       maxPolarAngle={Math.PI / 2.15}

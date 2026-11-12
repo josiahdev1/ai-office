@@ -43,6 +43,19 @@ CREATE TABLE IF NOT EXISTS public.office_brain_learning_log (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Ensure columns exist idempotently if table was pre-created
+ALTER TABLE public.office_brain_learning_log ADD COLUMN IF NOT EXISTS ts timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.office_brain_learning_log ADD COLUMN IF NOT EXISTS ts_pht text NOT NULL DEFAULT '';
+ALTER TABLE public.office_brain_learning_log ADD COLUMN IF NOT EXISTS run_id text;
+ALTER TABLE public.office_brain_learning_log ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'learned';
+ALTER TABLE public.office_brain_learning_log ADD COLUMN IF NOT EXISTS agent_id text;
+ALTER TABLE public.office_brain_learning_log ADD COLUMN IF NOT EXISTS category text NOT NULL DEFAULT 'agent_strength';
+ALTER TABLE public.office_brain_learning_log ADD COLUMN IF NOT EXISTS text text NOT NULL DEFAULT '';
+ALTER TABLE public.office_brain_learning_log ADD COLUMN IF NOT EXISTS confidence double precision NOT NULL DEFAULT 0.85;
+ALTER TABLE public.office_brain_learning_log ADD COLUMN IF NOT EXISTS source_ids jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE public.office_brain_learning_log ADD COLUMN IF NOT EXISTS by text NOT NULL DEFAULT 'boss';
+ALTER TABLE public.office_brain_learning_log ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+
 -- 3. Create office_agent_insights table
 CREATE TABLE IF NOT EXISTS public.office_agent_insights (
   id text PRIMARY KEY,
@@ -58,6 +71,19 @@ CREATE TABLE IF NOT EXISTS public.office_agent_insights (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Ensure columns exist idempotently if table was pre-created
+ALTER TABLE public.office_agent_insights ADD COLUMN IF NOT EXISTS ts timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.office_agent_insights ADD COLUMN IF NOT EXISTS agent_id text;
+ALTER TABLE public.office_agent_insights ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'strength';
+ALTER TABLE public.office_agent_insights ADD COLUMN IF NOT EXISTS category text NOT NULL DEFAULT 'agent_strength';
+ALTER TABLE public.office_agent_insights ADD COLUMN IF NOT EXISTS text text NOT NULL DEFAULT '';
+ALTER TABLE public.office_agent_insights ADD COLUMN IF NOT EXISTS confidence double precision NOT NULL DEFAULT 0.85;
+ALTER TABLE public.office_agent_insights ADD COLUMN IF NOT EXISTS source_ids jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE public.office_agent_insights ADD COLUMN IF NOT EXISTS pinned boolean NOT NULL DEFAULT false;
+ALTER TABLE public.office_agent_insights ADD COLUMN IF NOT EXISTS deleted boolean NOT NULL DEFAULT false;
+ALTER TABLE public.office_agent_insights ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.office_agent_insights ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 
 -- 4. Create office_jarvis_memory table
 CREATE TABLE IF NOT EXISTS public.office_jarvis_memory (
