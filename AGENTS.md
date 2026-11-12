@@ -8,6 +8,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Ticket-First Development Workflow (`tickets/`)
+
+1. **Mandatory Read & Naming Convention**: Before starting any task, always read `tickets/TEMPLATE.md` and inspect existing `tickets/ticket-*.md` files to check active tickets or determine the next sequential number. Every ticket lives in root `tickets/` named `tickets/ticket-XX-<kebab-case-slug>.md` and strictly follows `tickets/TEMPLATE.md` (`# [TICKET-XX] <Title>`, metadata block with `Phase / Milestone`, `Status`: `TODO` | `IN PROGRESS` | `COMPLETED`, `Date`, `Commit SHA`, `Branch: office-v3`, `Author / Assignee`, and sections `1. Context & Objectives` through `5. Notes & Dependencies`).
+2. **Ticket Before Code (Zero Unapproved Coding)**:
+   - **Existing / Provided Ticket**: If Josiah already created, named, or pasted a ticket (e.g., `tickets/ticket-27-...md`), read that exact ticket, NEVER create a duplicate ticket, set `**Status**: IN PROGRESS`, implement all changes, fill in `Commit SHA` and `4. Verification & Quality Gates` with real command outputs, and set `**Status**: COMPLETED` when done.
+   - **New Request Without a Ticket**: If Josiah asks for a new feature, UI change, or bug fix without an existing ticket, create the next sequential ticket `tickets/ticket-XX-<kebab-case-slug>.md` from `tickets/TEMPLATE.md` FIRST (`**Status**: IN PROGRESS`), and only write code after the ticket file is written.
+
 ## Tailwind CSS Developer Guide for Agents
 
 This project uses **Tailwind CSS v4** alongside the **Tailwind CSS IntelliSense** engine. To prevent `suggestCanonicalClasses` warnings from appearing in the user's IDE, agents must always write **canonical utility classes** instead of arbitrary bracket syntax (`[...]`).
@@ -73,7 +80,7 @@ This project operates on an autonomous AI team workflow where Josiah is the lead
 
 ## Autonomous Supabase Database & MCP Migration Rules
 
-This project uses Supabase (project ref: `spacfnutrnhzxxbkjrji`) with installed skills in `.agent/skills/supabase`, `.agent/skills/supabase-postgres-best-practices`, and `.agent/skills/supabase-realtime-data`.
+This project uses Supabase (project ref: `spacfnutrnhzxxbkjrji`) with installed skills in `docs/skills/supabase`, `docs/skills/supabase-postgres-best-practices`, and `docs/skills/supabase-realtime-data` (symlinked at `.agent/skills/`).
 
 ### 1. Mandatory Read & Zero Manual Ops
 - Before making any database schema, RLS, Realtime, or seed changes, always read `supabase/README.md` and `.agent/skills/supabase/SKILL.md` first.
