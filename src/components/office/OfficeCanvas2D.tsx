@@ -600,9 +600,11 @@ export default function OfficeCanvas2D({
       // =========================================================================
       // LAYER 1: Exterior Lawn, Sidewalk, Highway, Parking Bays & Foundation
       // =========================================================================
-      drawBox(0, -0.7, 0, 86, 0.8, 86, '#14532d', 0, 1, '#166534')
+      drawBox(-8, -0.7, 0, 102, 0.8, 86, '#14532d', 0, 1, '#166534')
       drawBox(0, -0.62, 0, 51.5, 1.15, 51.5, '#334155', 0, 1, '#475569')
+      drawBox(-34, -0.62, 0, 22, 1.15, 51.5, '#334155', 0, 1, '#475569')
       drawBox(0, -0.58, 0, 47.6, 1.2, 47.6, '#0f172a', 0, 1, '#1e293b')
+      drawBox(-34, -0.58, 0, 20, 1.2, 47.6, '#0f172a', 0, 1, '#1e293b')
 
       // South Dual-Lane Asphalt Highway (Z = 29.8)
       drawBox(0, -0.25, 29.8, 80, 0.12, 6.8, '#1e293b', 0, 1, '#334155')
@@ -637,9 +639,12 @@ export default function OfficeCanvas2D({
       drawBox(8, 0.02, 0, 2.4, 0.04, 46, '#e2e8f0')
 
       // West Wing Corridors connecting to Server Room, Wellness Wing & Comfort Rooms
-      drawBox(-26.5, 0.02, -8, 7, 0.04, 2.4, '#cbd5e1')
-      drawBox(-26.5, 0.02, 8, 7, 0.04, 2.4, '#cbd5e1')
-      drawBox(-29, 0.02, 0, 2.4, 0.04, 38, '#e2e8f0')
+      drawBox(-25.5, 0.02, -8, 5.0, 0.04, 2.4, '#cbd5e1')
+      drawBox(-25.5, 0.02, 8, 5.0, 0.04, 2.4, '#cbd5e1')
+      drawBox(-27.5, 0.02, 0, 2.4, 0.04, 44, '#e2e8f0')
+      // Glowing Doorway Thresholds at Main Office <-> West Wing Portals (z = -8, z = 8)
+      drawBox(-23.2, 0.045, -8, 0.5, 0.02, 2.4, '#38bdf8', 0, 0.65, '#7dd3fc')
+      drawBox(-23.2, 0.045, 8, 0.5, 0.02, 2.4, '#38bdf8', 0, 0.65, '#7dd3fc')
 
       for (const room of Object.values(ROOMS_3D)) {
         const [rx, ry, rz] = room.center
@@ -692,15 +697,18 @@ export default function OfficeCanvas2D({
         )
       })
 
+      // Main Building & Wellness Wing North Walls (z = -23.2)
       drawBox(0, 1.4, -23.2, 46.8, 2.8, 0.4, '#1e293b', 0, 1, '#334155')
-      for (const wx of [-16, 0, 16]) {
+      drawBox(-33, 1.4, -23.2, 19.2, 2.8, 0.4, '#1e293b', 0, 1, '#334155')
+      for (const wx of [-35, -16, 0, 16]) {
         drawBox(wx, 1.6, -22.98, 8, 1.6, 0.06, '#38bdf8', 0, 0.55, '#7dd3fc')
       }
       drawBox(0, 2.25, -22.92, 18, 0.85, 0.08, '#0f172a', 0, 1, '#00e5ff')
 
-      drawBox(-23.2, 1.4, 0, 0.4, 2.8, 46.8, '#1e293b', 0, 1, '#334155')
-      for (const wz of [-16, 0, 16]) {
-        drawBox(-22.98, 1.6, wz, 0.06, 1.6, 8, '#38bdf8', 0, 0.55, '#7dd3fc')
+      // Wellness Wing West Exterior Wall (x = -41.2)
+      drawBox(-41.2, 1.4, 0, 0.4, 2.8, 46.8, '#1e293b', 0, 1, '#334155')
+      for (const wz of [-16, -2, 6, 16]) {
+        drawBox(-40.98, 1.6, wz, 0.06, 1.6, 6, '#38bdf8', 0, 0.55, '#7dd3fc')
       }
 
       // =========================================================================
@@ -709,6 +717,19 @@ export default function OfficeCanvas2D({
       const renderQueue: { depth: number; draw: () => void }[] = []
       const enqueue = (x: number, z: number, yBias: number, draw: () => void) => {
         renderQueue.push({ depth: x + z + yBias * 0.05, draw })
+      }
+
+      // Main Building West Wall (Divided into 3 segments with 2.4m doorway openings at z = -8 and z = 8)
+      const westWallSegments: [number, number, number][] = [
+        [-16.3, 14.2, -16], // North segment (-23.4 to -9.2)
+        [0, 13.6, 0],       // Middle segment (-6.8 to +6.8)
+        [16.3, 14.2, 16],   // South segment (+9.2 to +23.4)
+      ]
+      for (const [segZ, segLen, winZ] of westWallSegments) {
+        enqueue(-23.2, segZ, 1.4, () => {
+          drawBox(-23.2, 1.4, segZ, 0.4, 2.8, segLen, '#1e293b', 0, 1, '#334155')
+          drawBox(-22.98, 1.6, winZ, 0.06, 1.6, 8, '#38bdf8', 0, 0.55, '#7dd3fc')
+        })
       }
 
       // 4.0 Parked Vehicles, Moving Highway Cars & Streetlights
@@ -1571,8 +1592,10 @@ export default function OfficeCanvas2D({
       // =========================================================================
       drawBox(-12.5, 0.35, 23.2, 21.8, 0.7, 0.4, '#334155', 0, 1, '#475569')
       drawBox(12.5, 0.35, 23.2, 21.8, 0.7, 0.4, '#334155', 0, 1, '#475569')
+      drawBox(-35, 0.35, 23.2, 12.4, 0.7, 0.4, '#334155', 0, 1, '#475569')
       drawBox(-12.5, 0.85, 23.2, 21.8, 0.3, 0.1, '#38bdf8', 0, 0.4)
       drawBox(12.5, 0.85, 23.2, 21.8, 0.3, 0.1, '#38bdf8', 0, 0.4)
+      drawBox(-35, 0.85, 23.2, 12.4, 0.3, 0.1, '#38bdf8', 0, 0.4)
 
       drawBox(23.2, 0.35, -12.5, 0.4, 0.7, 21.8, '#334155', 0, 1, '#475569')
       drawBox(23.2, 0.35, 12.5, 0.4, 0.7, 21.8, '#334155', 0, 1, '#475569')

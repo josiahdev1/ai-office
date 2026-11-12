@@ -292,6 +292,19 @@ export function BuildingArchitecture() {
           <boxGeometry args={[2.4, 0.02, 44]} />
           <meshStandardMaterial color="#e2e8f0" roughness={0.7} />
         </mesh>
+        {/* Glowing Doorway Thresholds at Main Office <-> West Wing Portals */}
+        {[-8, 8].map((tz) => (
+          <mesh key={`west-threshold-${tz}`} position={[-23.2, 0.045, tz]}>
+            <boxGeometry args={[0.5, 0.02, 2.4]} />
+            <meshStandardMaterial
+              color="#38bdf8"
+              emissive="#0284c7"
+              emissiveIntensity={0.6}
+              transparent
+              opacity={0.7}
+            />
+          </mesh>
+        ))}
       </group>
 
       {/* ===================================================================== */}
@@ -370,17 +383,17 @@ export function BuildingArchitecture() {
           </mesh>
         ))}
 
-        {/* Main Building West Wall (Divided into 3 segments with doorway openings at z = -8 and z = 8) */}
-        <mesh position={[-23.2, 1.4, -15.5]} castShadow receiveShadow>
-          <boxGeometry args={[0.4, 2.8, 15]} />
+        {/* Main Building West Wall (Divided into 3 segments with 2.4m doorway openings at z = -8 and z = 8) */}
+        <mesh position={[-23.2, 1.4, -16.3]} castShadow receiveShadow>
+          <boxGeometry args={[0.4, 2.8, 14.2]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
         <mesh position={[-23.2, 1.4, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.4, 2.8, 12]} />
+          <boxGeometry args={[0.4, 2.8, 13.6]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
-        <mesh position={[-23.2, 1.4, 15.5]} castShadow receiveShadow>
-          <boxGeometry args={[0.4, 2.8, 15]} />
+        <mesh position={[-23.2, 1.4, 16.3]} castShadow receiveShadow>
+          <boxGeometry args={[0.4, 2.8, 14.2]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
 
