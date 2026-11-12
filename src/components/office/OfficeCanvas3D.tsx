@@ -78,6 +78,9 @@ export default function OfficeCanvas3D({
           powerPreference: 'high-performance',
           preserveDrawingBuffer: true,
         }}
+        onCreated={({ gl }) => {
+          gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+        }}
         className="h-full w-full"
       >
         <color attach="background" args={[bgColor]} />

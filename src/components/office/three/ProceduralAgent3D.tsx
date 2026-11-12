@@ -34,6 +34,7 @@ export interface ProceduralAgent3DProps {
   mode: DepartmentMode
   routeOverride?: DepartmentMode
   isSelected: boolean
+  isWalkMode?: boolean
   onSelect: (agent: Agent) => void
   onArrive?: (
     agentId: string,
@@ -106,6 +107,7 @@ function createNameplateTexture(
   }
 
   const texture = new THREE.CanvasTexture(canvas)
+  texture.anisotropy = 8
   texture.needsUpdate = true
   return texture
 }
@@ -117,10 +119,12 @@ export function ProceduralAgent3D({
   mode,
   routeOverride,
   isSelected,
+  isWalkMode = false,
   onSelect,
   onArrive,
 }: ProceduralAgent3DProps) {
   const groupRef = useRef<THREE.Group>(null)
+  const nameplateRef = useRef<THREE.Sprite>(null)
   const leftHandRef = useRef<THREE.Mesh>(null)
   const rightHandRef = useRef<THREE.Mesh>(null)
   const leftLegRef = useRef<THREE.Group>(null)
@@ -249,6 +253,10 @@ export function ProceduralAgent3D({
     const dt = Math.min(0.1, delta)
     const t = state.clock.getElapsedTime()
     const nav = navRef.current
+    if (nameplateRef.current && groupRef.current) {
+      nameplateRef.current.visible =
+        !isWalkMode || state.camera.position.distanceTo(groupRef.current.position) <= 10.5
+    }
 
     // If global mode changed, stagger by agentIndex * 80ms; if individual agent override changed, start immediately (0ms stagger)
     const isGroupModeSwitch = lastGlobalModeRef.current !== mode
@@ -587,11 +595,11 @@ export function ProceduralAgent3D({
       >
         {/* Native WebGL Sprite Nameplate — Zero Pan/Zoom Lag */}
         {nameplateTexture && (
-          <sprite position={[0, 2.05, 0]} scale={[4.2, 0.95, 1]}>
+          <sprite ref={nameplateRef} position={[0, 2.05, 0]} scale={[4.2, 0.95, 1]}>
             <spriteMaterial
               map={nameplateTexture}
               transparent
-              depthTest={false}
+              depthTest={isWalkMode}
               depthWrite={false}
             />
           </sprite>

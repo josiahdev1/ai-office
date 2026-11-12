@@ -66,6 +66,8 @@ export function CameraController({
   // First-person Walk-Inside state (Eye-level y = 1.65m)
   const walkKeysRef = useRef<Record<string, boolean>>({})
   const walkAnglesRef = useRef<{ yaw: number; pitch: number }>({ yaw: 0, pitch: -0.04 })
+  const smoothAnglesRef = useRef<{ yaw: number; pitch: number }>({ yaw: 0, pitch: -0.04 })
+  const walkVelRef = useRef<{ x: number; z: number }>({ x: 0, z: 0 })
   const isDraggingRef = useRef(false)
   const lastPointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
@@ -100,9 +102,9 @@ export function CameraController({
       const tag = (e.target as HTMLElement | null)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
       walkKeysRef.current[e.code] = true
-      if (e.code === 'KeyE' && !e.repeat) {
+      if ((e.code === 'KeyE' || e.key.toLowerCase() === 'e') && !e.repeat) {
         const cam = cameraRef.current
-        const door = findNearestDoor(cam.position.x, cam.position.z, 3.2)
+        const door = findNearestDoor(cam.position.x, cam.position.z, 3.5)
         if (door) {
           onToggleDoorRef.current?.(door.id)
         }
@@ -152,7 +154,12 @@ export function CameraController({
     if (cameraViewMode === 'walk') {
       const cam = state.camera as THREE.PerspectiveCamera
       const keys = walkKeysRef.current
-      const { yaw, pitch } = walkAnglesRef.current
+      const dt = Math.min(delta, 0.05)
+      const lookLerp = 1 - Math.exp(-18 * dt)
+      smoothAnglesRef.current.yaw += (walkAnglesRef.current.yaw - smoothAnglesRef.current.yaw) * lookLerp
+      smoothAnglesRef.current.pitch += (walkAnglesRef.current.pitch - smoothAnglesRef.current.pitch) * lookLerp
+
+      const { yaw, pitch } = smoothAnglesRef.current
 
       const forwardX = -Math.sin(yaw)
       const forwardZ = -Math.cos(yaw)
@@ -179,17 +186,23 @@ export function CameraController({
       }
 
       const len = Math.hypot(moveX, moveZ)
-      if (len > 0.001) {
-        const speed = 5.5 * Math.min(delta, 0.05)
-        const rawX = Math.max(-45.5, Math.min(22.5, cam.position.x + (moveX / len) * speed))
-        const rawZ = Math.max(-22.5, Math.min(22.5, cam.position.z + (moveZ / len) * speed))
+      const maxSpeed = 6.2
+      const targetVx = len > 0.001 ? (moveX / len) * maxSpeed : 0
+      const targetVz = len > 0.001 ? (moveZ / len) * maxSpeed : 0
+      const accelLerp = 1 - Math.exp(-(len > 0.001 ? 14 : 16) * dt)
+      walkVelRef.current.x += (targetVx - walkVelRef.current.x) * accelLerp
+      walkVelRef.current.z += (targetVz - walkVelRef.current.z) * accelLerp
+
+      if (Math.hypot(walkVelRef.current.x, walkVelRef.current.z) > 0.01) {
+        const rawX = Math.max(-45.5, Math.min(22.5, cam.position.x + walkVelRef.current.x * dt))
+        const rawZ = Math.max(-22.5, Math.min(22.5, cam.position.z + walkVelRef.current.z * dt))
         const resolved = resolveWalkCollision(rawX, rawZ, 0.42, openDoorsRef.current)
         cam.position.set(resolved.x, 1.65, resolved.z)
       } else {
         cam.position.y = 1.65
       }
 
-      const nearby = findNearestDoor(cam.position.x, cam.position.z, 3.2)
+      const nearby = findNearestDoor(cam.position.x, cam.position.z, 3.5)
       const nearbyId = nearby?.id ?? null
       if (nearbyId !== lastNearbyDoorIdRef.current) {
         lastNearbyDoorIdRef.current = nearbyId

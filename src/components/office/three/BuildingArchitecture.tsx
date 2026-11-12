@@ -663,52 +663,135 @@ export function BuildingArchitecture({
       </group>
 
       {/* ===================================================================== */}
-      {/* 5. EXTERIOR CUTAWAY FRONT HALF-WALLS (South & East with Door Gaps)    */}
+      {/* 5. EXTERIOR FRONT WALLS (Cutaway in Iso 3D; Full-Height + Windows in Walk-3D) */}
       {/* ===================================================================== */}
-      <group name="CutawayFrontWalls">
-        <mesh position={[-12.5, 0.35, 23.2]} castShadow receiveShadow>
-          <boxGeometry args={[21.8, 0.7, 0.4]} />
-          <meshStandardMaterial color="#334155" roughness={0.8} />
-        </mesh>
-        <mesh position={[12.5, 0.35, 23.2]} castShadow receiveShadow>
-          <boxGeometry args={[21.8, 0.7, 0.4]} />
-          <meshStandardMaterial color="#334155" roughness={0.8} />
-        </mesh>
-        {/* Wellness Wing South Cutaway Front Wall */}
-        <mesh position={[-35, 0.35, 23.2]} castShadow receiveShadow>
-          <boxGeometry args={[12.4, 0.7, 0.4]} />
-          <meshStandardMaterial color="#334155" roughness={0.8} />
-        </mesh>
-        <mesh position={[-12.5, 0.85, 23.2]}>
-          <boxGeometry args={[21.8, 0.3, 0.1]} />
-          <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
-        </mesh>
-        <mesh position={[12.5, 0.85, 23.2]}>
-          <boxGeometry args={[21.8, 0.3, 0.1]} />
-          <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
-        </mesh>
-        <mesh position={[-35, 0.85, 23.2]}>
-          <boxGeometry args={[12.4, 0.3, 0.1]} />
-          <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
-        </mesh>
+      {isWalkMode ? (
+        <group name="WalkModeExteriorEnclosure">
+          {/* South Exterior Wall (z = 23.2) with South Entrance Doorway Gap (x in [-1.3, 1.3]) */}
+          {[-12.5, 12.5].map((sx, idx) => (
+            <group key={`south-ext-${idx}`} position={[sx, 0, 23.2]}>
+              {/* Lower Knee Wall (0..0.9m) */}
+              <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+                <boxGeometry args={[21.8, 0.9, 0.4]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              {/* Upper Header Beam (2.6..3.0m) */}
+              <mesh position={[0, 2.8, 0]} castShadow>
+                <boxGeometry args={[21.8, 0.4, 0.4]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              {/* Clear Panoramic Glass Window (0.9..2.6m) */}
+              <mesh position={[0, 1.75, 0]}>
+                <boxGeometry args={[21.6, 1.7, 0.08]} />
+                <meshStandardMaterial
+                  color="#bae6fd"
+                  transparent
+                  opacity={0.22}
+                  roughness={0.08}
+                  metalness={0.1}
+                />
+              </mesh>
+              {/* Architectural Vertical Window Mullions */}
+              {[-8, -4, 0, 4, 8].map((mx) => (
+                <mesh key={`s-mul-${idx}-${mx}`} position={[mx, 1.75, 0]}>
+                  <boxGeometry args={[0.14, 1.7, 0.2]} />
+                  <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.4} />
+                </mesh>
+              ))}
+            </group>
+          ))}
+          {/* Wellness Wing South Exterior Wall (x = -35, z = 23.2) */}
+          <group position={[-35, 0, 23.2]}>
+            <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+              <boxGeometry args={[12.4, 0.9, 0.4]} />
+              <meshStandardMaterial color="#1e293b" roughness={0.8} />
+            </mesh>
+            <mesh position={[0, 2.8, 0]} castShadow>
+              <boxGeometry args={[12.4, 0.4, 0.4]} />
+              <meshStandardMaterial color="#1e293b" roughness={0.8} />
+            </mesh>
+            <mesh position={[0, 1.75, 0]}>
+              <boxGeometry args={[12.2, 1.7, 0.08]} />
+              <meshStandardMaterial color="#bae6fd" transparent opacity={0.22} roughness={0.08} />
+            </mesh>
+            {[-4, 0, 4].map((mx) => (
+              <mesh key={`ws-mul-${mx}`} position={[mx, 1.75, 0]}>
+                <boxGeometry args={[0.14, 1.7, 0.2]} />
+                <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.4} />
+              </mesh>
+            ))}
+          </group>
 
-        <mesh position={[23.2, 0.35, -12.5]} castShadow receiveShadow>
-          <boxGeometry args={[0.4, 0.7, 21.8]} />
-          <meshStandardMaterial color="#334155" roughness={0.8} />
-        </mesh>
-        <mesh position={[23.2, 0.35, 12.5]} castShadow receiveShadow>
-          <boxGeometry args={[0.4, 0.7, 21.8]} />
-          <meshStandardMaterial color="#334155" roughness={0.8} />
-        </mesh>
-        <mesh position={[23.2, 0.85, -12.5]}>
-          <boxGeometry args={[0.1, 0.3, 21.8]} />
-          <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
-        </mesh>
-        <mesh position={[23.2, 0.85, 12.5]}>
-          <boxGeometry args={[0.1, 0.3, 21.8]} />
-          <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
-        </mesh>
-      </group>
+          {/* East Exterior Wall (x = 23.2) with East Parking Doorway Gap (z in [-1.3, 1.3]) */}
+          {[-12.5, 12.5].map((ez, idx) => (
+            <group key={`east-ext-${idx}`} position={[23.2, 0, ez]}>
+              <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+                <boxGeometry args={[0.4, 0.9, 21.8]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              <mesh position={[0, 2.8, 0]} castShadow>
+                <boxGeometry args={[0.4, 0.4, 21.8]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.8} />
+              </mesh>
+              <mesh position={[0, 1.75, 0]}>
+                <boxGeometry args={[0.08, 1.7, 21.6]} />
+                <meshStandardMaterial color="#bae6fd" transparent opacity={0.22} roughness={0.08} />
+              </mesh>
+              {[-8, -4, 0, 4, 8].map((mz) => (
+                <mesh key={`e-mul-${idx}-${mz}`} position={[0, 1.75, mz]}>
+                  <boxGeometry args={[0.2, 1.7, 0.14]} />
+                  <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.4} />
+                </mesh>
+              ))}
+            </group>
+          ))}
+        </group>
+      ) : (
+        <group name="CutawayFrontWalls">
+          <mesh position={[-12.5, 0.35, 23.2]} castShadow receiveShadow>
+            <boxGeometry args={[21.8, 0.7, 0.4]} />
+            <meshStandardMaterial color="#334155" roughness={0.8} />
+          </mesh>
+          <mesh position={[12.5, 0.35, 23.2]} castShadow receiveShadow>
+            <boxGeometry args={[21.8, 0.7, 0.4]} />
+            <meshStandardMaterial color="#334155" roughness={0.8} />
+          </mesh>
+          {/* Wellness Wing South Cutaway Front Wall */}
+          <mesh position={[-35, 0.35, 23.2]} castShadow receiveShadow>
+            <boxGeometry args={[12.4, 0.7, 0.4]} />
+            <meshStandardMaterial color="#334155" roughness={0.8} />
+          </mesh>
+          <mesh position={[-12.5, 0.85, 23.2]}>
+            <boxGeometry args={[21.8, 0.3, 0.1]} />
+            <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+          </mesh>
+          <mesh position={[12.5, 0.85, 23.2]}>
+            <boxGeometry args={[21.8, 0.3, 0.1]} />
+            <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+          </mesh>
+          <mesh position={[-35, 0.85, 23.2]}>
+            <boxGeometry args={[12.4, 0.3, 0.1]} />
+            <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+          </mesh>
+
+          <mesh position={[23.2, 0.35, -12.5]} castShadow receiveShadow>
+            <boxGeometry args={[0.4, 0.7, 21.8]} />
+            <meshStandardMaterial color="#334155" roughness={0.8} />
+          </mesh>
+          <mesh position={[23.2, 0.35, 12.5]} castShadow receiveShadow>
+            <boxGeometry args={[0.4, 0.7, 21.8]} />
+            <meshStandardMaterial color="#334155" roughness={0.8} />
+          </mesh>
+          <mesh position={[23.2, 0.85, -12.5]}>
+            <boxGeometry args={[0.1, 0.3, 21.8]} />
+            <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+          </mesh>
+          <mesh position={[23.2, 0.85, 12.5]}>
+            <boxGeometry args={[0.1, 0.3, 21.8]} />
+            <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+          </mesh>
+        </group>
+      )}
 
       {/* Floating Neon Room Signs above Wellness Wing Doors */}
       <group name="WellnessFloatingSigns">

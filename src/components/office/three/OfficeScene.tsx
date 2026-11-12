@@ -179,6 +179,7 @@ export function OfficeScene({
             mode={mode}
             routeOverride={agentRouteOverrides[agent.id]}
             isSelected={selectedAgentId === agent.id}
+            isWalkMode={isWalkMode}
             onSelect={onSelectAgent}
             onArrive={onArriveAgent}
           />

@@ -30,16 +30,24 @@ function boxToAABB(cx: number, cz: number, width: number, depth: number): AABB {
 }
 
 export const DOOR_DEFINITIONS: DoorDefinition[] = [
+  // Exterior Building Entrances (South & East)
+  { id: 'ext-south', label: 'South Main Entrance', x: 0, z: 23.2, axis: 'x', width: 2.6, thickness: 0.18, hingeSide: -1, openDirection: -1 },
+  { id: 'ext-east', label: 'East Parking Entrance', x: 23.2, z: 0, axis: 'z', width: 2.6, thickness: 0.18, hingeSide: -1, openDirection: -1 },
+  // Main Building Interior Department Doors
+  { id: 'door-eng', label: 'Engineering Door', x: -16, z: -8, axis: 'x', width: 2.6, thickness: 0.16, hingeSide: -1, openDirection: -1 },
+  { id: 'door-pantry', label: 'Pantry Door', x: -16, z: 8, axis: 'x', width: 2.6, thickness: 0.16, hingeSide: -1, openDirection: 1 },
+  { id: 'door-growth', label: 'Growth Lab Door', x: 16, z: -8, axis: 'x', width: 2.6, thickness: 0.16, hingeSide: -1, openDirection: -1 },
+  { id: 'door-intel', label: 'Intelligence Lab Door', x: 16, z: 8, axis: 'x', width: 2.6, thickness: 0.16, hingeSide: -1, openDirection: 1 },
   // Main Building <-> West Wing Connectors
   { id: 'portal-nw', label: 'West Wing North Door', x: -23.2, z: -8, axis: 'z', width: 2.4, thickness: 0.16, hingeSide: -1, openDirection: -1 },
   { id: 'portal-sw', label: 'West Wing South Door', x: -23.2, z: 8, axis: 'z', width: 2.4, thickness: 0.16, hingeSide: 1, openDirection: -1 },
   // West Wing Room Doors (x = -28.9)
-  { id: 'door-nap', label: 'Nap Room Door', x: -28.9, z: -16, axis: 'z', width: 2.0, thickness: 0.14, hingeSide: -1, openDirection: -1 },
-  { id: 'door-mens-cr', label: "Men's CR Door", x: -28.9, z: -8, axis: 'z', width: 2.0, thickness: 0.14, hingeSide: -1, openDirection: -1 },
-  { id: 'door-womens-cr', label: "Women's CR Door", x: -28.9, z: -2, axis: 'z', width: 2.0, thickness: 0.14, hingeSide: -1, openDirection: -1 },
-  { id: 'door-server', label: 'Server Room Door', x: -28.9, z: 3.5, axis: 'z', width: 2.2, thickness: 0.16, hingeSide: -1, openDirection: -1 },
-  { id: 'door-facilities', label: 'Facilities Door', x: -28.9, z: 9, axis: 'z', width: 2.0, thickness: 0.14, hingeSide: -1, openDirection: -1 },
-  { id: 'door-cafeteria', label: 'Cafeteria Door', x: -28.9, z: 16, axis: 'z', width: 2.0, thickness: 0.14, hingeSide: -1, openDirection: -1 },
+  { id: 'door-nap', label: 'Nap Room Door', x: -28.9, z: -16, axis: 'z', width: 2.2, thickness: 0.14, hingeSide: -1, openDirection: -1 },
+  { id: 'door-mens-cr', label: "Men's CR Door", x: -28.9, z: -8, axis: 'z', width: 2.2, thickness: 0.14, hingeSide: -1, openDirection: -1 },
+  { id: 'door-womens-cr', label: "Women's CR Door", x: -28.9, z: -2, axis: 'z', width: 2.2, thickness: 0.14, hingeSide: -1, openDirection: -1 },
+  { id: 'door-server', label: 'Server Room Door', x: -28.9, z: 3.5, axis: 'z', width: 2.4, thickness: 0.16, hingeSide: -1, openDirection: -1 },
+  { id: 'door-facilities', label: 'Facilities Door', x: -28.9, z: 9, axis: 'z', width: 2.2, thickness: 0.14, hingeSide: -1, openDirection: -1 },
+  { id: 'door-cafeteria', label: 'Cafeteria Door', x: -28.9, z: 16, axis: 'z', width: 2.2, thickness: 0.14, hingeSide: -1, openDirection: -1 },
 ]
 
 export const STATIC_WALL_COLLIDERS: AABB[] = [
