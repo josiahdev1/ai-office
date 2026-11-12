@@ -623,6 +623,7 @@ export type DepartmentMode =
   | 'WELLNESS'
   | 'CAFETERIA'
   | 'NAP_ROOM'
+  | 'COMFORT_ROOM'
 
 export interface CameraPreset {
   target: [number, number, number]
@@ -661,6 +662,10 @@ export const CAMERA_PRESETS: Record<DepartmentMode, CameraPreset> = {
   NAP_ROOM: {
     target: [-35, 0, -16],
     zoom: 30,
+  },
+  COMFORT_ROOM: {
+    target: [-35, 0, -2],
+    zoom: 32,
   },
 }
 
@@ -788,6 +793,8 @@ export function getAgentTargetPosition(
       return ws.gymPos
     case 'NAP_ROOM':
       return [-35, 0, -16]
+    case 'COMFORT_ROOM':
+      return [-35, 0, -2]
     case 'WELLNESS':
       return [-34, 0, 0]
     case 'FOCUS_WORK':

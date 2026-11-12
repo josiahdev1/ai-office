@@ -27,6 +27,12 @@ import { formatIloiloClock } from '@/lib/office/clock'
 import type { JarvisCoreState } from '@/components/jarvis/ArcReactor'
 import { AVAILABLE_MODELS } from '@/lib/jarvis/orchestrator'
 import { AddDepartmentModal } from '@/components/office/AddDepartmentModal'
+import { AgentLogDrawer } from '@/components/office/AgentLogDrawer'
+import {
+  needsManager,
+  getTirednessVisualState,
+  evaluateNextAction,
+} from '@/lib/office/needsEngine'
 
 const STORAGE_MODE_KEY = 'easyup_hq_mode_v3'
 const STORAGE_OVERRIDES_KEY = 'easyup_hq_overrides_v3'
@@ -221,6 +227,7 @@ function HQCommandPage() {
   const [rosterSearch, setRosterSearch] = useState<string>('')
   const [rosterDeptFilter, setRosterDeptFilter] = useState<string>('ALL')
   const [isAddDeptModalOpen, setIsAddDeptModalOpen] = useState<boolean>(false)
+  const [isAgentLogDrawerOpen, setIsAgentLogDrawerOpen] = useState<boolean>(false)
 
   // JARVIS Orchestrator State & Cinematic Transition Phase
   const [jarvisPhase, setJarvisPhase] = useState<JarvisTransitionPhase>('closed')
@@ -974,6 +981,8 @@ function HQCommandPage() {
     let arriving = 0
     let resting = 0
     let sleeping = 0
+    let inCr = 0
+    let cleaning = 0
     let waitingOnYou = approvals.length
     let accessories = 0
 
@@ -998,26 +1007,24 @@ function HQCommandPage() {
       const effMode = agentRouteOverrides[ag.id] || currentMode
       const taskLower = (ag.current_task || '').toLowerCase()
       const isWorking = isAgentActivelyWorking(ag)
+      const isCleaner = ag.id.startsWith('cleaner_')
 
-      if (isWorking) {
+      if (isCleaner && (effMode === 'WELLNESS' || effMode === 'OVERVIEW' || isWorking)) {
+        cleaning++
+      } else if (isWorking) {
         working++
+      } else if (effMode === 'CAFETERIA' || ag.status === 'eating' || taskLower.includes('eat') || taskLower.includes('lunch')) {
+        eating++
+      } else if (effMode === 'COMFORT_ROOM' || ag.status === 'in_cr') {
+        inCr++
+      } else if (effMode === 'NAP_ROOM' || ag.status === 'sleeping') {
+        sleeping++
       } else if (effMode === 'GYM' || ag.status === 'at_gym' || ag.status === 'gym') {
         inGym++
       } else if (effMode === 'ALL_HANDS' || ag.status === 'in_meeting') {
         inMeeting++
       } else if (effMode === 'PANTRY' || ag.status === 'on_break') {
-        if (
-          taskLower.includes('eat') ||
-          taskLower.includes('canteen') ||
-          taskLower.includes('meal') ||
-          taskLower.includes('lunch')
-        ) {
-          eating++
-        } else {
-          onBreak++
-        }
-      } else if (ag.status === 'sleeping') {
-        sleeping++
+        onBreak++
       } else if (ag.status === 'resting') {
         resting++
       } else {
@@ -1036,6 +1043,8 @@ function HQCommandPage() {
       inGym,
       inMeeting,
       onBreak,
+      inCr,
+      cleaning,
       arriving,
       resting,
       sleeping,
@@ -1095,6 +1104,14 @@ function HQCommandPage() {
             className="cursor-pointer rounded-lg px-2 py-1 font-mono text-[10px] font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all whitespace-nowrap"
           >
             + DEPT
+          </button>
+          <button
+            type="button"
+            data-testid="open-agent-log-button"
+            onClick={() => setIsAgentLogDrawerOpen(true)}
+            className="cursor-pointer rounded-lg px-2 py-1 font-mono text-[10px] font-bold text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all whitespace-nowrap"
+          >
+            AGENT LOG
           </button>
         </div>
 
@@ -1626,7 +1643,7 @@ function HQCommandPage() {
 
               <button
                 type="button"
-                onClick={() => handleGlobalModeChange('PANTRY')}
+                onClick={() => handleGlobalModeChange('CAFETERIA')}
                 className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
               >
                 <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
@@ -1638,6 +1655,40 @@ function HQCommandPage() {
                 </span>
                 <span className="font-black" style={{ color: '#f97316' }}>
                   {campusCounters.eating}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleGlobalModeChange('NAP_ROOM')}
+                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
+              >
+                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: '#a855f7', boxShadow: '0 0 8px #a855f7' }}
+                  />
+                  RESTING & SLEEPING
+                </span>
+                <span className="font-black" style={{ color: '#a855f7' }}>
+                  {campusCounters.resting + campusCounters.sleeping}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleGlobalModeChange('COMFORT_ROOM')}
+                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
+              >
+                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: '#f43f5e', boxShadow: '0 0 8px #f43f5e' }}
+                  />
+                  IN CR
+                </span>
+                <span className="font-black" style={{ color: '#f43f5e' }}>
+                  {campusCounters.inCr}
                 </span>
               </button>
 
@@ -1691,6 +1742,19 @@ function HQCommandPage() {
                   {campusCounters.onBreak}
                 </span>
               </button>
+
+              <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
+                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: '#10b981', boxShadow: '0 0 8px #10b981' }}
+                  />
+                  CLEANING
+                </span>
+                <span className="font-black" style={{ color: '#10b981' }}>
+                  {campusCounters.cleaning}
+                </span>
+              </div>
 
               <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
                 <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
@@ -2024,6 +2088,146 @@ function HQCommandPage() {
                   </div>
                 </div>
 
+                {/* Human-Like Agent Needs & Next Plan (Simulated Layer) */}
+                {(() => {
+                  const needs = needsManager.getCurrentNeeds(selectedAgent.id)
+                  const plan = needsManager.getPlan(selectedAgent.id)
+                  const tiredness = getTirednessVisualState(needs)
+                  const nextAction = evaluateNextAction(selectedAgent.id, needs, plan)
+
+                  const getBarColor = (val: number, isUrgency = false) => {
+                    if (isUrgency) {
+                      return val < 25 ? 'bg-rose-500' : val < 50 ? 'bg-amber-500' : 'bg-cyan-500'
+                    }
+                    return val < 25 ? 'bg-rose-500' : val < 45 ? 'bg-amber-500' : 'bg-emerald-400'
+                  }
+
+                  return (
+                    <div className="rounded-lg bg-slate-950/70 p-2.5 border border-slate-800/80 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-[9px] font-bold text-slate-300 tracking-wider uppercase">
+                            AGENT VITALS & PLAN
+                          </span>
+                          <span className="rounded bg-cyan-950/80 border border-cyan-500/40 px-1 py-0.5 font-mono text-[8px] font-bold text-cyan-300">
+                            SIMULATED
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsAgentLogDrawerOpen(true)}
+                          className="cursor-pointer font-mono text-[9px] text-cyan-400 hover:underline hover:text-cyan-300"
+                        >
+                          View Full Log →
+                        </button>
+                      </div>
+
+                      {/* Next Plan Banner */}
+                      <div className="rounded-md border border-cyan-500/30 bg-cyan-950/20 p-1.5">
+                        <div className="flex items-center justify-between text-[9px] font-mono">
+                          <span className="font-bold text-cyan-400 uppercase">
+                            NEXT: {plan?.kind?.toUpperCase() || nextAction.nextKind.toUpperCase()}
+                          </span>
+                          <span className="text-slate-400">
+                            {tiredness.description}
+                          </span>
+                        </div>
+                        <p className="font-sans text-[10px] text-slate-300 pt-0.5 truncate">
+                          {plan?.reason || nextAction.reason}
+                        </p>
+                      </div>
+
+                      {/* Vitals Progress Grid */}
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 font-mono text-[9px]">
+                        <div>
+                          <div className="flex justify-between text-slate-400 pb-0.5">
+                            <span>ENERGY</span>
+                            <span className="font-bold text-slate-200">{Math.round(needs.energy)}%</span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${getBarColor(needs.energy)}`}
+                              style={{ width: `${needs.energy}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between text-slate-400 pb-0.5">
+                            <span>HUNGER</span>
+                            <span className="font-bold text-slate-200">{Math.round(needs.hunger)}%</span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${getBarColor(needs.hunger)}`}
+                              style={{ width: `${needs.hunger}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between text-slate-400 pb-0.5">
+                            <span>THIRST</span>
+                            <span className="font-bold text-slate-200">{Math.round(needs.thirst)}%</span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${getBarColor(needs.thirst)}`}
+                              style={{ width: `${needs.thirst}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between text-slate-400 pb-0.5">
+                            <span>BLADDER</span>
+                            <span className="font-bold text-slate-200">{Math.round(needs.bladder)}%</span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${getBarColor(needs.bladder, true)}`}
+                              style={{ width: `${needs.bladder}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between text-slate-400 pb-0.5">
+                            <span>HEALTH</span>
+                            <span className="font-bold text-slate-200">{Math.round(needs.health)}%</span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-emerald-400 transition-all duration-300"
+                              style={{ width: `${needs.health}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between text-slate-400 pb-0.5">
+                            <span>MORALE</span>
+                            <span className="font-bold text-slate-200">{Math.round(needs.morale)}%</span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-purple-400 transition-all duration-300"
+                              style={{ width: `${needs.morale}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Hidden stats: Caffeine & Sleep Debt */}
+                      <div className="flex items-center justify-between font-mono text-[8px] text-slate-500 pt-0.5 border-t border-slate-900">
+                        <span>Caffeine: {needs.caffeine}%</span>
+                        <span>Sleep Debt: {needs.sleepDebt}%</span>
+                        <span>Speed: {tiredness.walkSpeedMultiplier}x</span>
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 {/* Live Task & File */}
                 <div className="rounded-lg bg-slate-950/40 p-2 border border-slate-800/40 space-y-1">
                   <div className="flex items-center justify-between font-mono text-[10px] text-slate-400">
@@ -2138,6 +2342,14 @@ function HQCommandPage() {
           const logLine = `${formatPHTTime()} [DEPT WIZARD] Department "${dept.name}" (${dept.id}) registered.`
           setLogs((prev) => [logLine, ...prev].slice(0, 50))
         }}
+      />
+
+      {/* Agent Activity Log & 24-hr Timeline Drawer */}
+      <AgentLogDrawer
+        isOpen={isAgentLogDrawerOpen}
+        onClose={() => setIsAgentLogDrawerOpen(false)}
+        initialAgentId={selectedAgent?.id}
+        agentList={agents.map((a) => ({ id: a.id, name: a.name }))}
       />
     </main>
   )

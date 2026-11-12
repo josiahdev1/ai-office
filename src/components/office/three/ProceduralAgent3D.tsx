@@ -55,17 +55,19 @@ function getFacingAngle(facing: 'SE' | 'SW' | 'NE' | 'NW'): number {
 function createNameplateTexture(
   name: string,
   dotHex: string,
-  isSelected: boolean
+  isSelected: boolean,
+  statusIcon?: string
 ): THREE.CanvasTexture {
   const canvas = document.createElement('canvas')
-  canvas.width = 320
+  canvas.width = 340
   canvas.height = 72
   const ctx = canvas.getContext('2d')
   if (ctx) {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.font = 'bold 26px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
-    const textMetrics = ctx.measureText(name)
-    const pillW = Math.min(308, Math.max(120, textMetrics.width + 66))
+    ctx.font = 'bold 24px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+    const displayText = statusIcon ? `${statusIcon} ${name}` : name
+    const textMetrics = ctx.measureText(displayText)
+    const pillW = Math.min(328, Math.max(124, textMetrics.width + 66))
     const pillH = 50
     const pillX = (canvas.width - pillW) * 0.5
     const pillY = (canvas.height - pillH) * 0.5
@@ -80,18 +82,18 @@ function createNameplateTexture(
     ctx.stroke()
 
     // Status Dot
-    const dotX = pillX + 24
+    const dotX = pillX + 22
     const dotY = canvas.height * 0.5
     ctx.beginPath()
-    ctx.arc(dotX, dotY, 8, 0, Math.PI * 2)
+    ctx.arc(dotX, dotY, 7, 0, Math.PI * 2)
     ctx.fillStyle = isSelected ? '#0f172a' : dotHex
     ctx.fill()
 
-    // Name Text (Name ONLY)
+    // Name Text (Name ONLY + small status icon)
     ctx.fillStyle = isSelected ? '#020617' : '#f8fafc'
     ctx.textBaseline = 'middle'
     ctx.textAlign = 'left'
-    ctx.fillText(name, pillX + 42, dotY + 1)
+    ctx.fillText(displayText, pillX + 38, dotY + 1)
   }
 
   const texture = new THREE.CanvasTexture(canvas)
@@ -127,11 +129,22 @@ export function ProceduralAgent3D({
     [agent.status, effectiveMode]
   )
 
+  const statusIcon = useMemo(() => {
+    if (effectiveMode === 'NAP_ROOM') return '💤'
+    if (effectiveMode === 'CAFETERIA') return '🍽️'
+    if (effectiveMode === 'PANTRY') return '☕'
+    if (effectiveMode === 'GYM') return '🏋️'
+    if (effectiveMode === 'COMFORT_ROOM') return '🚻'
+    if (agent.status === 'working' || (agent.current_task && agent.current_task.trim())) return '💻'
+    if (agent.id.startsWith('cleaner_')) return '🧹'
+    return '🟢'
+  }, [effectiveMode, agent.status, agent.current_task, agent.id])
+
   // Native WebGL Sprite Nameplate Texture (Zero Lag on Pan/Zoom)
   const nameplateTexture = useMemo(() => {
     if (typeof document === 'undefined') return null
-    return createNameplateTexture(agent.name, badge.dotHex, isSelected)
-  }, [agent.name, badge.dotHex, isSelected])
+    return createNameplateTexture(agent.name, badge.dotHex, isSelected, statusIcon)
+  }, [agent.name, badge.dotHex, isSelected, statusIcon])
 
   // Target world position based on effective mode
   const targetPos = useMemo<[number, number, number]>(
@@ -246,17 +259,29 @@ export function ProceduralAgent3D({
       staggerIdx
     )
 
-    if (groupRef.current) {
-      groupRef.current.position.set(
-        nav.currentPos[0],
-        nav.currentPos[1],
-        nav.currentPos[2]
-      )
-      groupRef.current.rotation.y = nav.rotationY
-    }
-
     const isWalking = nav.subState === 'walking'
     const isSeated = nav.subState === 'seated'
+    const isSleeping = !isWalking && effectiveMode === 'NAP_ROOM'
+
+    if (groupRef.current) {
+      if (isSleeping) {
+        groupRef.current.position.set(
+          nav.currentPos[0],
+          0.42,
+          nav.currentPos[2]
+        )
+        groupRef.current.rotation.x = -Math.PI / 2
+        groupRef.current.rotation.y = nav.rotationY
+      } else {
+        groupRef.current.position.set(
+          nav.currentPos[0],
+          nav.currentPos[1],
+          nav.currentPos[2]
+        )
+        groupRef.current.rotation.x = 0
+        groupRef.current.rotation.y = nav.rotationY
+      }
+    }
 
     // Leg & Arm Walk Cycle vs Seated Pose
     if (leftLegRef.current && rightLegRef.current) {
@@ -629,6 +654,70 @@ export function ProceduralAgent3D({
             <ringGeometry args={[0.9, 1.1, 32]} />
             <meshBasicMaterial color="#00e5ff" side={THREE.DoubleSide} />
           </mesh>
+        )}
+
+        {/* Floating Z Particles during Nap/Sleep */}
+        {effectiveMode === 'NAP_ROOM' && (
+          <group position={[0, 1.3, 0]}>
+            <mesh position={[0.15, 0.4, 0]}>
+              <boxGeometry args={[0.08, 0.08, 0.02]} />
+              <meshBasicMaterial color="#c084fc" />
+            </mesh>
+            <mesh position={[0.28, 0.65, 0]}>
+              <boxGeometry args={[0.12, 0.12, 0.02]} />
+              <meshBasicMaterial color="#a855f7" />
+            </mesh>
+          </group>
+        )}
+
+        {/* Cafeteria Meal Tray Prop */}
+        {effectiveMode === 'CAFETERIA' && (
+          <group position={[0, 0.46, 0.38]}>
+            <mesh castShadow>
+              <boxGeometry args={[0.34, 0.02, 0.24]} />
+              <meshStandardMaterial color="#334155" />
+            </mesh>
+            <mesh position={[-0.07, 0.02, 0]}>
+              <cylinderGeometry args={[0.05, 0.05, 0.02, 8]} />
+              <meshStandardMaterial color="#f8fafc" />
+            </mesh>
+            <mesh position={[0.07, 0.02, 0]}>
+              <boxGeometry args={[0.08, 0.03, 0.06]} />
+              <meshStandardMaterial color="#eab308" />
+            </mesh>
+            <mesh position={[0.1, 0.03, -0.05]}>
+              <cylinderGeometry args={[0.022, 0.02, 0.05, 8]} />
+              <meshStandardMaterial color="#06b6d4" />
+            </mesh>
+          </group>
+        )}
+
+        {/* Coffee / Drink Cup in Hand */}
+        {(effectiveMode === 'PANTRY' || agent.status === 'on_break') && (
+          <group position={[0.24, 0.38, 0.32]}>
+            <mesh castShadow>
+              <cylinderGeometry args={[0.03, 0.024, 0.07, 8]} />
+              <meshStandardMaterial color="#f8fafc" />
+            </mesh>
+            <mesh position={[0, 0.025, 0]}>
+              <cylinderGeometry args={[0.028, 0.028, 0.01, 8]} />
+              <meshStandardMaterial color="#78350f" />
+            </mesh>
+          </group>
+        )}
+
+        {/* Cleaner Yellow Sanitation Prop */}
+        {agent.id.startsWith('cleaner_') && (
+          <group position={[0.36, 0.22, 0]}>
+            <mesh castShadow>
+              <boxGeometry args={[0.22, 0.32, 0.2]} />
+              <meshStandardMaterial color="#eab308" roughness={0.4} />
+            </mesh>
+            <mesh position={[0, 0.28, -0.06]} rotation={[0.25, 0, 0]}>
+              <cylinderGeometry args={[0.012, 0.012, 0.6, 6]} />
+              <meshStandardMaterial color="#cbd5e1" metalness={0.8} />
+            </mesh>
+          </group>
         )}
       </group>
     </group>

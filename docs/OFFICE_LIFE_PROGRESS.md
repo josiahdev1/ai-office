@@ -37,18 +37,26 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K3: Needs Engine (Human-Like) + Plan + Activity Log
-- [ ] Idempotent `office_agent_needs` (energy, hunger, thirst, bladder, health, morale, caffeine, sleep_debt)
-- [ ] Circadian rhythm & human-like dynamics in `office_needs_config`
-- [ ] Visible tiredness behaviors & break requests in `office_break_requests`
-- [ ] Agent Plan in `office_agent_plan`
-- [ ] Activity Log in `office_agent_activity_log` with Agent Log drawer & timeline
+- [x] Phase K3 Completed:
+  - Added idempotent tables in migration 0011: office_agent_needs, office_needs_config, office_break_requests, office_agent_plan, and office_agent_activity_log.
+  - Implemented human-like Needs Engine with deterministic lazy evaluation, circadian rhythm curve, caffeine/sleep debt, traits, and break request dispatch.
+  - Built 24-hr PHT Day Timeline & Agent Log Drawer with real-time stream and RFC-4180 CSV export; verified with 9/9 passing tests.
+- [x] Idempotent `office_agent_needs` (energy, hunger, thirst, bladder, health, morale, caffeine, sleep_debt)
+- [x] Circadian rhythm & human-like dynamics in `office_needs_config`
+- [x] Visible tiredness behaviors & break requests in `office_break_requests`
+- [x] Agent Plan in `office_agent_plan`
+- [x] Activity Log in `office_agent_activity_log` with Agent Log drawer & timeline
 
 ---
 
 ### Phase K4: Real Activities in the 3D Office
-- [ ] 3D activity pathfinding, reservations, queues, and animations (water, coffee, eat, CR, nap, sleep, gym, lounge, social, work)
-- [ ] Small status icons on name tags
-- [ ] Derived live counters (WORKING, AVAILABLE, EATING, RESTING, SLEEPING, IN CR, IN GYM, ON BREAK, CLEANING)
+- [x] Phase K4 Completed:
+  - Implemented ActivitySlotManager managing reservations, FIFO queues, and deadlock timeouts across Nap Beds (8), CR Stalls (6), Dining Seats (24), Dispensers (6), and Gym spots.
+  - Added procedural 3D activity poses, props (meal trays, coffee cups, mop/cart), sleep Z particles, and sprite nameplate activity status icons (💤, 🍽️, ☕, 🚻, 🏋️, 💧, 💻, 🧹, 🟢).
+  - Wired derived live counters (WORKING, AVAILABLE, EATING, RESTING, SLEEPING, IN CR, IN GYM, ON BREAK, CLEANING) strictly from real states, passing 23/23 test suites (185 tests).
+- [x] 3D activity pathfinding, reservations, queues, and animations (water, coffee, eat, CR, nap, sleep, gym, lounge, social, work)
+- [x] Small status icons on name tags
+- [x] Derived live counters (WORKING, AVAILABLE, EATING, RESTING, SLEEPING, IN CR, IN GYM, ON BREAK, CLEANING)
 
 ---
 
