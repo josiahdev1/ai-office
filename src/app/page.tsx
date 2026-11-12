@@ -30,6 +30,9 @@ import { AddDepartmentModal } from '@/components/office/AddDepartmentModal'
 import { AgentLogDrawer } from '@/components/office/AgentLogDrawer'
 import { BrainLogDrawer } from '@/components/office/BrainLogDrawer'
 import { brainLearningManager } from '@/lib/office/brainLearningEngine'
+import { IncomingCallOverlay } from '@/components/reminders/IncomingCallOverlay'
+import { RemindersDrawer } from '@/components/reminders/RemindersDrawer'
+import { reminderManager } from '@/lib/reminders/reminderEngine'
 import {
   needsManager,
   getTirednessVisualState,
@@ -241,6 +244,8 @@ function HQCommandPage() {
   const [isAddDeptModalOpen, setIsAddDeptModalOpen] = useState<boolean>(false)
   const [isAgentLogDrawerOpen, setIsAgentLogDrawerOpen] = useState<boolean>(false)
   const [isBrainLogOpen, setIsBrainLogOpen] = useState<boolean>(false)
+  const [isRemindersOpen, setIsRemindersOpen] = useState<boolean>(false)
+  const [, setReminderTick] = useState<number>(0)
   const [rosterTab, setRosterTab] = useState<'roster' | 'wellness'>('roster')
   const [wellnessSort, setWellnessSort] = useState<'lowest_energy' | 'lowest_morale' | 'name'>('lowest_energy')
   const [agentPins, setAgentPins] = useState<Record<string, AgentPinStatus>>({})
@@ -471,6 +476,18 @@ function HQCommandPage() {
     return () => {
       isMounted = false
       clearInterval(pollInterval)
+    }
+  }, [])
+
+  // Reminder Manager Tick & Scheduling Checker
+  useEffect(() => {
+    const unsub = reminderManager.subscribe(() => setReminderTick((t) => t + 1))
+    const interval = setInterval(() => {
+      reminderManager.checkScheduledReminders()
+    }, 30000)
+    return () => {
+      unsub()
+      clearInterval(interval)
     }
   }, [])
 
@@ -1187,6 +1204,18 @@ function HQCommandPage() {
           >
             <span>🧠</span>
             <span>BRAIN LOG</span>
+          </button>
+          <button
+            type="button"
+            data-testid="open-reminders-button"
+            onClick={() => setIsRemindersOpen(true)}
+            className="cursor-pointer rounded-lg px-2 py-1 font-mono text-[10px] font-bold text-amber-300 border border-amber-500/40 hover:bg-amber-500/20 transition-all whitespace-nowrap flex items-center gap-1"
+          >
+            <span>⏰</span>
+            <span>REMINDERS</span>
+            {reminderManager.getUnacknowledgedMissed().length > 0 && (
+              <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+            )}
           </button>
         </div>
 
@@ -3044,6 +3073,15 @@ function HQCommandPage() {
           const logLine = `${formatPHTTime()} [BOSS GATHER] Boss delivered ${count} new collective insights into THE BRAIN core.`
           setLogs((prev) => [logLine, ...prev].slice(0, 50))
         }}
+      />
+
+      {/* JARVIS Incoming Call Overlay */}
+      <IncomingCallOverlay />
+
+      {/* JARVIS Reminders & Calls Drawer */}
+      <RemindersDrawer
+        isOpen={isRemindersOpen}
+        onClose={() => setIsRemindersOpen(false)}
       />
     </main>
   )

@@ -96,10 +96,14 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K8: Jarvis Reminders and "Jarvis Calls Me"
-- [ ] Function calling reminder tools & natural language voice parser (`src/lib/reminders/parse.ts`)
-- [ ] Idempotent tables (`office_reminders`, `office_reminder_events`, `office_push_subscriptions`)
-- [ ] Web Audio synthesized incoming call UI overlay & two-way voice call
-- [ ] Web Push service worker & optional channels (Telegram, Discord)
+- [x] Phase K8 Completed:
+  - Idempotent schema migration 0015: `office_reminders`, `office_reminder_events`, and `office_push_subscriptions` with indexes, RLS, and Realtime publication.
+  - Implemented `parseReminderNaturalLanguage` in `Asia/Manila` with next-day rollover, verbal read-backs, and `ReminderManager` with atomic claim, offline missed call catch-up, and Web Audio ringtone synthesis.
+  - Delivered full-screen `IncomingCallOverlay` with two-way voice call, `RemindersDrawer` with live countdowns and CSV export, `docs/REMINDERS.md`, and 5 JARVIS tools (`create_reminder`, `list_reminders`, `update_reminder`, `cancel_reminder`, `snooze_reminder`) with 21/21 passing tests.
+- [x] Function calling reminder tools & natural language voice parser (`src/lib/reminders/parse.ts`)
+- [x] Idempotent tables (`office_reminders`, `office_reminder_events`, `office_push_subscriptions`)
+- [x] Web Audio synthesized incoming call UI overlay & two-way voice call
+- [x] Web Push service worker & optional channels (Telegram, Discord)
 
 ---
 
