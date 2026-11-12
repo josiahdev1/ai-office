@@ -49,9 +49,6 @@ import {
   ROOM_DISPLAY_NAMES,
 } from '@/lib/office/facilitiesEngine'
 
-const STORAGE_MODE_KEY = 'easyup_hq_mode_v3'
-const STORAGE_OVERRIDES_KEY = 'easyup_hq_overrides_v3'
-
 const DEFAULT_AGENT_MODELS: Record<string, string> = {
   josiah: 'gemini-2.0-flash',
   gloria: 'gemini-2.5-pro',
@@ -382,35 +379,11 @@ function HQCommandPage() {
     return () => clearInterval(timer)
   }, [])
 
-  // 1. Initial State Fetch, Hydration from localStorage + Persisted DB Rooms/Statuses, and Supabase Health Check
+  // 1. Initial State Fetch and Supabase Health Check
   useEffect(() => {
     let isMounted = true
 
     async function loadInitialData(isFirstLoad = false) {
-      if (isFirstLoad && typeof window !== 'undefined') {
-        await Promise.resolve()
-        if (!isMounted) return
-        try {
-          const savedMode = window.localStorage.getItem(STORAGE_MODE_KEY)
-          if (
-            savedMode === 'OVERVIEW' ||
-            savedMode === 'FOCUS_WORK' ||
-            savedMode === 'ALL_HANDS' ||
-            savedMode === 'PANTRY' ||
-            savedMode === 'GYM'
-          ) {
-            setCurrentMode(savedMode)
-          }
-          const savedOverridesRaw = window.localStorage.getItem(STORAGE_OVERRIDES_KEY)
-          if (savedOverridesRaw) {
-            const parsed = JSON.parse(savedOverridesRaw) as Record<string, DepartmentMode>
-            setAgentRouteOverrides((prev) => ({ ...parsed, ...prev }))
-          }
-        } catch {
-          // Ignore storage read error
-        }
-      }
-
       try {
         const res = await fetch('/api/office/status')
         const json = await res.json()
@@ -421,25 +394,23 @@ function HQCommandPage() {
             setSupabaseActive(json.data.dbConnected)
           }
 
+          if (json.data.officeMode) {
+            setCurrentMode(json.data.officeMode)
+          }
+
           if (isFirstLoad && fleet.length > 0) {
             setAgents(fleet)
-            const savedOverridesRaw =
-              typeof window !== 'undefined'
-                ? window.localStorage.getItem(STORAGE_OVERRIDES_KEY)
-                : null
 
-            // Only derive route overrides from DB if localStorage does not already have an explicit override map
-            if (savedOverridesRaw === null) {
-              const dbOverrides: Record<string, DepartmentMode> = {}
-              for (const ag of fleet) {
-                const derived = deriveRouteOverrideFromAgent(ag)
-                if (derived) {
-                  dbOverrides[ag.id] = derived
-                }
+            // Derive route overrides strictly from live Supabase agent states
+            const dbOverrides: Record<string, DepartmentMode> = {}
+            for (const ag of fleet) {
+              const derived = deriveRouteOverrideFromAgent(ag)
+              if (derived) {
+                dbOverrides[ag.id] = derived
               }
-              if (Object.keys(dbOverrides).length > 0) {
-                setAgentRouteOverrides(dbOverrides)
-              }
+            }
+            if (Object.keys(dbOverrides).length > 0) {
+              setAgentRouteOverrides(dbOverrides)
             }
 
             setSelectedAgent((prev) => {
@@ -813,12 +784,6 @@ function HQCommandPage() {
   const handleGlobalModeChange = (newMode: DepartmentMode) => {
     setCurrentMode(newMode)
     setAgentRouteOverrides({})
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem(STORAGE_MODE_KEY, newMode)
-        window.localStorage.setItem(STORAGE_OVERRIDES_KEY, JSON.stringify({}))
-      } catch {}
-    }
 
     const modeStatus: Agent['status'] =
       newMode === 'GYM'
@@ -868,18 +833,10 @@ function HQCommandPage() {
     const targetRoom = modeToRoomName(targetMode, ws?.room || agent.room)
     const coords = ws ? getAgentTargetPosition(ws, currentMode, targetMode) : [0, 0, 0]
 
-    setAgentRouteOverrides((prev) => {
-      const next = {
-        ...prev,
-        [agent.id]: targetMode,
-      }
-      if (typeof window !== 'undefined') {
-        try {
-          window.localStorage.setItem(STORAGE_OVERRIDES_KEY, JSON.stringify(next))
-        } catch {}
-      }
-      return next
-    })
+    setAgentRouteOverrides((prev) => ({
+      ...prev,
+      [agent.id]: targetMode,
+    }))
 
     // IMPORTANT: Do NOT set current_coord here! current_coord is persisted only upon arrival.
     const updates: Partial<Agent> = {
@@ -920,18 +877,10 @@ function HQCommandPage() {
     const homeRoom = ws?.room || selectedAgent.room
 
     // Route agent to their work desk and set status to working immediately
-    setAgentRouteOverrides((prev) => {
-      const next = {
-        ...prev,
-        [selectedAgent.id]: 'FOCUS_WORK' as DepartmentMode,
-      }
-      if (typeof window !== 'undefined') {
-        try {
-          window.localStorage.setItem(STORAGE_OVERRIDES_KEY, JSON.stringify(next))
-        } catch {}
-      }
-      return next
-    })
+    setAgentRouteOverrides((prev) => ({
+      ...prev,
+      [selectedAgent.id]: 'FOCUS_WORK' as DepartmentMode,
+    }))
 
     setAgents((prev) =>
       prev.map((a) =>

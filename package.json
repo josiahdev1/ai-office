@@ -11,6 +11,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,md,json}\"",
     "sync:pr": "bash scripts/sync-pr-merge.sh",
+    "verify:supabase": "node scripts/verify-supabase.mjs",
     "fleet:learn": "NODE_OPTIONS=\"--experimental-websocket\" npx tsx --env-file=.env.local -e \"require('./src/app/api/office/cron/learn/route.ts').handleAutonomousCycle().then(r => console.log('Learned:', r.knowledge?.title))\""
   },
   "dependencies": {

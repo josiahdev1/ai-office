@@ -100,4 +100,72 @@ describe('Hardcoded Data & Real Working Audit Scanner', () => {
 
     expect(violations).toEqual([])
   })
+
+  it('4. strictly verifies zero localStorage accesses in src (Supabase is single source of truth)', () => {
+    function scanDir(dir: string): string[] {
+      const results: string[] = []
+      const entries = fs.readdirSync(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          results.push(...scanDir(fullPath))
+        } else if (entry.isFile() && (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts'))) {
+          results.push(fullPath)
+        }
+      }
+      return results
+    }
+
+    const files = scanDir(path.resolve(process.cwd(), 'src'))
+    const localStorageViolations: string[] = []
+
+    for (const file of files) {
+      const content = fs.readFileSync(file, 'utf8')
+      if (content.includes('localStorage')) {
+        localStorageViolations.push(path.relative(process.cwd(), file))
+      }
+    }
+
+    expect(localStorageViolations).toEqual([])
+  })
+
+  it('5. scans src to ensure no dummy, mock, lorem, or fake fixtures exist outside tests', () => {
+    function scanDir(dir: string): string[] {
+      const results: string[] = []
+      const entries = fs.readdirSync(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          results.push(...scanDir(fullPath))
+        } else if (entry.isFile() && (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts'))) {
+          results.push(fullPath)
+        }
+      }
+      return results
+    }
+
+    const files = scanDir(path.resolve(process.cwd(), 'src'))
+    const mockViolations: string[] = []
+
+    for (const file of files) {
+      const content = fs.readFileSync(file, 'utf8')
+      const lines = content.split('\n')
+      lines.forEach((line, idx) => {
+        const lower = line.toLowerCase()
+        // Ignore comments that mention sample algorithms or geometry sampling
+        if (lower.includes('sample every other waypoint') || lower.includes('resample') || lower.includes('downsample')) return
+        if (
+          lower.includes('mockdata') ||
+          lower.includes('dummydata') ||
+          lower.includes('lorem ipsum') ||
+          lower.includes('fakeagents') ||
+          lower.includes('mock_agents')
+        ) {
+          mockViolations.push(`${path.relative(process.cwd(), file)}:${idx + 1}: ${line.trim()}`)
+        }
+      })
+    }
+
+    expect(mockViolations).toEqual([])
+  })
 })

@@ -1041,19 +1041,8 @@ export default function OfficeCanvas2D({
           effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
 
         if (!agentNavMapRef.current[agent.id]) {
-          let initMode = currentMode
-          let initOverride = routeOverride
-          if (typeof window !== 'undefined') {
-            try {
-              const savedMode = window.localStorage.getItem('easyup_hq_mode_v3') as DepartmentMode | null
-              if (savedMode) initMode = savedMode
-              const savedOverrides = window.localStorage.getItem('easyup_hq_overrides_v3')
-              if (savedOverrides && !initOverride) {
-                const parsed = JSON.parse(savedOverrides) as Record<string, DepartmentMode>
-                if (parsed[agent.id]) initOverride = parsed[agent.id]
-              }
-            } catch {}
-          }
+          const initMode = currentMode
+          const initOverride = routeOverride
           const spawnPos = getAgentTargetPosition(ws, initMode, initOverride)
           const eff = initOverride || initMode
           const spawnAtDesk = eff === 'OVERVIEW' || eff === 'FOCUS_WORK'

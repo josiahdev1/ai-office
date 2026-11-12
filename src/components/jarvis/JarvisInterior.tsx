@@ -34,6 +34,7 @@ import {
   getEchoProtectedMediaConstraints,
 } from '@/lib/jarvis/voiceState'
 import { needsManager } from '@/lib/office/needsEngine'
+import { DataHealthPanel } from '@/components/office/DataHealthPanel'
 
 export type JarvisQualityPreset = 'low' | 'medium' | 'high'
 
@@ -99,11 +100,6 @@ interface SpeechRecognitionLike {
   onend: (() => void) | null
 }
 
-const STORAGE_USER_NAME_KEY = 'easyup_jarvis_username_v1'
-const STORAGE_QUALITY_KEY = 'easyup_jarvis_quality_v1'
-const STORAGE_AUTONOMY_KEY = 'easyup_jarvis_autonomy_v1'
-const STORAGE_MODEL_KEY = 'easyup_jarvis_model_v1'
-
 export default function JarvisInterior({
   agents,
   approvals,
@@ -122,32 +118,10 @@ export default function JarvisInterior({
   onVoiceTranscription,
   onVoiceStateChange,
 }: JarvisInteriorProps) {
-  const [userName, setUserName] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return window.localStorage.getItem(STORAGE_USER_NAME_KEY) || 'Josiah'
-    }
-    return 'Josiah'
-  })
-  const [quality, setQuality] = useState<JarvisQualityPreset>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = window.localStorage.getItem(STORAGE_QUALITY_KEY)
-      if (saved === 'low' || saved === 'medium' || saved === 'high') return saved
-    }
-    return 'high'
-  })
-  const [autonomyMode, setAutonomyMode] = useState<'ask' | 'auto_safe'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = window.localStorage.getItem(STORAGE_AUTONOMY_KEY)
-      if (saved === 'ask' || saved === 'auto_safe') return saved
-    }
-    return 'ask'
-  })
-  const [selectedModel, setSelectedModel] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return window.localStorage.getItem(STORAGE_MODEL_KEY) || 'gemini-2.0-flash'
-    }
-    return 'gemini-2.0-flash'
-  })
+  const [userName, setUserName] = useState<string>('Josiah')
+  const [quality, setQuality] = useState<JarvisQualityPreset>('high')
+  const [autonomyMode, setAutonomyMode] = useState<'ask' | 'auto_safe'>('ask')
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.0-flash')
 
   const [renderMode, setRenderMode] = useState<'3d' | '2d'>(
     is2DDefault ? '2d' : '3d'
@@ -224,6 +198,7 @@ export default function JarvisInterior({
   }, [voiceInterruptHeadphones])
 
   const [showDiagnosticsModal, setShowDiagnosticsModal] = useState<boolean>(false)
+  const [diagnosticsTab, setDiagnosticsTab] = useState<'voice' | 'data_health'>('voice')
   const recentSpokenSentencesRef = useRef<{ text: string; timestamp: number }[]>([])
   const lastHeardTranscriptRef = useRef<string>('')
 
@@ -1518,9 +1493,6 @@ export default function JarvisInterior({
             onChange={(e) => {
               const val = e.target.value
               setSelectedModel(val)
-              if (typeof window !== 'undefined') {
-                window.localStorage.setItem(STORAGE_MODEL_KEY, val)
-              }
               const found = AVAILABLE_MODELS.find((m) => m.id === val)
               if (found) {
                 setProviderStatus({
@@ -1595,11 +1567,7 @@ export default function JarvisInterior({
             aria-label="Graphics quality preset"
             value={quality}
             onChange={(e) => {
-              const val = e.target.value as JarvisQualityPreset
-              setQuality(val)
-              if (typeof window !== 'undefined') {
-                window.localStorage.setItem(STORAGE_QUALITY_KEY, val)
-              }
+              setQuality(e.target.value as JarvisQualityPreset)
             }}
             className="rounded-lg border border-slate-800 bg-slate-950 px-2 py-1 font-mono text-[10px] font-bold text-cyan-300 focus:border-cyan-400 focus:outline-none"
           >
@@ -1608,11 +1576,28 @@ export default function JarvisInterior({
             <option value="low">QUALITY: LOW</option>
           </select>
 
+          {/* Data Health Modal Toggle Button */}
+          <button
+            type="button"
+            data-testid="jarvis-data-health-btn"
+            onClick={() => {
+              setDiagnosticsTab('data_health')
+              setShowDiagnosticsModal(true)
+            }}
+            className="cursor-pointer flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-950/40 px-2.5 py-1 font-mono text-[10px] font-bold text-cyan-300 hover:border-cyan-400 hover:bg-cyan-900/60 transition whitespace-nowrap"
+            title="Open Supabase Data Health Panel"
+          >
+            <span>🗄️ DATA HEALTH</span>
+          </button>
+
           {/* Diagnostics Modal Toggle Button */}
           <button
             type="button"
             data-testid="jarvis-diagnostics-btn"
-            onClick={() => setShowDiagnosticsModal(true)}
+            onClick={() => {
+              setDiagnosticsTab('voice')
+              setShowDiagnosticsModal(true)
+            }}
             className="cursor-pointer flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-950/40 px-2.5 py-1 font-mono text-[10px] font-bold text-amber-300 hover:border-amber-400 hover:bg-amber-900/60 transition whitespace-nowrap"
             title="Open Jarvis Voice & State Diagnostics"
           >
@@ -1832,9 +1817,6 @@ export default function JarvisInterior({
                   onChange={(e) => {
                     const v = e.target.value || 'Josiah'
                     setUserName(v)
-                    if (typeof window !== 'undefined') {
-                      window.localStorage.setItem(STORAGE_USER_NAME_KEY, v)
-                    }
                   }}
                   aria-label="Operator name"
                   className="w-full bg-transparent font-bold text-cyan-300 focus:outline-none"
@@ -1846,9 +1828,6 @@ export default function JarvisInterior({
                 onClick={() => {
                   const next = autonomyMode === 'ask' ? 'auto_safe' : 'ask'
                   setAutonomyMode(next)
-                  if (typeof window !== 'undefined') {
-                    window.localStorage.setItem(STORAGE_AUTONOMY_KEY, next)
-                  }
                 }}
                 className="cursor-pointer rounded-lg border border-slate-800 bg-slate-950/80 px-2 py-1 font-mono text-[10px] font-semibold text-slate-300 hover:border-cyan-500/50 hover:text-cyan-300 whitespace-nowrap"
               >
@@ -2259,16 +2238,34 @@ export default function JarvisInterior({
           className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
         >
           <div className="flex flex-col w-full max-w-4xl max-h-[85vh] rounded-2xl border border-cyan-500/40 bg-[#061020] shadow-[0_0_50px_rgba(0,229,255,0.25)] overflow-hidden">
-            {/* Header */}
+            {/* Header with Navigation Tabs */}
             <div className="flex items-center justify-between border-b border-cyan-500/20 px-5 py-3.5 bg-slate-950/80">
-              <div className="flex items-center gap-2.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-ping" />
-                <h2 className="font-mono text-sm font-bold tracking-wider text-cyan-300 uppercase">
-                  JARVIS VOICE &amp; STATE DIAGNOSTICS
-                </h2>
-                <span className="rounded border border-cyan-500/30 bg-cyan-950/60 px-2 py-0.5 font-mono text-[10px] text-cyan-200">
-                  {voiceMachine.history.length} TRANSITIONS
-                </span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDiagnosticsTab('voice')}
+                  className={`cursor-pointer flex items-center gap-2 rounded-lg px-3 py-1.5 font-mono text-xs font-bold transition ${
+                    diagnosticsTab === 'voice'
+                      ? 'border border-amber-500/50 bg-amber-950/70 text-amber-300'
+                      : 'border border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>⚡ VOICE DIAGNOSTICS</span>
+                  <span className="rounded bg-amber-500/30 px-1 py-0.2 text-[9px] text-amber-200">
+                    {voiceMachine.history.length}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDiagnosticsTab('data_health')}
+                  className={`cursor-pointer flex items-center gap-2 rounded-lg px-3 py-1.5 font-mono text-xs font-bold transition ${
+                    diagnosticsTab === 'data_health'
+                      ? 'border border-cyan-500/50 bg-cyan-950/70 text-cyan-300'
+                      : 'border border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>🗄️ SUPABASE DATA HEALTH</span>
+                </button>
               </div>
               <button
                 type="button"
@@ -2281,7 +2278,12 @@ export default function JarvisInterior({
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 font-mono text-xs">
+            {diagnosticsTab === 'data_health' ? (
+              <div className="flex-1 overflow-y-auto p-5">
+                <DataHealthPanel />
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 font-mono text-xs">
               {/* Telemetry Cards Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="rounded-xl border border-cyan-500/25 bg-slate-950/60 p-3">
@@ -2413,6 +2415,7 @@ export default function JarvisInterior({
                 </div>
               </div>
             </div>
+          )}
 
             {/* Modal Footer */}
             <div className="flex items-center justify-between border-t border-cyan-500/20 px-5 py-3 bg-slate-950/90">

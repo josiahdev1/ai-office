@@ -38,6 +38,7 @@ import { officeBus } from '@/lib/office/bus'
 import { dialogueEngine, generateAllHandsScript } from '@/lib/office/dialogueEngine'
 import { officeSupabase } from '@/lib/supabase/officeService'
 import { resolveNameTagPositions, AgentTagInput } from '@/lib/office/antiOverlap'
+import { DataHealthPanel } from './DataHealthPanel'
 
 export interface IsometricOfficeProps {
   agents: Agent[]
@@ -2966,11 +2967,12 @@ export function IsometricOffice({
 
       {/* ==================== 10. SETTINGS MODAL ==================== */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl border border-[#1e283d] bg-[#0c101a] p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl border border-cyan-500/40 bg-[#0c101a] p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-[#1e283d] pb-3">
-              <h3 className="font-mono text-sm font-bold text-slate-100">
-                HQ OFFICE PREFERENCES & DB STATUS
+              <h3 className="font-mono text-sm font-bold text-slate-100 flex items-center gap-2">
+                <span>⚙️</span>
+                <span>HQ OFFICE PREFERENCES &amp; SUPABASE DATA HEALTH</span>
               </h3>
               <button
                 type="button"
@@ -2981,38 +2983,11 @@ export function IsometricOffice({
                 ✕
               </button>
             </div>
-            <div className="mt-4 space-y-3.5 font-mono text-xs">
-              {/* Database Telemetry Badge */}
-              <div className="rounded-lg border border-emerald-500/40 bg-emerald-950/30 p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-                    <span className="font-bold text-emerald-300">DB CONNECTED (Postgres)</span>
-                  </div>
-                  <span className="text-[10px] text-emerald-400 font-bold">ONLINE</span>
-                </div>
-                <p className="mt-1 text-[10px] text-slate-400 truncate">
-                  spacfnutrnhzxxbkjrji.supabase.co
-                </p>
-                <div className="mt-2.5 grid grid-cols-2 gap-2 border-t border-emerald-900/60 pt-2 text-[11px]">
-                  <div>
-                    <span className="text-slate-400">office_agents:</span>{' '}
-                    <span className="font-bold text-white">{tableCounts?.office_agents ?? agents.length}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">office_approvals:</span>{' '}
-                    <span className="font-bold text-white">{tableCounts?.office_approvals ?? approvals.length}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">office_logs:</span>{' '}
-                    <span className="font-bold text-white">{tableCounts?.office_logs ?? logs.length}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">office_messages:</span>{' '}
-                    <span className="font-bold text-white">{tableCounts?.office_messages ?? 47}</span>
-                  </div>
-                </div>
-              </div>
+
+            {/* Live Supabase Data Health Panel */}
+            <DataHealthPanel compact />
+
+            <div className="space-y-3 font-mono text-xs border-t border-slate-800 pt-3">
 
               <div className="flex items-center justify-between pt-1">
                 <span className="text-slate-300">Audio Synthesizer</span>

@@ -172,21 +172,10 @@ export function ProceduralAgent3D({
 
   const isDeskMode = effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
 
-  // Determine initial spawn position on mount (accounting for persisted localStorage state on F5 reload)
+  // Determine initial spawn position on mount from props
   const initialSpawn = useMemo(() => {
-    let initMode = mode
-    let initOverride = routeOverride
-    if (typeof window !== 'undefined') {
-      try {
-        const savedMode = window.localStorage.getItem('easyup_hq_mode_v3') as DepartmentMode | null
-        if (savedMode) initMode = savedMode
-        const savedOverrides = window.localStorage.getItem('easyup_hq_overrides_v3')
-        if (savedOverrides && !initOverride) {
-          const parsed = JSON.parse(savedOverrides) as Record<string, DepartmentMode>
-          if (parsed[agent.id]) initOverride = parsed[agent.id]
-        }
-      } catch {}
-    }
+    const initMode = mode
+    const initOverride = routeOverride
     const eff = initOverride || initMode
     const pos = getAgentTargetPosition(workstation, initMode, initOverride)
     let rot = deskRotationY
