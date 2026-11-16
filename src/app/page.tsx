@@ -1555,6 +1555,44 @@ function HQCommandPage() {
         {/* ======================================================================= */}
         <div className="relative flex flex-1 min-h-0 overflow-hidden">
           <div className="relative flex flex-1 flex-col min-w-0 h-full overflow-hidden">
+            {/* Camera-Only Top Room-Tab Bar (Never mutates agent states) */}
+            {!isCanvasFullscreen && (
+              <nav
+                aria-label="Camera Room Tabs"
+                data-testid="top-room-tab-bar"
+                className="hidden lg:flex items-center gap-1 overflow-x-auto border-b border-slate-800/80 bg-[#0b0f18] px-3 py-1 font-mono text-xs shrink-0"
+              >
+                {[
+                  { label: 'Overview', mode: 'OVERVIEW' as DepartmentMode },
+                  { label: 'Intelligence Lab', mode: 'FOCUS_WORK' as DepartmentMode },
+                  { label: 'Dev Studio', mode: 'FOCUS_WORK' as DepartmentMode },
+                  { label: 'Creative Studio', mode: 'FOCUS_WORK' as DepartmentMode },
+                  { label: 'Operations Hub', mode: 'ALL_HANDS' as DepartmentMode },
+                  { label: 'V-Suite', mode: 'ALL_HANDS' as DepartmentMode },
+                  { label: 'Growth Lab', mode: 'FOCUS_WORK' as DepartmentMode },
+                  { label: 'Pantry & Game Lounge', mode: 'PANTRY' as DepartmentMode },
+                  { label: 'Social Peeps', mode: 'CAFETERIA' as DepartmentMode },
+                  { label: 'Gym', mode: 'GYM' as DepartmentMode },
+                  { label: 'Pickleball Court', mode: 'PICKLEBALL' as DepartmentMode },
+                ].map((tab) => {
+                  const isActive = currentMode === tab.mode && (tab.label === 'Pickleball Court' || tab.label === 'Overview' || tab.label === 'Gym' || tab.label === 'Pantry & Game Lounge' || tab.label === 'Social Peeps')
+                  return (
+                    <button
+                      key={tab.label}
+                      type="button"
+                      onClick={() => setCurrentMode(tab.mode)}
+                      className={`cursor-pointer rounded-md px-2 py-1 font-medium transition-all duration-200 ease-out whitespace-nowrap ${
+                        isActive
+                          ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/40'
+                          : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-100 border border-transparent'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  )
+                })}
+              </nav>
+            )}
             {/* Synchronized 3D or 2D Isometric Viewport */}
             <section className="relative flex-1 min-h-0 overflow-hidden">
               <div

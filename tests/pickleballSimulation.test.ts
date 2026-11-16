@@ -47,13 +47,14 @@ describe('Pickleball 2v2 Rally Simulation & Pathfinding', () => {
     expect(state.rallyHits).toBeGreaterThanOrEqual(1)
   })
 
-  it('rotates sideline bench player in and active player out cleanly', () => {
+  it('rotates sideline bench player in and losing-side player out while winners stay', () => {
     const state = createInitialRallyState(['boss', 'josiah', 'khent', 'blaze'], ['ferwin'])
     rotateSidelinePlayer(state)
-    expect(state.activePlayers[0]).toBe('ferwin')
-    expect(state.benchQueue).toContain('boss')
+    expect(state.activePlayers[0]).toBe('boss') // Winners stay
+    expect(state.activePlayers[2]).toBe('ferwin')
+    expect(state.benchQueue).toContain('khent')
     expect(state.lastSubbedIn).toBe('ferwin')
-    expect(state.lastSubbedOut).toBe('boss')
+    expect(state.lastSubbedOut).toBe('khent')
   })
 
   it('routes agents via A* from The Brain to the outdoor Pickleball Court', () => {

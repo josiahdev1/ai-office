@@ -15,7 +15,6 @@ import { CameraController, CameraViewMode } from './CameraController'
 import { JarvisCoreState } from '@/components/jarvis/ArcReactor'
 import { computeSolarLighting } from '@/lib/office/clock'
 import { DoorDefinition } from '@/lib/office/walkCollision'
-import { getPickleballSlotForAgent } from '@/lib/office/pickleballSimulation'
 
 export type OfficeLightingTheme = 'auto' | 'day' | 'night'
 
@@ -109,6 +108,18 @@ export function OfficeScene({
     })
   }, [agents])
 
+  const realPickleballPlayers = useMemo(
+    () =>
+      renderedAgents
+        .filter(
+          ({ agent }) =>
+            agentRouteOverrides[agent.id] === 'PICKLEBALL' ||
+            agent.room === 'Pickleball Court'
+        )
+        .map(({ agent }) => agent.id),
+    [renderedAgents, agentRouteOverrides]
+  )
+
   return (
     <group name="Office3DWorld">
       {/* 1. Dynamic Environmental Lighting (Auto PHT Solar / Day / Night) */}
@@ -169,15 +180,17 @@ export function OfficeScene({
 
       {/* 5. Departmental Props & Furniture + Outdoor Pickleball Court */}
       <OfficeFurniture />
-      <PickleballCourt3D />
+      <PickleballCourt3D activePlayerIds={realPickleballPlayers} />
 
       {/* 6. All Registered Database Agents with A* Walking & Distinct Styles */}
       <group name="AgentFleet">
         {renderedAgents.map(({ agent, workstation, idx }) => {
-          const pbSlot = getPickleballSlotForAgent(agent.id)
+          const isRealPickleball =
+            agentRouteOverrides[agent.id] === 'PICKLEBALL' ||
+            agent.room === 'Pickleball Court'
           const effectiveOverride =
             agentRouteOverrides[agent.id] ??
-            (pbSlot && (mode === 'OVERVIEW' || mode === 'PICKLEBALL')
+            (isRealPickleball
               ? 'PICKLEBALL'
               : mode === 'PICKLEBALL'
                 ? 'OVERVIEW'

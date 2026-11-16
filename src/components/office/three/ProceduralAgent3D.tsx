@@ -413,17 +413,18 @@ export function ProceduralAgent3D({
         leftArmRef.current.rotation.x = 0.7 + Math.sin(t * 3.5) * 0.15
         rightArmRef.current.rotation.x = 0.65 + Math.cos(t * 3.5) * 0.15
       } else if (effectiveMode === 'CAFETERIA' && !isWalking) {
-        // Dining at Cafeteria Table: holding fork/spoon to eat
-        leftArmRef.current.rotation.x = 0.5
-        rightArmRef.current.rotation.x = 0.65 + Math.sin(t * 3) * 0.2
+        // Dining at Cafeteria Table: scoop-from-plate-to-mouth arm motion
+        leftArmRef.current.rotation.x = 0.48
+        rightArmRef.current.rotation.x = 0.85 + Math.sin(t * 3.8 + agentIndex) * 0.35
       } else if (effectiveMode === 'PICKLEBALL' && !isWalking) {
-        // Pickleball rally forehand/backhand swing & ready stance
-        leftArmRef.current.rotation.x = 0.35 + Math.sin(t * 2.5 + agentIndex) * 0.12
-        rightArmRef.current.rotation.x = 0.75 + Math.sin(t * 4.8 + agentIndex * 1.3) * 0.55
+        // Pickleball rally forehand/backhand shoulder swing & ready stance
+        leftArmRef.current.rotation.x = 0.35 + Math.sin(t * 2.5 + agentIndex) * 0.14
+        rightArmRef.current.rotation.x = 0.78 + Math.sin(t * 4.8 + agentIndex * 1.3) * 0.65
+        rightArmRef.current.rotation.z = Math.cos(t * 4.8 + agentIndex * 1.3) * 0.28
       } else if (effectiveMode === 'PANTRY' && !isWalking) {
-        // Drinking coffee at Pantry: lifting cup to mouth
-        leftArmRef.current.rotation.x = 0.2
-        rightArmRef.current.rotation.x = 0.75 + Math.sin(t * 1.5) * 0.15
+        // Drinking coffee at Pantry: periodic raise-to-mouth sip
+        leftArmRef.current.rotation.x = 0.22
+        rightArmRef.current.rotation.x = 0.7 + Math.max(0, Math.sin(t * 1.8 + agentIndex)) * 0.45
       } else {
         leftArmRef.current.rotation.x = isSeated ? 0.5 : 0.15
         rightArmRef.current.rotation.x = isSeated ? 0.5 : 0.15

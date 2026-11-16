@@ -1,30 +1,19 @@
 ---
 name: keep-existing-sprites
-description: Preservation rules and extension guidelines for existing employee pixel sprites.
+description: Preservation rules and extension guidelines for the video-style low-poly block agent characters (updated 2026-11-16 per TICKET-35).
 ---
 
-# Keep Existing Sprites Rule
+# Keep Video-Style Block Character Design (TICKET-35 Revision)
 
-## 1. Source of Truth
-The employee visual identity is strictly anchored in `src/components/office/pixel-sprites.tsx`.
-- **Character Design**: Chunky pixel-art human worker wearing a blue baseball cap, dark face silhouette, vivid blue shirt/hoodie, and dark work trousers/shoes.
-- **Strict Prohibition**: NEVER replace this pixel sprite with 3D models, smooth vector illustrations, generic emoji blobs, or unapproved sprite sheets.
+> Updated on **2026-11-16** per Josiah's character revision request in `TICKET-35`.
 
-## 2. Permitted Sprite Extensions
-The sprite rendering engine may only modify or augment the character through the following dimensions:
-1. **Isometric Orientations & Walk Cycles**:
-   - 4-direction facing: South-East (SE), South-West (SW), North-East (NE), North-West (NW).
-   - 2-frame walking cycle (leg sway and subtle head bob).
-   - Sitting and keyboard typing animation frames (hands resting or moving over keyboard).
-2. **Dynamic Name Tags & HUD Badges**:
-   - Dark pill badge floating 28px above the agent's head.
-   - Status dot indicator:
-     - 🟢 Green (`#22c55e`): Working / Active / Focused.
-     - 🟡 Yellow (`#eab308`): In discussion / Meeting at The Brain.
-     - 🔵 Cyan/Blue (`#38bdf8`): Moving / Traveling to target.
-     - 🟣 Purple (`#a855f7`): On break / Pantry / Lounge.
-     - 🔴 Red (`#ef4444`): Blocked / Alert / Approval requested.
-   - Monospace font for agent role/name for clean readability.
-3. **Interactive Speech Bubbles**:
-   - Crisp high-contrast speech bubble rendered above the name tag during live dialogue or agent notifications.
-   - Auto-fades after 4-6 seconds with soft bounce-in animation.
+## Core Rules
+1. **Preserve the Video-Style Voxel/Block Character Architecture** in `src/components/office/AgentModel3D.tsx` and `src/components/office/three/VoxelAgentMesh.tsx`:
+   - Cube-ish head with hair block variants (`short`, `bald`, `curly`, `long`, `ponytail`, `white_gray`), simple pixel eyes, bold outfit torso (`#f97316`, `#eab308`, `#ef4444`, `#38bdf8`, `#1e293b`, `#14b8a6`), separate swinging arm blocks, small hand cubes, two leg blocks, and dark shoes.
+   - Contextual held props: Pickleball paddle (`court` players only), coffee cup (`PANTRY`), dumbbell (`GYM`), clipboard (`boss`).
+2. **Deterministic Appearance Data**:
+   - Store appearance in `office_agents.appearance` jsonb; when missing, generate once via `generateAgentAppearance(agentId)` (seeded PRNG) and persist idempotently.
+3. **2D Parity**:
+   - Mirror the exact same character silhouettes, outfits, and props in `OfficeCanvas2D.tsx` via `src/lib/office/sceneModel.ts` and `src/lib/office/spriteBaker.ts`.
+4. **Nameplates & Foot Rings**:
+   - Keep nameplates concise (`Name` + status dot/badge) with anti-overlap and orange foot ring (`#f97316`) for queued bench waiters.

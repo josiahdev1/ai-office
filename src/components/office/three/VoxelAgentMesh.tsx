@@ -33,6 +33,7 @@ export function VoxelAgentMesh({
   const isPickleball = effectiveMode === 'PICKLEBALL' && pbSlot?.role === 'court'
   const isGym = effectiveMode === 'GYM'
   const isPantry = effectiveMode === 'PANTRY'
+  const isEating = effectiveMode === 'CAFETERIA'
 
   return (
     <group position={[0, 0.42, 0]}>
@@ -157,6 +158,29 @@ export function VoxelAgentMesh({
           <cylinderGeometry args={[0.045, 0.04, 0.09, 10]} />
           <meshStandardMaterial color="#f8fafc" roughness={0.3} />
         </mesh>
+      )}
+
+      {isEating && (
+        <group>
+          {/* White Plate & Meal on Table */}
+          <mesh position={[0, 0.34, 0.56]} castShadow receiveShadow>
+            <cylinderGeometry args={[0.14, 0.12, 0.025, 16]} />
+            <meshStandardMaterial color="#f8fafc" roughness={0.25} />
+          </mesh>
+          <mesh position={[-0.03, 0.36, 0.55]} castShadow>
+            <sphereGeometry args={[0.045, 10, 8]} />
+            <meshStandardMaterial color="#fef08a" roughness={0.7} />
+          </mesh>
+          <mesh position={[0.04, 0.36, 0.57]} castShadow>
+            <boxGeometry args={[0.06, 0.03, 0.05]} />
+            <meshStandardMaterial color="#b45309" roughness={0.6} />
+          </mesh>
+          {/* Metallic Spoon in Right Hand */}
+          <mesh position={[0.16, 0.36, 0.46]} rotation={[0.45, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.01, 0.01, 0.16, 8]} />
+            <meshStandardMaterial color="#cbd5e1" metalness={0.85} roughness={0.2} />
+          </mesh>
+        </group>
       )}
 
       {/* Expressive Voxel Head + Pixel Eyes */}

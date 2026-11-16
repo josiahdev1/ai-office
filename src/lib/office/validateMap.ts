@@ -29,6 +29,12 @@ import {
   isPointInsideBuilding,
   doesEdgeIntersectBuilding,
 } from './campusMap'
+import { findPath, isWorldTileWalkable } from '@/engine/pathfinding'
+import { PICKLEBALL_COURT_SLOTS } from '@/config/officeLayout'
+import {
+  PICKLEBALL_8_BENCH_SEATS,
+  PICKLEBALL_BASKET_POS,
+} from '@/lib/office/pickleballSimulation'
 
 export interface ValidationReport {
   valid: boolean
@@ -387,5 +393,50 @@ export function validateOfficeMap(): ValidationReport {
       walkableTiles: walkableCount,
       blockedTiles: blockedCount,
     },
+  }
+}
+
+export function validatePickleballAccess(): {
+  valid: boolean
+  errors: string[]
+  passageWidthTiles: number
+} {
+  const errors: string[] = []
+  // Check passage width >= 2 tiles at z = -25 (x in [-16, -15])
+  const passageTiles: [number, number][] = [
+    [-16, -25],
+    [-15, -25],
+    [-16, -26],
+    [-15, -26],
+  ]
+  const walkablePassageCols = [-16, -15].filter(
+    (gx) => isWorldTileWalkable(gx, -25) && isWorldTileWalkable(gx, -26)
+  )
+  if (walkablePassageCols.length < 2) {
+    errors.push(`Pickleball passage width < 2 tiles (found ${walkablePassageCols.length})`)
+  }
+  for (const [px, pz] of passageTiles) {
+    if (!isWorldTileWalkable(px, pz)) {
+      errors.push(`Passage tile (${px}, ${pz}) is not walkable`)
+    }
+  }
+
+  // Check reachability from Engineering (-16, -16) via North Gate to all court slots, bench seats & basket
+  const targets: { label: string; x: number; z: number }[] = [
+    ...PICKLEBALL_COURT_SLOTS.map((s, i) => ({ label: `court_slot_${i}`, x: s[0], z: s[2] })),
+    ...PICKLEBALL_8_BENCH_SEATS.map((s, i) => ({ label: `bench_seat_${i}`, x: s[0], z: s[2] })),
+    { label: 'ball_basket', x: PICKLEBALL_BASKET_POS[0], z: PICKLEBALL_BASKET_POS[2] },
+  ]
+  for (const t of targets) {
+    const path = findPath(-16, -16, t.x, t.z)
+    if (path.length === 0) {
+      errors.push(`Pickleball ${t.label} (${t.x}, ${t.z}) is unreachable via A*`)
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    passageWidthTiles: walkablePassageCols.length,
   }
 }

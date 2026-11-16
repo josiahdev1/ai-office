@@ -30,7 +30,8 @@ function boxToAABB(cx: number, cz: number, width: number, depth: number): AABB {
 }
 
 export const DOOR_DEFINITIONS: DoorDefinition[] = [
-  // Exterior Building Entrances (South & East)
+  // Exterior Building Entrances (North Garden, South & East)
+  { id: 'ext-north', label: 'North Garden Gate', x: 0, z: -23.2, axis: 'x', width: 2.6, thickness: 0.18, hingeSide: -1, openDirection: 1 },
   { id: 'ext-south', label: 'South Main Entrance', x: 0, z: 23.2, axis: 'x', width: 2.6, thickness: 0.18, hingeSide: -1, openDirection: -1 },
   { id: 'ext-east', label: 'East Parking Entrance', x: 23.2, z: 0, axis: 'z', width: 2.6, thickness: 0.18, hingeSide: -1, openDirection: -1 },
   // Main Building Interior Department Doors
@@ -51,8 +52,10 @@ export const DOOR_DEFINITIONS: DoorDefinition[] = [
 ]
 
 export const STATIC_WALL_COLLIDERS: AABB[] = [
-  // Exterior North, South, East Perimeter Walls (Main Building)
-  boxToAABB(0, -23.2, 46.8, 0.45),
+  // Exterior North Wall (split around North Garden Gate at x = 0)
+  boxToAABB(-12.5, -23.2, 21.8, 0.45),
+  boxToAABB(12.5, -23.2, 21.8, 0.45),
+  // Exterior South, East Perimeter Walls (Main Building)
   boxToAABB(0, 23.2, 46.8, 0.45),
   boxToAABB(23.2, 0, 0.45, 46.8),
 

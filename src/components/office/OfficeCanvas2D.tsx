@@ -24,7 +24,6 @@ import {
   SERVER_RACKS,
 } from '@/lib/office/wellnessWing'
 import {
-  getPickleballSlotForAgent,
   createInitialRallyState,
   stepPickleballRally,
 } from '@/lib/office/pickleballSimulation'
@@ -104,7 +103,7 @@ export default function OfficeCanvas2D({
   const agentsRef = useRef<Agent[]>(agents)
   const modeRef = useRef<DepartmentMode>(mode)
   const overridesRef = useRef<Record<string, DepartmentMode>>(agentRouteOverrides)
-  const pickleballRallyRef = useRef(createInitialRallyState())
+  const pickleballRallyRef = useRef(createInitialRallyState([]))
   const selectedIdRef = useRef<string | null | undefined>(selectedAgentId)
   const onSelectRef = useRef(onSelectAgent)
   const onArriveRef = useRef(onArriveAgent)
@@ -621,6 +620,8 @@ export default function OfficeCanvas2D({
       drawBox(-8, 0.01, -25.2, 20, 0.04, 3.2, '#475569', 0, 1, '#64748b')
       drawBox(-16, 0.02, -33, 16, 0.04, 12, '#0d9488', 0, 1, '#14b8a6')
       drawBox(-16, 0.06, -33, 13.4, 0.02, 6.1, '#2563eb', 0, 1, '#60a5fa')
+      // Bright Green Non-Volley ("Kitchen") Strips beside the Net (p02, p05 reference)
+      drawBox(-16, 0.072, -33, 4.26, 0.008, 6.06, '#22c55e', 0, 1, '#16a34a')
       drawBox(-16, 0.078, -36.02, 13.4, 0.01, 0.08, '#f8fafc')
       drawBox(-16, 0.078, -29.98, 13.4, 0.01, 0.08, '#f8fafc')
       drawBox(-22.67, 0.078, -33, 0.08, 0.01, 6.1, '#f8fafc')
@@ -1237,6 +1238,15 @@ export default function OfficeCanvas2D({
       }
 
       // 4C-3. OUTDOOR PICKLEBALL COURT PROPS (Net, Posts, Benches, Perimeter Rail & Live Rally Ball)
+      const currentAgents = agentsRef.current
+      const overrides = overridesRef.current
+      const realPickleballPlayers = currentAgents
+        .filter(
+          (ag) =>
+            overrides[ag.id] === 'PICKLEBALL' || ag.room === 'Pickleball Court'
+        )
+        .map((ag) => ag.id)
+      pickleballRallyRef.current.activePlayers = realPickleballPlayers.slice(0, 4)
       const pbState = stepPickleballRally(pickleballRallyRef.current, dt)
       enqueue(-16, -33, 0.48, () => {
         drawBox(-16, 0.48, -36.25, 0.1, 0.96, 0.1, '#0f172a')
@@ -1254,23 +1264,23 @@ export default function OfficeCanvas2D({
       enqueue(-16, -38.95, 0.48, () => {
         drawBox(-16, 0.48, -38.95, 15.8, 0.9, 0.06, '#bae6fd', 0, 0.22, '#38bdf8')
       })
-      enqueue(pbState.ballPos[0], pbState.ballPos[2], pbState.ballPos[1], () => {
-        const sh = project(pbState.ballPos[0], 0.09, pbState.ballPos[2])
-        ctx.fillStyle = 'rgba(9, 13, 22, 0.35)'
-        ctx.beginPath()
-        ctx.ellipse(sh.px, sh.py, Math.max(2, zoom * 0.14), Math.max(1, zoom * 0.08), 0, 0, Math.PI * 2)
-        ctx.fill()
+      if (pbState.ballVisible) {
+        enqueue(pbState.ballPos[0], pbState.ballPos[2], pbState.ballPos[1], () => {
+          const sh = project(pbState.ballPos[0], 0.09, pbState.ballPos[2])
+          ctx.fillStyle = 'rgba(9, 13, 22, 0.35)'
+          ctx.beginPath()
+          ctx.ellipse(sh.px, sh.py, Math.max(2, zoom * 0.14), Math.max(1, zoom * 0.08), 0, 0, Math.PI * 2)
+          ctx.fill()
 
-        const bp = project(pbState.ballPos[0], pbState.ballPos[1], pbState.ballPos[2])
-        ctx.fillStyle = '#bef264'
-        ctx.beginPath()
-        ctx.arc(bp.px, bp.py, Math.max(2.5, zoom * 0.12), 0, Math.PI * 2)
-        ctx.fill()
-      })
+          const bp = project(pbState.ballPos[0], pbState.ballPos[1], pbState.ballPos[2])
+          ctx.fillStyle = '#bef264'
+          ctx.beginPath()
+          ctx.arc(bp.px, bp.py, Math.max(2.5, zoom * 0.12), 0, Math.PI * 2)
+          ctx.fill()
+        })
+      }
 
       // 4D. Workstations + A* Walking Characters + Canvas-Rendered Nameplates
-      const currentAgents = agentsRef.current
-      const overrides = overridesRef.current
       const newScreenBoxes: Record<
         string,
         {
@@ -1296,10 +1306,12 @@ export default function OfficeCanvas2D({
           }
         }
 
-        const pbSlot = getPickleballSlotForAgent(agent.id)
+        const isRealPickleball =
+          overrides[agent.id] === 'PICKLEBALL' ||
+          agent.room === 'Pickleball Court'
         const routeOverride =
           overrides[agent.id] ??
-          (pbSlot && (currentMode === 'OVERVIEW' || currentMode === 'PICKLEBALL')
+          (isRealPickleball
             ? 'PICKLEBALL'
             : currentMode === 'PICKLEBALL'
               ? 'OVERVIEW'

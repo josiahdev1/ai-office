@@ -566,9 +566,13 @@ export function BuildingArchitecture({
       {/* 4. EXTERIOR FULL BACK WALLS (North & West)                            */}
       {/* ===================================================================== */}
       <group name="BackWalls">
-        {/* Main Building North Wall */}
-        <mesh position={[0, 1.4, -23.2]} castShadow receiveShadow>
-          <boxGeometry args={[46.8, 2.8, 0.4]} />
+        {/* Main Building North Wall (split around 2.6m North Garden Gate at x = 0) */}
+        <mesh position={[-12.5, 1.4, -23.2]} castShadow receiveShadow>
+          <boxGeometry args={[21.8, 2.8, 0.4]} />
+          <meshStandardMaterial color="#1e293b" roughness={0.8} />
+        </mesh>
+        <mesh position={[12.5, 1.4, -23.2]} castShadow receiveShadow>
+          <boxGeometry args={[21.8, 2.8, 0.4]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
         {/* Wellness Wing North Wall */}
@@ -576,7 +580,7 @@ export function BuildingArchitecture({
           <boxGeometry args={[19.2, 2.8, 0.4]} />
           <meshStandardMaterial color="#1e293b" roughness={0.8} />
         </mesh>
-        {[-35, -16, 0, 16].map((x) => (
+        {[-35, -16, 16].map((x) => (
           <mesh key={`n-win-${x}`} position={[x, 1.6, -23.15]}>
             <planeGeometry args={[8, 1.6]} />
             <meshStandardMaterial
