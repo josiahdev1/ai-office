@@ -15,6 +15,7 @@ import { CameraController, CameraViewMode } from './CameraController'
 import { JarvisCoreState } from '@/components/jarvis/ArcReactor'
 import { computeSolarLighting } from '@/lib/office/clock'
 import { DoorDefinition } from '@/lib/office/walkCollision'
+import { getPickleballSlotForAgent } from '@/lib/office/pickleballSimulation'
 
 export type OfficeLightingTheme = 'auto' | 'day' | 'night'
 
@@ -172,20 +173,30 @@ export function OfficeScene({
 
       {/* 6. All Registered Database Agents with A* Walking & Distinct Styles */}
       <group name="AgentFleet">
-        {renderedAgents.map(({ agent, workstation, idx }) => (
-          <ProceduralAgent3D
-            key={agent.id}
-            agent={agent}
-            agentIndex={idx}
-            workstation={workstation}
-            mode={mode}
-            routeOverride={agentRouteOverrides[agent.id]}
-            isSelected={selectedAgentId === agent.id}
-            isWalkMode={isWalkMode}
-            onSelect={onSelectAgent}
-            onArrive={onArriveAgent}
-          />
-        ))}
+        {renderedAgents.map(({ agent, workstation, idx }) => {
+          const pbSlot = getPickleballSlotForAgent(agent.id)
+          const effectiveOverride =
+            agentRouteOverrides[agent.id] ??
+            (pbSlot && (mode === 'OVERVIEW' || mode === 'PICKLEBALL')
+              ? 'PICKLEBALL'
+              : mode === 'PICKLEBALL'
+                ? 'OVERVIEW'
+                : undefined)
+          return (
+            <ProceduralAgent3D
+              key={agent.id}
+              agent={agent}
+              agentIndex={idx}
+              workstation={workstation}
+              mode={mode}
+              routeOverride={effectiveOverride}
+              isSelected={selectedAgentId === agent.id}
+              isWalkMode={isWalkMode}
+              onSelect={onSelectAgent}
+              onArrive={onArriveAgent}
+            />
+          )
+        })}
       </group>
     </group>
   )

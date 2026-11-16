@@ -71,20 +71,26 @@ export function CameraController({
   const isDraggingRef = useRef(false)
   const lastPointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
+  const isTweeningRef = useRef(true)
+
   useEffect(() => {
     if (isDivingToJarvis) return
     const preset = CAMERA_PRESETS[mode] || CAMERA_PRESETS.OVERVIEW
     targetVec.current.set(preset.target[0], preset.target[1], preset.target[2])
     targetZoom.current = preset.zoom
     userZoomOffsetRef.current = 0
+    isTweeningRef.current = true
   }, [mode, isDivingToJarvis])
 
   useEffect(() => {
     if (!zoomStep || zoomStep.nonce === 0) return
-    userZoomOffsetRef.current = Math.max(
-      -6,
-      Math.min(45, userZoomOffsetRef.current + zoomStep.delta)
-    )
+    const controls = controlsRef.current
+    const currentZoom =
+      controls && 'zoom' in controls.object
+        ? (controls.object as THREE.OrthographicCamera).zoom
+        : targetZoom.current
+    targetZoom.current = Math.max(5, Math.min(110, currentZoom + zoomStep.delta))
+    isTweeningRef.current = true
   }, [zoomStep])
 
   // Keyboard & mouse-look bindings for Walk-Inside 3D mode
@@ -232,6 +238,7 @@ export function CameraController({
       }
       targetVec.current.set(0, 1.9, 0)
       targetZoom.current = 82
+      isTweeningRef.current = true
     } else if (!isDivingToJarvis && wasDivingRef.current) {
       wasDivingRef.current = false
       if (savedCameraRef.current) {
@@ -243,28 +250,28 @@ export function CameraController({
         targetVec.current.set(preset.target[0], preset.target[1], preset.target[2])
         targetZoom.current = preset.zoom
       }
+      isTweeningRef.current = true
     }
 
-    // For OVERVIEW mode, calculate dynamic responsive auto-fit zoom based on viewport size
-    if (!isDivingToJarvis && (mode === 'OVERVIEW' || !CAMERA_PRESETS[mode])) {
-      const w = state.size.width
-      const h = state.size.height
-      const fitZoom = Math.min(12.5, Math.max(8.0, Math.min(w / 140, h / 72)))
-      targetZoom.current = Math.max(7.5, Math.min(60, fitZoom + userZoomOffsetRef.current))
-      targetVec.current.set(-7.5, 0, 0)
-    } else if (!isDivingToJarvis) {
-      const preset = CAMERA_PRESETS[mode] || CAMERA_PRESETS.OVERVIEW
-      targetZoom.current = Math.max(8, Math.min(80, preset.zoom + userZoomOffsetRef.current))
-    }
+    if (isTweeningRef.current) {
+      const speed = isDivingToJarvis ? 6.5 : 5.0
+      const factor = Math.min(delta * speed, 1.0)
 
-    const speed = isDivingToJarvis ? 6.5 : 4.5
-    const factor = Math.min(delta * speed, 1.0)
+      controls.target.lerp(targetVec.current, factor)
 
-    controls.target.lerp(targetVec.current, factor)
+      if (orthoCam && typeof orthoCam.zoom === 'number') {
+        orthoCam.zoom += (targetZoom.current - orthoCam.zoom) * factor
+        orthoCam.updateProjectionMatrix()
+      }
 
-    if (orthoCam && typeof orthoCam.zoom === 'number') {
-      orthoCam.zoom += (targetZoom.current - orthoCam.zoom) * factor
-      orthoCam.updateProjectionMatrix()
+      const targetDist = controls.target.distanceTo(targetVec.current)
+      const zoomDiff =
+        orthoCam && typeof orthoCam.zoom === 'number'
+          ? Math.abs(targetZoom.current - orthoCam.zoom)
+          : 0
+      if (targetDist < 0.04 && zoomDiff < 0.05) {
+        isTweeningRef.current = false
+      }
     }
 
     controls.update()
@@ -283,10 +290,14 @@ export function CameraController({
       enableRotate
       enablePan
       enableZoom
+      zoomSpeed={1.2}
       minZoom={5}
       maxZoom={110}
       minPolarAngle={0.15}
       maxPolarAngle={Math.PI / 2.15}
+      onStart={() => {
+        isTweeningRef.current = false
+      }}
     />
   )
 }

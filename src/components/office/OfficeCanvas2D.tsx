@@ -24,6 +24,11 @@ import {
   SERVER_RACKS,
 } from '@/lib/office/wellnessWing'
 import {
+  getPickleballSlotForAgent,
+  createInitialRallyState,
+  stepPickleballRally,
+} from '@/lib/office/pickleballSimulation'
+import {
   getCharacterStyle,
   getAgentStatusBadge,
 } from '@/config/characterStyles'
@@ -99,6 +104,7 @@ export default function OfficeCanvas2D({
   const agentsRef = useRef<Agent[]>(agents)
   const modeRef = useRef<DepartmentMode>(mode)
   const overridesRef = useRef<Record<string, DepartmentMode>>(agentRouteOverrides)
+  const pickleballRallyRef = useRef(createInitialRallyState())
   const selectedIdRef = useRef<string | null | undefined>(selectedAgentId)
   const onSelectRef = useRef(onSelectAgent)
   const onArriveRef = useRef(onArriveAgent)
@@ -614,19 +620,28 @@ export default function OfficeCanvas2D({
       // North Walkway & Outdoor Pickleball Court Complex ([-16, 0, -33])
       drawBox(-8, 0.01, -25.2, 20, 0.04, 3.2, '#475569', 0, 1, '#64748b')
       drawBox(-16, 0.02, -33, 16, 0.04, 12, '#0d9488', 0, 1, '#14b8a6')
-      drawBox(-16, 0.045, -33, 13.4, 0.015, 6.1, '#0284c7', 0, 1, '#38bdf8')
-      drawBox(-16, 0.055, -36.02, 13.4, 0.008, 0.07, '#f8fafc')
-      drawBox(-16, 0.055, -29.98, 13.4, 0.008, 0.07, '#f8fafc')
-      drawBox(-22.67, 0.055, -33, 0.07, 0.008, 6.1, '#f8fafc')
-      drawBox(-9.33, 0.055, -33, 0.07, 0.008, 6.1, '#f8fafc')
-      drawBox(-18.13, 0.055, -33, 0.06, 0.008, 6.06, '#f8fafc')
-      drawBox(-13.87, 0.055, -33, 0.06, 0.008, 6.06, '#f8fafc')
-      drawBox(-20.4, 0.055, -33, 4.54, 0.008, 0.06, '#f8fafc')
-      drawBox(-11.6, 0.055, -33, 4.54, 0.008, 0.06, '#f8fafc')
-      // Center Net & Spectator Benches
-      drawBox(-16, 0.46, -33, 0.08, 0.84, 6.45, '#1e293b', 0, 0.85, '#f8fafc')
-      drawBox(-16, 0.42, -38.1, 5.4, 0.08, 0.55, '#b45309', 0, 1, '#78350f')
-      drawBox(-16, 0.42, -27.9, 5.4, 0.08, 0.55, '#b45309', 0, 1, '#78350f')
+      drawBox(-16, 0.06, -33, 13.4, 0.02, 6.1, '#2563eb', 0, 1, '#60a5fa')
+      drawBox(-16, 0.078, -36.02, 13.4, 0.01, 0.08, '#f8fafc')
+      drawBox(-16, 0.078, -29.98, 13.4, 0.01, 0.08, '#f8fafc')
+      drawBox(-22.67, 0.078, -33, 0.08, 0.01, 6.1, '#f8fafc')
+      drawBox(-9.33, 0.078, -33, 0.08, 0.01, 6.1, '#f8fafc')
+      drawBox(-18.13, 0.078, -33, 0.07, 0.01, 6.06, '#f8fafc')
+      drawBox(-13.87, 0.078, -33, 0.07, 0.01, 6.06, '#f8fafc')
+      drawBox(-20.4, 0.078, -33, 4.54, 0.01, 0.07, '#f8fafc')
+      drawBox(-11.6, 0.078, -33, 4.54, 0.01, 0.07, '#f8fafc')
+      // PICKLEBALL COURT Ground Typography
+      {
+        const lbl = project(-16, 0.085, -28.85)
+        ctx.save()
+        ctx.translate(lbl.px, lbl.py)
+        ctx.rotate(-Math.PI / 6)
+        ctx.fillStyle = 'rgba(248, 250, 252, 0.92)'
+        ctx.font = `bold ${Math.max(8, Math.round(zoom * 0.42))}px ui-sans-serif, system-ui, sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText('PICKLEBALL COURT', 0, 0)
+        ctx.restore()
+      }
 
       drawBox(0, -0.62, 0, 51.5, 1.15, 51.5, '#334155', 0, 1, '#475569')
       drawBox(-34, -0.62, 0, 22, 1.15, 51.5, '#334155', 0, 1, '#475569')
@@ -677,6 +692,7 @@ export default function OfficeCanvas2D({
       drawBox(-23.2, 0.045, 8, 0.5, 0.02, 2.4, '#38bdf8', 0, 0.65, '#7dd3fc')
 
       for (const room of Object.values(ROOMS_3D)) {
+        if (room.id === 'PICKLEBALL') continue
         const [rx, ry, rz] = room.center
         if (room.id === 'COMMAND') {
           drawCylinder(rx, ry + 0.04, rz, 6.8, 6.8, 0.08, '#090d16', 36, 1, '#00e5ff')
@@ -1220,6 +1236,38 @@ export default function OfficeCanvas2D({
         })
       }
 
+      // 4C-3. OUTDOOR PICKLEBALL COURT PROPS (Net, Posts, Benches, Perimeter Rail & Live Rally Ball)
+      const pbState = stepPickleballRally(pickleballRallyRef.current, dt)
+      enqueue(-16, -33, 0.48, () => {
+        drawBox(-16, 0.48, -36.25, 0.1, 0.96, 0.1, '#0f172a')
+        drawBox(-16, 0.48, -29.75, 0.1, 0.96, 0.1, '#0f172a')
+        drawBox(-16, 0.46, -33, 0.06, 0.84, 6.45, '#1e293b', 0, 0.82, '#94a3b8')
+        drawBox(-16, 0.9, -33, 0.08, 0.07, 6.5, '#f8fafc')
+      })
+      for (const bz of [-38.1, -27.9]) {
+        enqueue(-16, bz, 0.42, () => {
+          drawBox(-16, 0.42, bz, 5.4, 0.08, 0.55, '#b45309', 0, 1, '#78350f')
+          drawBox(-18.2, 0.21, bz, 0.14, 0.42, 0.45, '#1e293b')
+          drawBox(-13.8, 0.21, bz, 0.14, 0.42, 0.45, '#1e293b')
+        })
+      }
+      enqueue(-16, -38.95, 0.48, () => {
+        drawBox(-16, 0.48, -38.95, 15.8, 0.9, 0.06, '#bae6fd', 0, 0.22, '#38bdf8')
+      })
+      enqueue(pbState.ballPos[0], pbState.ballPos[2], pbState.ballPos[1], () => {
+        const sh = project(pbState.ballPos[0], 0.09, pbState.ballPos[2])
+        ctx.fillStyle = 'rgba(9, 13, 22, 0.35)'
+        ctx.beginPath()
+        ctx.ellipse(sh.px, sh.py, Math.max(2, zoom * 0.14), Math.max(1, zoom * 0.08), 0, 0, Math.PI * 2)
+        ctx.fill()
+
+        const bp = project(pbState.ballPos[0], pbState.ballPos[1], pbState.ballPos[2])
+        ctx.fillStyle = '#bef264'
+        ctx.beginPath()
+        ctx.arc(bp.px, bp.py, Math.max(2.5, zoom * 0.12), 0, Math.PI * 2)
+        ctx.fill()
+      })
+
       // 4D. Workstations + A* Walking Characters + Canvas-Rendered Nameplates
       const currentAgents = agentsRef.current
       const overrides = overridesRef.current
@@ -1248,7 +1296,14 @@ export default function OfficeCanvas2D({
           }
         }
 
-        const routeOverride = overrides[agent.id]
+        const pbSlot = getPickleballSlotForAgent(agent.id)
+        const routeOverride =
+          overrides[agent.id] ??
+          (pbSlot && (currentMode === 'OVERVIEW' || currentMode === 'PICKLEBALL')
+            ? 'PICKLEBALL'
+            : currentMode === 'PICKLEBALL'
+              ? 'OVERVIEW'
+              : undefined)
         const effectiveMode = routeOverride || currentMode
         const style = getCharacterStyle(agent.id, agent.name)
         const badge = getAgentStatusBadge(agent.status, effectiveMode)

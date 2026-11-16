@@ -66,51 +66,51 @@ export function PickleballCourt3D() {
         </mesh>
 
         {/* Blue Inner Playing Court (13.4m x 6.1m) */}
-        <mesh position={[0, 0.045, 0]} receiveShadow>
-          <boxGeometry args={[13.4, 0.015, 6.1]} />
-          <meshStandardMaterial color="#0284c7" roughness={0.65} />
+        <mesh position={[0, 0.06, 0]} receiveShadow>
+          <boxGeometry args={[13.4, 0.02, 6.1]} />
+          <meshStandardMaterial color="#2563eb" roughness={0.65} />
         </mesh>
 
         {/* Crisp White Court Lines */}
         {/* North & South Sidelines */}
-        <mesh position={[0, 0.055, -3.02]}>
-          <boxGeometry args={[13.4, 0.008, 0.07]} />
+        <mesh position={[0, 0.078, -3.02]}>
+          <boxGeometry args={[13.4, 0.01, 0.08]} />
           <meshBasicMaterial color="#f8fafc" />
         </mesh>
-        <mesh position={[0, 0.055, 3.02]}>
-          <boxGeometry args={[13.4, 0.008, 0.07]} />
+        <mesh position={[0, 0.078, 3.02]}>
+          <boxGeometry args={[13.4, 0.01, 0.08]} />
           <meshBasicMaterial color="#f8fafc" />
         </mesh>
         {/* West & East Baselines */}
-        <mesh position={[-6.67, 0.055, 0]}>
-          <boxGeometry args={[0.07, 0.008, 6.1]} />
+        <mesh position={[-6.67, 0.078, 0]}>
+          <boxGeometry args={[0.08, 0.01, 6.1]} />
           <meshBasicMaterial color="#f8fafc" />
         </mesh>
-        <mesh position={[6.67, 0.055, 0]}>
-          <boxGeometry args={[0.07, 0.008, 6.1]} />
+        <mesh position={[6.67, 0.078, 0]}>
+          <boxGeometry args={[0.08, 0.01, 6.1]} />
           <meshBasicMaterial color="#f8fafc" />
         </mesh>
         {/* Non-Volley ("Kitchen") Lines (±2.13m from net) */}
-        <mesh position={[-2.13, 0.055, 0]}>
-          <boxGeometry args={[0.06, 0.008, 6.06]} />
+        <mesh position={[-2.13, 0.078, 0]}>
+          <boxGeometry args={[0.07, 0.01, 6.06]} />
           <meshBasicMaterial color="#f8fafc" />
         </mesh>
-        <mesh position={[2.13, 0.055, 0]}>
-          <boxGeometry args={[0.06, 0.008, 6.06]} />
+        <mesh position={[2.13, 0.078, 0]}>
+          <boxGeometry args={[0.07, 0.01, 6.06]} />
           <meshBasicMaterial color="#f8fafc" />
         </mesh>
         {/* Center Service Lines */}
-        <mesh position={[-4.4, 0.055, 0]}>
-          <boxGeometry args={[4.54, 0.008, 0.06]} />
+        <mesh position={[-4.4, 0.078, 0]}>
+          <boxGeometry args={[4.54, 0.01, 0.07]} />
           <meshBasicMaterial color="#f8fafc" />
         </mesh>
-        <mesh position={[4.4, 0.055, 0]}>
-          <boxGeometry args={[4.54, 0.008, 0.06]} />
+        <mesh position={[4.4, 0.078, 0]}>
+          <boxGeometry args={[4.54, 0.01, 0.07]} />
           <meshBasicMaterial color="#f8fafc" />
         </mesh>
 
         {/* PICKLEBALL COURT Ground Label */}
-        <mesh position={[0, 0.056, 4.15]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh position={[0, 0.082, 4.15]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[6.4, 1.2]} />
           <meshBasicMaterial map={labelTex} transparent />
         </mesh>

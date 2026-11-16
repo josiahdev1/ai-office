@@ -1037,13 +1037,13 @@ export function getAgentTargetPosition(
     case 'SERVER_ROOM':
       return [-35, 0, 3.5]
     case 'PICKLEBALL': {
-      const agentKeys = Object.keys(AGENT_WORKSTATIONS_3D)
-      const idx = agentKeys.indexOf(ws.agentId)
-      const safeIdx = idx >= 0 ? idx : 0
-      if (safeIdx < PICKLEBALL_COURT_SLOTS.length) {
-        return PICKLEBALL_COURT_SLOTS[safeIdx]
-      }
-      return PICKLEBALL_BENCH_SLOTS[(safeIdx - PICKLEBALL_COURT_SLOTS.length) % PICKLEBALL_BENCH_SLOTS.length]
+      const players = ['boss', 'josiah', 'khent', 'blaze']
+      const bench = ['ferwin', 'jo_vincent']
+      const pIdx = players.indexOf(ws.agentId)
+      if (pIdx >= 0) return PICKLEBALL_COURT_SLOTS[pIdx]
+      const bIdx = bench.indexOf(ws.agentId)
+      if (bIdx >= 0) return PICKLEBALL_BENCH_SLOTS[bIdx]
+      return ws.deskPos
     }
     case 'WELLNESS':
       return [-34, 0, 0]

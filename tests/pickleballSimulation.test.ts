@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   createInitialRallyState,
+  getPickleballSlotForAgent,
+  PICKLEBALL_DEFAULT_PLAYERS,
   rotateSidelinePlayer,
   stepPickleballRally,
 } from '@/lib/office/pickleballSimulation'
@@ -12,6 +14,22 @@ describe('Pickleball 2v2 Rally Simulation & Pathfinding', () => {
     expect(state.activePlayers).toHaveLength(4)
     expect(state.benchQueue.length).toBeGreaterThan(0)
     expect(state.rallyHits).toBe(0)
+  })
+
+  it('enforces max 4 court players and assigns extra players to sideline benches', () => {
+    expect(PICKLEBALL_DEFAULT_PLAYERS).toHaveLength(4)
+    expect(getPickleballSlotForAgent('boss')?.role).toBe('court')
+    expect(getPickleballSlotForAgent('ferwin')?.role).toBe('bench')
+    expect(getPickleballSlotForAgent('cleaner_1')).toBeNull()
+  })
+
+  it('keeps ball stationary (no ghost ball) when fewer than 2 players are on court', () => {
+    const state = createInitialRallyState(['', '', '', ''], [])
+    const before = [...state.ballPos]
+    stepPickleballRally(state, 0.5)
+    expect(state.rallyHits).toBe(0)
+    expect(state.ballPos[0]).toBe(before[0])
+    expect(state.ballPos[2]).toBe(before[2])
   })
 
   it('advances parabolic ball flight over the 0.92m center net and triggers paddle swing', () => {

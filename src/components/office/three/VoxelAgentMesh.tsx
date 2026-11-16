@@ -4,6 +4,7 @@ import React from 'react'
 import * as THREE from 'three'
 import { CharacterStyleConfig } from '@/config/characterStyles'
 import { DepartmentMode } from '@/config/officeLayout'
+import { getPickleballSlotForAgent } from '@/lib/office/pickleballSimulation'
 
 export interface VoxelAgentMeshProps {
   style: CharacterStyleConfig
@@ -28,7 +29,8 @@ export function VoxelAgentMesh({
   leftHandRef,
   rightHandRef,
 }: VoxelAgentMeshProps) {
-  const isPickleball = effectiveMode === 'PICKLEBALL'
+  const pbSlot = getPickleballSlotForAgent(agentId)
+  const isPickleball = effectiveMode === 'PICKLEBALL' && pbSlot?.role === 'court'
   const isGym = effectiveMode === 'GYM'
   const isPantry = effectiveMode === 'PANTRY'
 

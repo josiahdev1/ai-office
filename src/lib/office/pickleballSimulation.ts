@@ -18,12 +18,33 @@ export interface PickleballRallyState {
   lastSubbedIn: string | null
 }
 
-const DEFAULT_PLAYERS: [string, string, string, string] = ['boss', 'josiah', 'khent', 'blaze']
-const DEFAULT_BENCH: string[] = ['ferwin', 'jo_vincent', 'ian', 'john_arvy']
+export const PICKLEBALL_DEFAULT_PLAYERS: [string, string, string, string] = [
+  'boss',
+  'josiah',
+  'khent',
+  'blaze',
+]
+export const PICKLEBALL_DEFAULT_BENCH: string[] = ['ferwin', 'jo_vincent']
+
+export function getPickleballSlotForAgent(
+  agentId: string,
+  activePlayers: readonly string[] = PICKLEBALL_DEFAULT_PLAYERS,
+  benchPlayers: readonly string[] = PICKLEBALL_DEFAULT_BENCH
+): { role: 'court'; index: number } | { role: 'bench'; index: number } | null {
+  const courtIdx = activePlayers.slice(0, 4).indexOf(agentId)
+  if (courtIdx >= 0) {
+    return { role: 'court', index: courtIdx }
+  }
+  const benchIdx = benchPlayers.indexOf(agentId)
+  if (benchIdx >= 0) {
+    return { role: 'bench', index: benchIdx }
+  }
+  return null
+}
 
 export function createInitialRallyState(
-  players: [string, string, string, string] = DEFAULT_PLAYERS,
-  bench: string[] = DEFAULT_BENCH
+  players: [string, string, string, string] = PICKLEBALL_DEFAULT_PLAYERS,
+  bench: string[] = PICKLEBALL_DEFAULT_BENCH
 ): PickleballRallyState {
   const start = PICKLEBALL_COURT_SLOTS[0]
   const end = PICKLEBALL_COURT_SLOTS[2]
@@ -71,6 +92,12 @@ export function stepPickleballRally(
   state: PickleballRallyState,
   dt: number
 ): PickleballRallyState {
+  // Never bounce a ghost ball on an empty court (< 2 active players)
+  const validPlayers = state.activePlayers.filter(Boolean)
+  if (validPlayers.length < 2) {
+    state.ballPos = [state.fromPos[0], 0.45, state.fromPos[1]]
+    return state
+  }
   const safeDt = Math.max(0, Math.min(0.1, dt))
   state.flightProgress += safeDt / state.flightDuration
 

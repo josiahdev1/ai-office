@@ -832,6 +832,9 @@ function HQCommandPage() {
   // Does NOT modify current_coord directly — agents unseat and walk via pathQueue!
   const handleGlobalModeChange = (newMode: DepartmentMode) => {
     setCurrentMode(newMode)
+    if (newMode === 'PICKLEBALL') {
+      return
+    }
     setAgentRouteOverrides({})
 
     const modeStatus: Agent['status'] =
