@@ -1,11 +1,13 @@
 # \[TICKET-34\] Hotfix: True 2v2 Pickleball Match with Active Players & Sideline Bench Queue, Complete 2D/3D Court Lines & Net, Non-Summoning Room Camera Jump & Unlocked 3D Zoom/Orbit
 
 **Phase / Milestone**: Phase K11.1 Pickleball Court & 3D Camera Hotfix
-**Status**: COMPLETED
+**Status**: MERGED INTO TICKET-35
 **Date**: 2026-11-16
-**Commit SHA**: pending
+**Commit SHA**: db8915e
 **Branch**: `office-v3`
 **Author / Assignee**: Josiah (Lead Architect) & Antigravity Autonomous Engineering Fleet
+
+> Superseded by TICKET-35 on 2026-11-16. Remaining and verified work continues in `tickets/ticket-35-pickleball-video-style-agents-shadows-parity-orbit-and-facilities.md`. The original content below is kept unchanged for history.
 
 ## 1. Root-Cause Diagnosis (From Live Screenshots)
 
