@@ -58,7 +58,9 @@ export function AgentLogDrawer({
   initialAgentId,
   agentList,
 }: AgentLogDrawerProps) {
-  const [selectedAgent, setSelectedAgent] = useState<string>(initialAgentId || 'ALL')
+  const [selectedAgent, setSelectedAgent] = useState<string>(
+    initialAgentId || 'ALL'
+  )
   const [selectedKind, setSelectedKind] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [logs, setLogs] = useState<AgentActivityLogRecord[]>([])
@@ -86,7 +88,11 @@ export function AgentLogDrawer({
         .channel('realtime_agent_activity_log')
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'office_agent_activity_log' },
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'office_agent_activity_log',
+          },
           (payload) => {
             if (payload.new) {
               const newRecord: AgentActivityLogRecord = {
@@ -151,8 +157,10 @@ export function AgentLogDrawer({
   }
 
   // 24-hour PHT Timeline Blocks for the currently selected agent
-  const timelineAgentId = selectedAgent === 'ALL' ? (agentList[0]?.id || 'boss') : selectedAgent
-  const timelineAgentName = agentList.find((a) => a.id === timelineAgentId)?.name || timelineAgentId
+  const timelineAgentId =
+    selectedAgent === 'ALL' ? agentList[0]?.id || 'boss' : selectedAgent
+  const timelineAgentName =
+    agentList.find((a) => a.id === timelineAgentId)?.name || timelineAgentId
 
   const timelineBlocks = useMemo(() => {
     // Generate deterministic 24-hr schedule bands
@@ -160,27 +168,67 @@ export function AgentLogDrawer({
       { start: 0, end: 6, kind: 'sleep' as ActivityKind, label: 'Night Rest' },
       { start: 6, end: 7, kind: 'cr' as ActivityKind, label: 'Morning Prep' },
       { start: 7, end: 8, kind: 'eat' as ActivityKind, label: 'Breakfast' },
-      { start: 8, end: 9, kind: 'drink' as ActivityKind, label: 'Arrival & Hydration' },
-      { start: 9, end: 12, kind: 'work' as ActivityKind, label: 'Morning Core Work' },
-      { start: 12, end: 13.5, kind: 'eat' as ActivityKind, label: 'Grand Cafeteria Lunch' },
-      { start: 13.5, end: 14, kind: 'coffee' as ActivityKind, label: 'Pantry Coffee Dip Reset' },
-      { start: 14, end: 17, kind: 'work' as ActivityKind, label: 'Sprint Execution' },
-      { start: 17, end: 18.5, kind: 'gym' as ActivityKind, label: 'Campus Gym Workout' },
+      {
+        start: 8,
+        end: 9,
+        kind: 'drink' as ActivityKind,
+        label: 'Arrival & Hydration',
+      },
+      {
+        start: 9,
+        end: 12,
+        kind: 'work' as ActivityKind,
+        label: 'Morning Core Work',
+      },
+      {
+        start: 12,
+        end: 13.5,
+        kind: 'eat' as ActivityKind,
+        label: 'Grand Cafeteria Lunch',
+      },
+      {
+        start: 13.5,
+        end: 14,
+        kind: 'coffee' as ActivityKind,
+        label: 'Pantry Coffee Dip Reset',
+      },
+      {
+        start: 14,
+        end: 17,
+        kind: 'work' as ActivityKind,
+        label: 'Sprint Execution',
+      },
+      {
+        start: 17,
+        end: 18.5,
+        kind: 'gym' as ActivityKind,
+        label: 'Campus Gym Workout',
+      },
       { start: 18.5, end: 19.5, kind: 'eat' as ActivityKind, label: 'Dinner' },
-      { start: 19.5, end: 22, kind: 'social' as ActivityKind, label: 'Lounge & Brain Sync' },
-      { start: 22, end: 24, kind: 'sleep' as ActivityKind, label: 'Night Rest' },
+      {
+        start: 19.5,
+        end: 22,
+        kind: 'social' as ActivityKind,
+        label: 'Lounge & Brain Sync',
+      },
+      {
+        start: 22,
+        end: 24,
+        kind: 'sleep' as ActivityKind,
+        label: 'Night Rest',
+      },
     ]
   }, [])
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
-      <div className="relative flex h-full w-full max-w-2xl flex-col border-l border-cyan-500/30 bg-[#0a0f1d] shadow-2xl text-slate-200">
+    <div className="animate-in fade-in fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs transition-opacity duration-200">
+      <div className="relative flex h-full w-full max-w-2xl flex-col border-l border-cyan-500/30 bg-[#0a0f1d] text-slate-200 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 bg-slate-950/80 px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="flex h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-400" />
             <h2 className="font-mono text-sm font-bold tracking-wider text-slate-100 uppercase">
               AGENT ACTIVITY LOG & TIMELINE
             </h2>
@@ -193,10 +241,20 @@ export function AgentLogDrawer({
             <button
               type="button"
               onClick={handleExportCSV}
-              className="cursor-pointer flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-[11px] font-medium text-slate-300 hover:border-cyan-400 hover:text-cyan-300 transition-all"
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-[11px] font-medium text-slate-300 transition-all hover:border-cyan-400 hover:text-cyan-300"
             >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
               </svg>
               <span>Export CSV</span>
             </button>
@@ -204,26 +262,41 @@ export function AgentLogDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="cursor-pointer rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              className="cursor-pointer rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
         </div>
 
         {/* 24-Hour PHT Day Timeline Section */}
-        <div className="border-b border-slate-800/80 bg-slate-950/40 p-4 space-y-2">
+        <div className="space-y-2 border-b border-slate-800/80 bg-slate-950/40 p-4">
           <div className="flex items-center justify-between font-mono text-[11px] text-slate-400">
             <span>
-              24-HR PHT DAY TIMELINE · <span className="text-cyan-400 font-bold">{timelineAgentName}</span>
+              24-HR PHT DAY TIMELINE ·{' '}
+              <span className="font-bold text-cyan-400">
+                {timelineAgentName}
+              </span>
             </span>
-            <span className="text-slate-500">Iloilo City (Asia/Manila, UTC+8)</span>
+            <span className="text-slate-500">
+              Iloilo City (Asia/Manila, UTC+8)
+            </span>
           </div>
 
           {/* Timeline Bar */}
-          <div className="relative h-7 w-full rounded-md overflow-hidden bg-slate-900 border border-slate-800 flex">
+          <div className="relative flex h-7 w-full overflow-hidden rounded-md border border-slate-800 bg-slate-900">
             {timelineBlocks.map((blk, idx) => {
               const widthPct = ((blk.end - blk.start) / 24) * 100
               const bg = TIMELINE_BLOCK_COLORS[blk.kind] || '#6366f1'
@@ -231,10 +304,10 @@ export function AgentLogDrawer({
                 <div
                   key={idx}
                   title={`${blk.label} (${blk.start}:00 - ${blk.end}:00 PHT)`}
-                  className="group relative h-full flex items-center justify-center cursor-pointer border-r border-slate-950/30 transition-opacity hover:opacity-90"
+                  className="group relative flex h-full cursor-pointer items-center justify-center border-r border-slate-950/30 transition-opacity hover:opacity-90"
                   style={{ width: `${widthPct}%`, backgroundColor: bg }}
                 >
-                  <span className="truncate px-1 font-mono text-[9px] font-bold text-slate-950 uppercase hidden md:inline">
+                  <span className="hidden truncate px-1 font-mono text-[9px] font-bold text-slate-950 uppercase md:inline">
                     {blk.kind}
                   </span>
                 </div>
@@ -243,7 +316,7 @@ export function AgentLogDrawer({
           </div>
 
           {/* Hours Ruler */}
-          <div className="flex justify-between font-mono text-[9px] text-slate-500 px-0.5">
+          <div className="flex justify-between px-0.5 font-mono text-[9px] text-slate-500">
             <span>00:00</span>
             <span>06:00</span>
             <span>12:00</span>
@@ -253,9 +326,11 @@ export function AgentLogDrawer({
         </div>
 
         {/* Filter Controls */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 border-b border-slate-800/80 bg-slate-950/60 p-4">
+        <div className="grid grid-cols-1 gap-2.5 border-b border-slate-800/80 bg-slate-950/60 p-4 md:grid-cols-3">
           <div>
-            <label className="block font-mono text-[10px] text-slate-400 mb-1">FILTER BY AGENT</label>
+            <label className="mb-1 block font-mono text-[10px] text-slate-400">
+              FILTER BY AGENT
+            </label>
             <select
               value={selectedAgent}
               onChange={(e) => setSelectedAgent(e.target.value)}
@@ -271,7 +346,9 @@ export function AgentLogDrawer({
           </div>
 
           <div>
-            <label className="block font-mono text-[10px] text-slate-400 mb-1">ACTIVITY KIND</label>
+            <label className="mb-1 block font-mono text-[10px] text-slate-400">
+              ACTIVITY KIND
+            </label>
             <select
               value={selectedKind}
               onChange={(e) => setSelectedKind(e.target.value)}
@@ -293,7 +370,9 @@ export function AgentLogDrawer({
           </div>
 
           <div>
-            <label className="block font-mono text-[10px] text-slate-400 mb-1">SEARCH REASON / TEXT</label>
+            <label className="mb-1 block font-mono text-[10px] text-slate-400">
+              SEARCH REASON / TEXT
+            </label>
             <input
               type="text"
               placeholder="e.g. hunger, dip, Christian..."
@@ -305,21 +384,23 @@ export function AgentLogDrawer({
         </div>
 
         {/* Log Entries Stream */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2.5 divide-y divide-slate-800/40">
+        <div className="flex-1 space-y-2.5 divide-y divide-slate-800/40 overflow-y-auto p-4">
           {filteredLogs.length === 0 ? (
             <div className="p-8 text-center font-mono text-xs text-slate-500">
               No matching activity log entries found for the selected filters.
             </div>
           ) : (
             filteredLogs.map((log) => {
-              const colorClass = ACTIVITY_COLORS[log.kind] || 'bg-slate-800 text-slate-300 border-slate-700'
+              const colorClass =
+                ACTIVITY_COLORS[log.kind] ||
+                'bg-slate-800 text-slate-300 border-slate-700'
               const isExpanded = expandedLogId === log.id
 
               return (
                 <div
                   key={log.id}
                   onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
-                  className="cursor-pointer rounded-lg bg-slate-950/40 p-3 hover:bg-slate-900/60 border border-slate-800/40 transition-all pt-2.5"
+                  className="cursor-pointer rounded-lg border border-slate-800/40 bg-slate-950/40 p-3 pt-2.5 transition-all hover:bg-slate-900/60"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -329,7 +410,9 @@ export function AgentLogDrawer({
                       <span className="font-mono text-[10px] font-bold text-cyan-400">
                         {log.agentId.toUpperCase()}
                       </span>
-                      <span className={`rounded border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider ${colorClass}`}>
+                      <span
+                        className={`rounded border px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-wider uppercase ${colorClass}`}
+                      >
                         {log.kind}
                       </span>
                       <span className="font-mono text-[9px] text-slate-500 uppercase">
@@ -342,14 +425,16 @@ export function AgentLogDrawer({
                     </span>
                   </div>
 
-                  <p className="mt-1 font-sans text-xs text-slate-300 leading-relaxed">
+                  <p className="mt-1 font-sans text-xs leading-relaxed text-slate-300">
                     {log.reason}
                   </p>
 
                   {/* Expanded Needs Telemetry Drawer */}
                   {isExpanded && log.needsBefore && (
-                    <div className="mt-2.5 rounded-md border border-slate-800 bg-slate-950/80 p-2 font-mono text-[10px] text-slate-400 space-y-1">
-                      <div className="font-bold text-cyan-400">VITALS AT DECISION TIME:</div>
+                    <div className="mt-2.5 space-y-1 rounded-md border border-slate-800 bg-slate-950/80 p-2 font-mono text-[10px] text-slate-400">
+                      <div className="font-bold text-cyan-400">
+                        VITALS AT DECISION TIME:
+                      </div>
                       <div className="grid grid-cols-3 gap-2 pt-0.5">
                         <span>Energy: {log.needsBefore.energy}%</span>
                         <span>Hunger: {log.needsBefore.hunger}%</span>
@@ -367,8 +452,10 @@ export function AgentLogDrawer({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-slate-800 bg-slate-950/90 px-4 py-3 flex items-center justify-between font-mono text-[10px] text-slate-500">
-          <span>Showing {filteredLogs.length} of {logs.length} logged events</span>
+        <div className="flex items-center justify-between border-t border-slate-800 bg-slate-950/90 px-4 py-3 font-mono text-[10px] text-slate-500">
+          <span>
+            Showing {filteredLogs.length} of {logs.length} logged events
+          </span>
           <span>Realtime Feed Active</span>
         </div>
       </div>

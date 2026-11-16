@@ -31,35 +31,16 @@ export type ActivityKind =
   | 'wake'
 
 export type ActivityPhase =
-  | 'planned'
-  | 'started'
-  | 'completed'
-  | 'cancelled'
-  | 'denied'
+  'planned' | 'started' | 'completed' | 'cancelled' | 'denied'
 
 export type DecidedBy =
-  | 'needs engine'
-  | 'schedule'
-  | 'jarvis'
-  | 'boss'
-  | 'agent'
-  | 'me'
+  'needs engine' | 'schedule' | 'jarvis' | 'boss' | 'agent' | 'me'
 
 export type PlanSource =
-  | 'needs'
-  | 'schedule'
-  | 'jarvis'
-  | 'boss'
-  | 'agent_request'
-  | 'me'
+  'needs' | 'schedule' | 'jarvis' | 'boss' | 'agent_request' | 'me'
 
 export type PlanStatus =
-  | 'planned'
-  | 'approved'
-  | 'started'
-  | 'done'
-  | 'cancelled'
-  | 'skipped'
+  'planned' | 'approved' | 'started' | 'done' | 'cancelled' | 'skipped'
 
 export interface AgentTraits {
   metabolism: 'fast' | 'normal' | 'slow'
@@ -215,8 +196,8 @@ export function generateAgentTraits(agentId: string): AgentTraits {
   const metabolism = metaOptions[hash % 3]
   const sleepiness = sleepOptions[(hash >>> 2) % 3]
   const gymLover = (hash & 1) === 0
-  const caffeineSensitivity = 0.85 + (((hash >>> 4) % 7) * 0.05) // 0.85 to 1.15
-  const bladderCapacity = 0.85 + (((hash >>> 7) % 7) * 0.05) // 0.85 to 1.15
+  const caffeineSensitivity = 0.85 + ((hash >>> 4) % 7) * 0.05 // 0.85 to 1.15
+  const bladderCapacity = 0.85 + ((hash >>> 7) % 7) * 0.05 // 0.85 to 1.15
 
   return {
     metabolism,
@@ -242,7 +223,7 @@ export function getCircadianEnergyMultiplier(
   let shift = 0
   if (sleepiness === 'early_bird') shift = -1.0
   if (sleepiness === 'night_owl') shift = 1.8
-  const adjHour = ((h - shift + 24) % 24)
+  const adjHour = (h - shift + 24) % 24
 
   // Mid-morning peak: 09:00 - 11:30
   if (adjHour >= 9.0 && adjHour <= 11.5) {
@@ -313,7 +294,8 @@ export function computeCurrentNeeds(
   if (caffeineEffective > 0) {
     // Sharp rise peaking around 30 min, decay into crash after 2 hours
     if (elapsedHours < 2.0) {
-      caffeineEnergyBoost = caffeineEffective * 0.25 * Math.sin((elapsedHours / 2.0) * Math.PI)
+      caffeineEnergyBoost =
+        caffeineEffective * 0.25 * Math.sin((elapsedHours / 2.0) * Math.PI)
     } else {
       caffeineEnergyCrash = Math.min(15, (elapsedHours - 2.0) * 4.0)
     }
@@ -352,7 +334,9 @@ export function computeCurrentNeeds(
 
   // Apply circadian scaling, caffeine modulation, and sleep debt drag
   const sleepDebtPenalty = (currentSleepDebt / 100.0) * 22.0
-  let netEnergy = (rawEnergy + caffeineEnergyBoost - caffeineEnergyCrash) * circadian - sleepDebtPenalty
+  let netEnergy =
+    (rawEnergy + caffeineEnergyBoost - caffeineEnergyCrash) * circadian -
+    sleepDebtPenalty
   netEnergy = Math.max(0, Math.min(100, Math.round(netEnergy * 10) / 10))
 
   // 4. Hunger (100 = full)
@@ -386,7 +370,10 @@ export function computeCurrentNeeds(
     if (activeState === 'coffee') fillRate *= 2.8 // Caffeine increases bladder urge
     rawBladder -= elapsedHours * fillRate
   }
-  const netBladder = Math.max(0, Math.min(100, Math.round(rawBladder * 10) / 10))
+  const netBladder = Math.max(
+    0,
+    Math.min(100, Math.round(rawBladder * 10) / 10)
+  )
 
   // 7. Health & Morale
   let netHealth = base.health
@@ -426,7 +413,9 @@ export function computeCurrentNeeds(
 /**
  * Derives visible tiredness level and behavioral expressions for 3D/2D animation loops.
  */
-export function getTirednessVisualState(needs: AgentNeeds): TirednessVisualState {
+export function getTirednessVisualState(
+  needs: AgentNeeds
+): TirednessVisualState {
   if (needs.energy < 15.0) {
     return {
       level: 'exhausted',
@@ -756,7 +745,10 @@ class AgentNeedsManager {
     }
   }
 
-  public getNeedsRecord(agentId: string, now: Date = new Date()): AgentNeedsRecord {
+  public getNeedsRecord(
+    agentId: string,
+    now: Date = new Date()
+  ): AgentNeedsRecord {
     let rec = this.cache.get(agentId)
     if (!rec) {
       rec = {
@@ -789,7 +781,10 @@ class AgentNeedsManager {
     return computeCurrentNeeds(rec, now)
   }
 
-  public getAgentNeeds(agentId: string, now: Date = new Date()): AgentNeeds & { state: ActivityKind } {
+  public getAgentNeeds(
+    agentId: string,
+    now: Date = new Date()
+  ): AgentNeeds & { state: ActivityKind } {
     const rec = this.getNeedsRecord(agentId, now)
     const current = computeCurrentNeeds(rec, now)
     return {

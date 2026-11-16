@@ -50,7 +50,7 @@ export function getActiveLLMProviders(): {
   )
   const anthropic = Boolean(
     process.env.ANTHROPIC_API_KEY &&
-      process.env.ANTHROPIC_API_KEY.trim().length > 5
+    process.env.ANTHROPIC_API_KEY.trim().length > 5
   )
   const openai = Boolean(
     process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim().length > 5
@@ -113,7 +113,6 @@ async function callGemini(
 
   throw new Error(lastError)
 }
-
 
 /**
  * Call Anthropic Messages API

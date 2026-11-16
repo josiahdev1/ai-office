@@ -1,12 +1,12 @@
 /**
  * Activity Director & Counter Parity Engine for EasyUp Software Solution HQ
- * 
+ *
  * Derives each agent's live activity from real Supabase operational state:
  * - mode (FOCUS_WORK, ALL_HANDS, COFFEE_BREAK, RECREATION)
  * - tasks (active, queued, needs_approval)
  * - approvals (pending approval -> waiting_on_you with orange indicator)
  * - off-duty / lunch break scheduling with max 30% limits
- * 
+ *
  * Guarantees 100% mathematical parity:
  * working + eating + gym + meeting + break + arriving + waiting_on_you === totalAgents
  */
@@ -47,8 +47,10 @@ export function computeAgentActivities(
   const pendingApprovalAgentSlugs = new Set<string>()
   approvals.forEach((app) => {
     if (app.status === 'pending' || !app.status) {
-      if (app.agent_id) pendingApprovalAgentSlugs.add(app.agent_id.toLowerCase())
-      if (app.agent_name) pendingApprovalAgentSlugs.add(app.agent_name.toLowerCase())
+      if (app.agent_id)
+        pendingApprovalAgentSlugs.add(app.agent_id.toLowerCase())
+      if (app.agent_name)
+        pendingApprovalAgentSlugs.add(app.agent_name.toLowerCase())
     }
   })
 
@@ -119,7 +121,10 @@ export function computeAgentActivities(
         currentGymCount++
       }
       // Designated snack / coffee agents (e.g. index 5 & 12) within 30% limit
-      else if ((idx === 5 || idx === 12) && currentEatingCount < maxLeisureCount) {
+      else if (
+        (idx === 5 || idx === 12) &&
+        currentEatingCount < maxLeisureCount
+      ) {
         act = 'eating'
         label = 'Pantry Snack / Lunch'
         color = '#f59e0b' // Amber
@@ -174,7 +179,10 @@ export function computeAgentActivities(
 
   // Open tasks count: tasks in queued, working, or needs_approval
   const openTasksCount = tasks.filter(
-    (t) => t.status === 'queued' || t.status === 'working' || t.status === 'needs_approval'
+    (t) =>
+      t.status === 'queued' ||
+      t.status === 'working' ||
+      t.status === 'needs_approval'
   ).length
 
   // Total accessories unlocked across agents

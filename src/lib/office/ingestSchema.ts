@@ -16,7 +16,14 @@ export function constantTimeCompare(a: string, b: string): boolean {
 // Event Validation Schemas
 // =============================================================================
 const BaseEvent = z.object({
-  cli: z.enum(['claude-code', 'antigravity', 'codex', 'opencode', 'cursor', 'other']),
+  cli: z.enum([
+    'claude-code',
+    'antigravity',
+    'codex',
+    'opencode',
+    'cursor',
+    'other',
+  ]),
   session_id: z.string().min(1).max(128),
   cwd_hash: z.string().max(64).optional(),
 })

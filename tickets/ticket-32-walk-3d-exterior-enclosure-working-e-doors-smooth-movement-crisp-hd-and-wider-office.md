@@ -5,11 +5,12 @@
 **Date**: 2026-11-13  
 **Commit SHA**: recorded-on-merge  
 **Branch**: `office-v3`  
-**Author / Assignee**: Josiah (Lead Architect) & Antigravity Autonomous Engineering Fleet  
+**Author / Assignee**: Josiah (Lead Architect) & Antigravity Autonomous Engineering Fleet
 
 ---
 
 ## 1. Context & Objectives
+
 - **Open Exterior Perimeter Walls in Walk-3D (`image_0c2b9d.png` & `image_0c27c2.png`)**: In Walk-3D mode, the outer perimeter currently only renders low waist-high cutaway walls with a wide open gap to the street, making the building look unfinished from inside. In Walk-3D, all exterior perimeter walls must extend full floor-to-ceiling height with architectural window frames, clear glass panes, and proper exterior doors—while automatically lowering back to cutaway height in top-down Isometric 3D view.
 - **Broken Interactive `[E]` Key Doors (`image_0c2786.png`)**: Doorway openings in Walk-3D are currently empty gaps with no physical hinged door mesh rendered and no working `[E]` key prompt or open/close toggle. Every interior and exterior doorway must render a visible framed hinged door panel (with handle/glass insert), detect player proximity reliably, display an on-screen `Press [E] to Open` / `Press [E] to Close` prompt, and smoothly swing open/closed on `KeyE` (updating collision in real time).
 - **Choppy / Non-Smooth Walk-3D Movement**: Walking and looking around inside Walk-3D feels jerky/stiff. Implement frame-rate-independent delta-time velocity acceleration/damping (`lerp` smoothing) for `W/A/S/D` + Arrow movement and smooth mouse-look / pointer-lock rotation so walking through the office feels fluid and natural.
@@ -17,6 +18,7 @@
 - **Narrow / Cramped Office Width & Layout (`image_0c2786.png`)**: As seen in the 3rd screenshot (`image_0c2786.png`), the main office corridors, doorways, and workspace aisles feel narrow and cramped. Expand the overall office width and room dimensions (`validateMap` passing, full A* walkability across 3D, Walk-3D, and 2D `?v=2`) so hallways, doorways, and departments feel spacious, realistic, and comfortably walkable.
 
 ## 2. Architectural Design & Key Changes
+
 1. **Expanded Office Width & Spacious Interior Layout (`src/config/officeLayout.ts`, `OfficeCanvas3D.tsx`, `OfficeCanvas2D.tsx`)**:
    - Widen the entire office campus footprint and increase doorway/corridor widths (`>= 2.4m` clear aisles) across the Main Office, Executive/Brain, Engineering/Ops, Server Room, Comfort Rooms, Bedroom, Canteen, Pantry, and Gym so walking inside feels spacious and realistic (`image_0c2786.png`), maintaining 100% parity across 3D, Walk-3D, and 2D (`?v=2`).
 2. **Walk-3D Full Exterior Enclosure (Ceiling-High Outer Walls, Framed Windows & Exterior Doors) (`OfficeCanvas3D.tsx`)**:
@@ -32,9 +34,11 @@
    - Fix floating agent nameplates in Walk-3D (`image_0c2786.png`): hide/fade nameplates behind walls or beyond `10m` distance and remove `transform` CSS blur scaling on `<Html>` badges so labels stay razor-sharp and never clutter through walls.
 
 ## 3. Data & Schema Modifications
+
 - `supabase/migrations/0020_wider_office_floorplan_and_doorways.sql` (additive `IF NOT EXISTS` migration): Seed the widened, spacious office `office_map_versions` layout and doorway coordinates, applied autonomously via Supabase MCP (`apply_migration` / `execute_sql`).
 
 ## 4. Verification & Quality Gates
+
 - **Lint**: PASS (`npm run lint` — 0 errors, canonical Tailwind v4 classes)
 - **Type Check**: PASS (`npx tsc --noEmit` — 0 errors)
 - **Unit & Integration Tests**: PASS (`npm test -- --run` — 28/28 test files, 267/267 tests passed in 12.28s)
@@ -43,5 +47,6 @@
   - Verified Walk-3D full floor-to-ceiling exterior enclosure with framed panoramic glass windows and exterior entry doors, 14 interactive `[E]` hinged doors (`walkCollision.ts`), smooth delta-time velocity/look damping (`CameraController.tsx`), HiDPI sharpness (`gl.setPixelRatio(Math.min(dpr, 2))`), and distance-culled (`<= 10.5m`) occlusion-clean nameplates (`ProceduralAgent3D.tsx`) with zero React/hydration console errors.
 
 ## 5. Notes & Dependencies
+
 - Follows `tickets/ticket-31-2d-server-room-fix-walk-3d-wall-collision-hd-monitors-sky-and-smooth-ui-animations.md`.
 - Visual references attached by Josiah: `image_0c2b9d.png` (open exterior gap needing full wall/windows), `image_0c27c2.png` (Gym exterior wall/window enclosure), and `image_0c2786.png` (narrow doorway needing wider office proportions, visible hinged door with working `[E]` interaction, and distance-culled crisp labels).

@@ -99,11 +99,36 @@ describe('Office Activities Engine (Phase K4)', () => {
 
   it('strictly derives campus live counters without hardcoded formulas', () => {
     const agents = [
-      { id: 'josiah', status: 'working', current_task: 'PR Review', room: 'Command' },
-      { id: 'gian', status: 'available', current_task: '', room: 'Engineering' },
-      { id: 'arwin', status: 'available', current_task: '', room: 'Engineering' },
-      { id: 'cleaner_1', status: 'available', current_task: '', room: 'Facilities' },
-      { id: 'cleaner_2', status: 'available', current_task: '', room: 'Facilities' },
+      {
+        id: 'josiah',
+        status: 'working',
+        current_task: 'PR Review',
+        room: 'Command',
+      },
+      {
+        id: 'gian',
+        status: 'available',
+        current_task: '',
+        room: 'Engineering',
+      },
+      {
+        id: 'arwin',
+        status: 'available',
+        current_task: '',
+        room: 'Engineering',
+      },
+      {
+        id: 'cleaner_1',
+        status: 'available',
+        current_task: '',
+        room: 'Facilities',
+      },
+      {
+        id: 'cleaner_2',
+        status: 'available',
+        current_task: '',
+        room: 'Facilities',
+      },
     ]
 
     const needsMap = {

@@ -1,13 +1,13 @@
 'use client'
 
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-} from 'react'
-import { Agent, Approval, FacingDirection, OfficeTask, VehicleState } from './types'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import {
+  Agent,
+  Approval,
+  FacingDirection,
+  OfficeTask,
+  VehicleState,
+} from './types'
 import { PixelSprite } from './pixel-sprites'
 import { VehicleSprite } from './VehicleSprite'
 import { ActivityCounterCard } from './ActivityCounterCard'
@@ -28,16 +28,22 @@ import {
   calculateFacingBetweenPoints,
   DeskSlot,
 } from '@/lib/office/map'
-import {
-  PARKING_BAYS,
-  OUTDOOR_PROPS,
-} from '@/lib/office/campusMap'
+import { PARKING_BAYS, OUTDOOR_PROPS } from '@/lib/office/campusMap'
 import { TrafficSimulator } from '@/lib/office/trafficSim'
-import { computeAgentActivities, AgentDirectedActivity } from '@/lib/office/activityDirector'
+import {
+  computeAgentActivities,
+  AgentDirectedActivity,
+} from '@/lib/office/activityDirector'
 import { officeBus } from '@/lib/office/bus'
-import { dialogueEngine, generateAllHandsScript } from '@/lib/office/dialogueEngine'
+import {
+  dialogueEngine,
+  generateAllHandsScript,
+} from '@/lib/office/dialogueEngine'
 import { officeSupabase } from '@/lib/supabase/officeService'
-import { resolveNameTagPositions, AgentTagInput } from '@/lib/office/antiOverlap'
+import {
+  resolveNameTagPositions,
+  AgentTagInput,
+} from '@/lib/office/antiOverlap'
 import { DataHealthPanel } from './DataHealthPanel'
 
 export interface IsometricOfficeProps {
@@ -54,7 +60,11 @@ export interface IsometricOfficeProps {
     action: 'approve' | 'reject' | 'hold' | 'send_back' | 'instruct',
     instruction?: string
   ) => Promise<void>
-  onCreateTask?: (task: { title: string; assignedTo: string; department: string }) => Promise<void>
+  onCreateTask?: (task: {
+    title: string
+    assignedTo: string
+    department: string
+  }) => Promise<void>
   onDispatchDirective?: (agentId: string, directive: string) => Promise<void>
   logs?: string[]
   doneToday?: Array<{ id: string; title: string; agent: string; time: string }>
@@ -124,7 +134,8 @@ export function IsometricOffice({
 
   // Decision Cards Panel & Live Counter Filter
   const [showDecisionPanel, setShowDecisionPanel] = useState(false)
-  const [activeActivityFilter, setActiveActivityFilter] = useState<AgentDirectedActivity | null>(null)
+  const [activeActivityFilter, setActiveActivityFilter] =
+    useState<AgentDirectedActivity | null>(null)
 
   // Camera Tour ("Walk around")
   const [isTourActive, setIsTourActive] = useState(false)
@@ -135,11 +146,15 @@ export function IsometricOffice({
   const tourStepRef = useRef(0)
 
   // Traffic Simulation
-  const trafficSimRef = useRef<TrafficSimulator>(new TrafficSimulator({ maxMovingCars: 12 }))
+  const trafficSimRef = useRef<TrafficSimulator>(
+    new TrafficSimulator({ maxMovingCars: 12 })
+  )
   const [trafficVehicles, setTrafficVehicles] = useState<VehicleState[]>([])
 
   // Commute arrivals/departures tracking
-  const [arrivingAgentIds, setArrivingAgentIds] = useState<Set<string>>(new Set())
+  const [arrivingAgentIds, setArrivingAgentIds] = useState<Set<string>>(
+    new Set()
+  )
 
   // Office Modes & Audio
   const [currentMode, setCurrentMode] = useState<OfficeMode>('FOCUS_WORK')
@@ -151,9 +166,16 @@ export function IsometricOffice({
   }, [soundEnabled])
 
   // Computed Activities & Stats
-  const { activities: directedActivities, stats: activityStats } = useMemo(() => {
-    return computeAgentActivities(agents, currentMode, approvals, tasks, arrivingAgentIds)
-  }, [agents, currentMode, approvals, tasks, arrivingAgentIds])
+  const { activities: directedActivities, stats: activityStats } =
+    useMemo(() => {
+      return computeAgentActivities(
+        agents,
+        currentMode,
+        approvals,
+        tasks,
+        arrivingAgentIds
+      )
+    }, [agents, currentMode, approvals, tasks, arrivingAgentIds])
 
   // Philippine Standard Time (PHT - UTC+8) Real-Time Clock
   const [phtTimeString, setPhtTimeString] = useState('')
@@ -351,7 +373,10 @@ export function IsometricOffice({
         try {
           if (soundEnabled) sfx?.playBlip?.(840)
         } catch {}
-        setActiveSpeech((prev) => ({ ...prev, [dialogue.to]: dialogue.replyText }))
+        setActiveSpeech((prev) => ({
+          ...prev,
+          [dialogue.to]: dialogue.replyText,
+        }))
         officeBus.publish({
           from: dialogue.to,
           fromName: dialogue.toName,
@@ -438,7 +463,10 @@ export function IsometricOffice({
       meetingTimeoutsRef.current = []
 
       if (newMode === 'ALL_HANDS') {
-        const lines = generateAllHandsScript(agentsRef.current, approvals.length)
+        const lines = generateAllHandsScript(
+          agentsRef.current,
+          approvals.length
+        )
         let accumulatedDelay = 2500
 
         lines.forEach((line) => {
@@ -449,7 +477,10 @@ export function IsometricOffice({
               if (soundEnabled) sfx?.playBlip?.(680)
             } catch {}
 
-            setActiveSpeech((prev) => ({ ...prev, [line.speakerId]: line.text }))
+            setActiveSpeech((prev) => ({
+              ...prev,
+              [line.speakerId]: line.text,
+            }))
 
             // Listeners turn to face the speaker during All Hands
             const currentSims = simStateRef.current
@@ -476,7 +507,12 @@ export function IsometricOffice({
             })
             setMeetingTranscript((prev) => [
               ...prev,
-              { speaker: line.speakerName, role: line.speakerRole, text: line.text, time: timeStr },
+              {
+                speaker: line.speakerName,
+                role: line.speakerRole,
+                text: line.text,
+                time: timeStr,
+              },
             ])
 
             officeBus.publish({
@@ -502,21 +538,24 @@ export function IsometricOffice({
               'info'
             )
 
-            const clearTid = setTimeout(() => {
-              setActiveSpeech((prev) => {
-                const next = { ...prev }
-                delete next[line.speakerId]
-                return next
-              })
-              // Listeners turn back toward table center
-              const simsAfter = simStateRef.current
-              agentsRef.current.forEach((a) => {
-                const s = simsAfter[a.id]
-                if (s && !s.isWalking) {
-                  s.facing = calculateFacingBetweenPoints(s.x, s.y, 700, 408)
-                }
-              })
-            }, Math.max(2500, line.delayMs - 500))
+            const clearTid = setTimeout(
+              () => {
+                setActiveSpeech((prev) => {
+                  const next = { ...prev }
+                  delete next[line.speakerId]
+                  return next
+                })
+                // Listeners turn back toward table center
+                const simsAfter = simStateRef.current
+                agentsRef.current.forEach((a) => {
+                  const s = simsAfter[a.id]
+                  if (s && !s.isWalking) {
+                    s.facing = calculateFacingBetweenPoints(s.x, s.y, 700, 408)
+                  }
+                })
+              },
+              Math.max(2500, line.delayMs - 500)
+            )
             meetingTimeoutsRef.current.push(clearTid)
           }, accumulatedDelay)
 
@@ -548,7 +587,9 @@ export function IsometricOffice({
       })
       const data = await res.json()
       if (data.ok) {
-        setSpawnToast(`Specialist ${newAgentName} onboarded to ${newAgentDept}!`)
+        setSpawnToast(
+          `Specialist ${newAgentName} onboarded to ${newAgentDept}!`
+        )
         setShowAddAgentModal(false)
         setNewAgentName('')
         setNewAgentRole('')
@@ -609,7 +650,11 @@ export function IsometricOffice({
           state.y = stepResult.next.y
 
           if (stepResult.dx !== 0 || stepResult.dy !== 0) {
-            state.facing = calculateWalkingFacing(stepResult.dx, stepResult.dy, state.facing)
+            state.facing = calculateWalkingFacing(
+              stepResult.dx,
+              stepResult.dy,
+              state.facing
+            )
           }
 
           if (frameTick % 6 === 0) {
@@ -637,7 +682,12 @@ export function IsometricOffice({
                 state.isSeated = true
                 state.hasCoffee = false
                 state.activity = 'seated_meeting'
-                state.facing = calculateFacingBetweenPoints(state.x, state.y, 700, 408)
+                state.facing = calculateFacingBetweenPoints(
+                  state.x,
+                  state.y,
+                  700,
+                  408
+                )
               } else if (activeMode === 'COFFEE_BREAK') {
                 state.isSeated = true
                 state.hasCoffee = true
@@ -656,7 +706,9 @@ export function IsometricOffice({
         // 2. Dynamic Typing Animation & Keyboard Sound
         if (!state.isWalking && state.isSeated && state.activity === 'typing') {
           const currentAgent = agentsRef.current.find((a) => a.id === agentId)
-          const isWorking = currentAgent?.status === 'working' || currentAgent?.status === 'active'
+          const isWorking =
+            currentAgent?.status === 'working' ||
+            currentAgent?.status === 'active'
           const typeInterval = isWorking ? 7 : 22
 
           if (frameTick % typeInterval === 0) {
@@ -741,20 +793,23 @@ export function IsometricOffice({
   }, [])
 
   // Center on agent when selected from external UI
-  const handleSelectAgentAndFollow = useCallback((agent: Agent) => {
-    onSelectAgent(agent)
-    try {
-      if (soundEnabled) sfx?.playSelect?.()
-    } catch {}
+  const handleSelectAgentAndFollow = useCallback(
+    (agent: Agent) => {
+      onSelectAgent(agent)
+      try {
+        if (soundEnabled) sfx?.playSelect?.()
+      } catch {}
 
-    const sim = simStateRef.current[agent.id]
-    if (sim) {
-      setPan({
-        x: -(sim.x - 700) * zoom,
-        y: -(sim.y - 420) * zoom,
-      })
-    }
-  }, [onSelectAgent, soundEnabled, zoom])
+      const sim = simStateRef.current[agent.id]
+      if (sim) {
+        setPan({
+          x: -(sim.x - 700) * zoom,
+          y: -(sim.y - 420) * zoom,
+        })
+      }
+    },
+    [onSelectAgent, soundEnabled, zoom]
+  )
 
   // Mouse pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -915,14 +970,14 @@ export function IsometricOffice({
         <div className="pointer-events-auto flex items-center gap-2">
           <div className="flex items-center gap-2 rounded-lg border border-[#1e283d] bg-[#0c101a]/95 px-3 py-1.5 shadow-xl backdrop-blur-md">
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-            <span className="font-mono text-xs font-bold tracking-wider text-slate-100 whitespace-nowrap uppercase">
+            <span className="font-mono text-xs font-bold tracking-wider whitespace-nowrap text-slate-100 uppercase">
               EasyUp Headquarters
             </span>
-            <span className="rounded bg-emerald-950/80 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-300 whitespace-nowrap">
+            <span className="rounded bg-emerald-950/80 px-1.5 py-0.5 font-mono text-[10px] font-semibold whitespace-nowrap text-emerald-300">
               {agents.length} AGENTS
             </span>
             {supabaseActive && (
-              <span className="hidden sm:inline-flex items-center gap-1 rounded bg-blue-950/80 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-blue-300 whitespace-nowrap">
+              <span className="hidden items-center gap-1 rounded bg-blue-950/80 px-1.5 py-0.5 font-mono text-[10px] font-semibold whitespace-nowrap text-blue-300 sm:inline-flex">
                 <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
                 SYNCED
               </span>
@@ -940,7 +995,7 @@ export function IsometricOffice({
                 e.stopPropagation()
                 setShowGoSignalModal(true)
               }}
-              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/80 bg-amber-950/90 px-2.5 py-1.5 font-mono text-xs font-bold text-amber-300 shadow-xl shadow-amber-950/50 transition hover:bg-amber-900 active:scale-95 animate-pulse whitespace-nowrap"
+              className="flex animate-pulse cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/80 bg-amber-950/90 px-2.5 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-amber-300 shadow-xl shadow-amber-950/50 transition hover:bg-amber-900 active:scale-95"
               title="Pending Go-Signals Require Approval"
             >
               <span>⚠️</span>
@@ -956,7 +1011,7 @@ export function IsometricOffice({
                 e.stopPropagation()
                 setShowTranscriptDrawer((prev) => !prev)
               }}
-              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-purple-500/80 bg-purple-950/90 px-2.5 py-1.5 font-mono text-xs font-bold text-purple-200 shadow-xl shadow-purple-950/50 transition hover:bg-purple-900 active:scale-95 animate-pulse whitespace-nowrap"
+              className="flex animate-pulse cursor-pointer items-center gap-1.5 rounded-lg border border-purple-500/80 bg-purple-950/90 px-2.5 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-purple-200 shadow-xl shadow-purple-950/50 transition hover:bg-purple-900 active:scale-95"
               title="View Live Meeting Transcript"
             >
               <span>🎙️</span>
@@ -964,7 +1019,7 @@ export function IsometricOffice({
             </button>
           )}
 
-          <div className="flex items-center gap-1.5 overflow-x-auto rounded-lg border border-[#1e283d]/80 bg-[#0c101a]/90 p-1 shadow-lg backdrop-blur-md scrollbar-none">
+          <div className="flex scrollbar-none items-center gap-1.5 overflow-x-auto rounded-lg border border-[#1e283d]/80 bg-[#0c101a]/90 p-1 shadow-lg backdrop-blur-md">
             {agents.map((ag) => {
               const isSelected = selectedAgentId === ag.id
               return (
@@ -1002,9 +1057,11 @@ export function IsometricOffice({
         {/* Right: Manila Time, Sound Toggle, Reset Overview */}
         <div className="pointer-events-auto flex items-center gap-2">
           {/* Philippine Standard Time Badge */}
-          <div className="flex items-center gap-1.5 rounded-lg border border-[#1e283d] bg-[#0c101a]/95 px-2.5 py-1.5 font-mono text-xs text-slate-300 shadow-xl backdrop-blur-md whitespace-nowrap">
+          <div className="flex items-center gap-1.5 rounded-lg border border-[#1e283d] bg-[#0c101a]/95 px-2.5 py-1.5 font-mono text-xs whitespace-nowrap text-slate-300 shadow-xl backdrop-blur-md">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-            <span className="font-bold text-slate-100">{phtTimeString || '09:00 AM'}</span>
+            <span className="font-bold text-slate-100">
+              {phtTimeString || '09:00 AM'}
+            </span>
             <span className="text-[10px] text-slate-400">PHT (UTC+8)</span>
           </div>
 
@@ -1158,30 +1215,95 @@ export function IsometricOffice({
               strokeLinejoin="round"
             />
             {/* Security Entrance Gate at Bottom (700, 1140) */}
-            <rect x="670" y="1128" width="10" height="16" fill="#475569" stroke="#1e293b" />
-            <rect x="720" y="1128" width="10" height="16" fill="#475569" stroke="#1e293b" />
-            <line x1="680" y1="1136" x2="720" y2="1136" stroke="#94a3b8" strokeWidth="2" strokeDasharray="4 2" />
+            <rect
+              x="670"
+              y="1128"
+              width="10"
+              height="16"
+              fill="#475569"
+              stroke="#1e293b"
+            />
+            <rect
+              x="720"
+              y="1128"
+              width="10"
+              height="16"
+              fill="#475569"
+              stroke="#1e293b"
+            />
+            <line
+              x1="680"
+              y1="1136"
+              x2="720"
+              y2="1136"
+              stroke="#94a3b8"
+              strokeWidth="2"
+              strokeDasharray="4 2"
+            />
 
             {/* 2. Zen Garden Koi Pond */}
             <g transform="translate(180, 560)">
-              <ellipse cx="0" cy="0" rx="55" ry="32" fill="#1e293b" stroke="#64748b" strokeWidth="3" />
-              <ellipse cx="0" cy="0" rx="50" ry="28" fill="#0891b2" fillOpacity="0.75" />
+              <ellipse
+                cx="0"
+                cy="0"
+                rx="55"
+                ry="32"
+                fill="#1e293b"
+                stroke="#64748b"
+                strokeWidth="3"
+              />
+              <ellipse
+                cx="0"
+                cy="0"
+                rx="50"
+                ry="28"
+                fill="#0891b2"
+                fillOpacity="0.75"
+              />
               {/* Lily Pads */}
               <circle cx="-16" cy="-8" r="5" fill="#15803d" />
               <circle cx="18" cy="6" r="6" fill="#15803d" />
               <circle cx="8" cy="-12" r="4.5" fill="#16a34a" />
-              <text x="0" y="4" fill="#67e8f9" fontSize="6.5" fontFamily="monospace" textAnchor="middle" opacity="0.8">
+              <text
+                x="0"
+                y="4"
+                fill="#67e8f9"
+                fontSize="6.5"
+                fontFamily="monospace"
+                textAnchor="middle"
+                opacity="0.8"
+              >
                 ZEN POND
               </text>
             </g>
 
             {/* 3. EasyUp Flagpole */}
             <g transform="translate(620, 750)">
-              <line x1="0" y1="0" x2="0" y2="-65" stroke="#94a3b8" strokeWidth="2.5" />
+              <line
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="-65"
+                stroke="#94a3b8"
+                strokeWidth="2.5"
+              />
               <circle cx="0" cy="-66" r="2.5" fill="#fbbf24" />
               {/* Flying Flag Banner */}
-              <polygon points="0,-64 26,-56 26,-42 0,-50" fill="#0284c7" stroke="#38bdf8" strokeWidth="0.8" />
-              <text x="12" y="-52" fill="#ffffff" fontSize="5" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+              <polygon
+                points="0,-64 26,-56 26,-42 0,-50"
+                fill="#0284c7"
+                stroke="#38bdf8"
+                strokeWidth="0.8"
+              />
+              <text
+                x="12"
+                y="-52"
+                fill="#ffffff"
+                fontSize="5"
+                fontFamily="monospace"
+                fontWeight="bold"
+                textAnchor="middle"
+              >
                 EASYUP
               </text>
             </g>
@@ -1196,16 +1318,52 @@ export function IsometricOffice({
             />
             {/* Walkway Paver Tiles */}
             {[720, 750, 780, 810].map((wy) => (
-              <line key={`walkway-tile-${wy}`} x1="665" y1={wy} x2="735" y2={wy} stroke="#94a3b8" strokeWidth="0.8" strokeDasharray="3 3" />
+              <line
+                key={`walkway-tile-${wy}`}
+                x1="665"
+                y1={wy}
+                x2="735"
+                y2={wy}
+                stroke="#94a3b8"
+                strokeWidth="0.8"
+                strokeDasharray="3 3"
+              />
             ))}
 
             {/* Glass Entrance Canopy */}
             <g transform="translate(700, 715)">
-              <polygon points="-46,-12 46,-12 36,18 -36,18" fill="rgba(56, 189, 248, 0.25)" stroke="#38bdf8" strokeWidth="1.5" />
+              <polygon
+                points="-46,-12 46,-12 36,18 -36,18"
+                fill="rgba(56, 189, 248, 0.25)"
+                stroke="#38bdf8"
+                strokeWidth="1.5"
+              />
               {/* Brushed Steel Canopy Pillars */}
-              <line x1="-36" y1="18" x2="-36" y2="35" stroke="#94a3b8" strokeWidth="3" />
-              <line x1="36" y1="18" x2="36" y2="35" stroke="#94a3b8" strokeWidth="3" />
-              <text x="0" y="4" fill="#38bdf8" fontSize="7" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+              <line
+                x1="-36"
+                y1="18"
+                x2="-36"
+                y2="35"
+                stroke="#94a3b8"
+                strokeWidth="3"
+              />
+              <line
+                x1="36"
+                y1="18"
+                x2="36"
+                y2="35"
+                stroke="#94a3b8"
+                strokeWidth="3"
+              />
+              <text
+                x="0"
+                y="4"
+                fill="#38bdf8"
+                fontSize="7"
+                fontFamily="monospace"
+                fontWeight="bold"
+                textAnchor="middle"
+              >
                 MAIN ENTRANCE
               </text>
             </g>
@@ -1219,8 +1377,22 @@ export function IsometricOffice({
               strokeWidth="2"
             />
             {/* Curbs with Granite Trim */}
-            <line x1="-130" y1="825" x2="1530" y2="825" stroke="#cbd5e1" strokeWidth="2.5" />
-            <line x1="-130" y1="915" x2="1530" y2="915" stroke="#cbd5e1" strokeWidth="2.5" />
+            <line
+              x1="-130"
+              y1="825"
+              x2="1530"
+              y2="825"
+              stroke="#cbd5e1"
+              strokeWidth="2.5"
+            />
+            <line
+              x1="-130"
+              y1="915"
+              x2="1530"
+              y2="915"
+              stroke="#cbd5e1"
+              strokeWidth="2.5"
+            />
             {/* Center Dashed Yellow Divider */}
             <line
               x1="-130"
@@ -1232,8 +1404,24 @@ export function IsometricOffice({
               strokeDasharray="12 8"
             />
             {/* Solid White Edge Shoulders */}
-            <line x1="-130" y1="835" x2="1530" y2="835" stroke="#f8fafc" strokeWidth="1.2" strokeOpacity="0.8" />
-            <line x1="-130" y1="905" x2="1530" y2="905" stroke="#f8fafc" strokeWidth="1.2" strokeOpacity="0.8" />
+            <line
+              x1="-130"
+              y1="835"
+              x2="1530"
+              y2="835"
+              stroke="#f8fafc"
+              strokeWidth="1.2"
+              strokeOpacity="0.8"
+            />
+            <line
+              x1="-130"
+              y1="905"
+              x2="1530"
+              y2="905"
+              stroke="#f8fafc"
+              strokeWidth="1.2"
+              strokeOpacity="0.8"
+            />
 
             {/* Zebra Pedestrian Crosswalk */}
             <g transform="translate(700, 870)">
@@ -1253,17 +1441,75 @@ export function IsometricOffice({
             {/* Transit Bus Stop with Shelter */}
             <g transform="translate(940, 810)">
               {/* Concrete Bus Pad */}
-              <rect x="-35" y="10" width="70" height="24" rx="2" fill="#334155" stroke="#64748b" />
+              <rect
+                x="-35"
+                y="10"
+                width="70"
+                height="24"
+                rx="2"
+                fill="#334155"
+                stroke="#64748b"
+              />
               {/* Glass Wall & Blue Canopy */}
-              <polygon points="-30,-8 30,-8 25,12 -25,12" fill="rgba(14, 165, 233, 0.4)" stroke="#0284c7" strokeWidth="1.5" />
-              <line x1="-25" y1="12" x2="-25" y2="24" stroke="#64748b" strokeWidth="2" />
-              <line x1="25" y1="12" x2="25" y2="24" stroke="#64748b" strokeWidth="2" />
+              <polygon
+                points="-30,-8 30,-8 25,12 -25,12"
+                fill="rgba(14, 165, 233, 0.4)"
+                stroke="#0284c7"
+                strokeWidth="1.5"
+              />
+              <line
+                x1="-25"
+                y1="12"
+                x2="-25"
+                y2="24"
+                stroke="#64748b"
+                strokeWidth="2"
+              />
+              <line
+                x1="25"
+                y1="12"
+                x2="25"
+                y2="24"
+                stroke="#64748b"
+                strokeWidth="2"
+              />
               {/* Bench */}
-              <rect x="-18" y="14" width="36" height="5" rx="1" fill="#78350f" />
+              <rect
+                x="-18"
+                y="14"
+                width="36"
+                height="5"
+                rx="1"
+                fill="#78350f"
+              />
               {/* Sign Post */}
-              <line x1="32" y1="-14" x2="32" y2="20" stroke="#94a3b8" strokeWidth="1.5" />
-              <circle cx="32" cy="-16" r="6" fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
-              <text x="32" y="-14" fill="#ffffff" fontSize="6" fontFamily="monospace" fontWeight="bold" textAnchor="middle">BUS</text>
+              <line
+                x1="32"
+                y1="-14"
+                x2="32"
+                y2="20"
+                stroke="#94a3b8"
+                strokeWidth="1.5"
+              />
+              <circle
+                cx="32"
+                cy="-16"
+                r="6"
+                fill="#0284c7"
+                stroke="#ffffff"
+                strokeWidth="1"
+              />
+              <text
+                x="32"
+                y="-14"
+                fill="#ffffff"
+                fontSize="6"
+                fontFamily="monospace"
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                BUS
+              </text>
             </g>
 
             {/* 6. Employee & Visitor Parking Lot (22 Bays) */}
@@ -1275,9 +1521,35 @@ export function IsometricOffice({
               strokeWidth="2"
             />
             {/* Driving Aisle Centerline at y = 1000 with Circulation Arrows */}
-            <line x1="300" y1="1000" x2="1120" y2="1000" stroke="#475569" strokeWidth="1" strokeDasharray="14 10" />
-            <text x="460" y="1003" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">▶ DRIVING AISLE ▶</text>
-            <text x="880" y="1003" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">▶ CIRCULATION ▶</text>
+            <line
+              x1="300"
+              y1="1000"
+              x2="1120"
+              y2="1000"
+              stroke="#475569"
+              strokeWidth="1"
+              strokeDasharray="14 10"
+            />
+            <text
+              x="460"
+              y="1003"
+              fill="#64748b"
+              fontSize="9"
+              fontFamily="monospace"
+              textAnchor="middle"
+            >
+              ▶ DRIVING AISLE ▶
+            </text>
+            <text
+              x="880"
+              y="1003"
+              fill="#64748b"
+              fontSize="9"
+              fontFamily="monospace"
+              textAnchor="middle"
+            >
+              ▶ CIRCULATION ▶
+            </text>
 
             {/* Parking Bays */}
             {PARKING_BAYS.map((bay) => {
@@ -1322,19 +1594,62 @@ export function IsometricOffice({
                   {/* Accessible Handicap Surface Paint */}
                   {isAccessible && (
                     <g>
-                      <rect x="-22" y="-12" width="44" height="24" rx="2" fill="#0284c7" fillOpacity="0.35" stroke="#38bdf8" strokeWidth="1" />
-                      <text x="0" y="4" fill="#ffffff" fontSize="10" textAnchor="middle">♿</text>
+                      <rect
+                        x="-22"
+                        y="-12"
+                        width="44"
+                        height="24"
+                        rx="2"
+                        fill="#0284c7"
+                        fillOpacity="0.35"
+                        stroke="#38bdf8"
+                        strokeWidth="1"
+                      />
+                      <text
+                        x="0"
+                        y="4"
+                        fill="#ffffff"
+                        fontSize="10"
+                        textAnchor="middle"
+                      >
+                        ♿
+                      </text>
                     </g>
                   )}
 
                   {/* Founder Josiah Dedicated Spot */}
                   {isFounder && (
                     <g>
-                      <rect x="-24" y="-14" width="48" height="28" rx="2" fill="#78350f" fillOpacity="0.4" stroke="#f59e0b" strokeWidth="1.5" />
-                      <text x="0" y="0" fill="#fbbf24" fontSize="6.5" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+                      <rect
+                        x="-24"
+                        y="-14"
+                        width="48"
+                        height="28"
+                        rx="2"
+                        fill="#78350f"
+                        fillOpacity="0.4"
+                        stroke="#f59e0b"
+                        strokeWidth="1.5"
+                      />
+                      <text
+                        x="0"
+                        y="0"
+                        fill="#fbbf24"
+                        fontSize="6.5"
+                        fontFamily="monospace"
+                        fontWeight="bold"
+                        textAnchor="middle"
+                      >
                         ★ JOSIAH ★
                       </text>
-                      <text x="0" y="8" fill="#fef08a" fontSize="5" fontFamily="monospace" textAnchor="middle">
+                      <text
+                        x="0"
+                        y="8"
+                        fill="#fef08a"
+                        fontSize="5"
+                        fontFamily="monospace"
+                        textAnchor="middle"
+                      >
                         FOUNDER
                       </text>
                     </g>
@@ -1366,34 +1681,94 @@ export function IsometricOffice({
             ].map((lamp) => (
               <g key={lamp.id} transform={`translate(${lamp.x}, ${lamp.y})`}>
                 {/* Radial Glow Puddle */}
-                <ellipse cx="0" cy="18" rx="36" ry="18" fill="url(#lampLightPuddle)" />
+                <ellipse
+                  cx="0"
+                  cy="18"
+                  rx="36"
+                  ry="18"
+                  fill="url(#lampLightPuddle)"
+                />
                 {/* Post & Fixture */}
-                <line x1="0" y1="0" x2="0" y2="18" stroke="#64748b" strokeWidth="2.2" />
-                <circle cx="0" cy="0" r="3.5" fill="#fef08a" stroke="#ca8a04" strokeWidth="1" />
+                <line
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="18"
+                  stroke="#64748b"
+                  strokeWidth="2.2"
+                />
+                <circle
+                  cx="0"
+                  cy="0"
+                  r="3.5"
+                  fill="#fef08a"
+                  stroke="#ca8a04"
+                  strokeWidth="1"
+                />
               </g>
             ))}
 
             {/* 8. Swaying Trees & Bushes */}
-            {OUTDOOR_PROPS.filter((p) => p.type.startsWith('tree_')).map((tree) => {
-              const isPine = tree.type === 'tree_pine'
-              const isMaple = tree.type === 'tree_maple'
-              const trunkColor = '#78350f'
-              const foliageColor = isPine ? '#14532d' : isMaple ? '#b91c1c' : '#15803d'
-              const foliageHighlight = isPine ? '#166534' : isMaple ? '#dc2626' : '#22c55e'
+            {OUTDOOR_PROPS.filter((p) => p.type.startsWith('tree_')).map(
+              (tree) => {
+                const isPine = tree.type === 'tree_pine'
+                const isMaple = tree.type === 'tree_maple'
+                const trunkColor = '#78350f'
+                const foliageColor = isPine
+                  ? '#14532d'
+                  : isMaple
+                    ? '#b91c1c'
+                    : '#15803d'
+                const foliageHighlight = isPine
+                  ? '#166534'
+                  : isMaple
+                    ? '#dc2626'
+                    : '#22c55e'
 
-              return (
-                <g key={tree.id} transform={`translate(${tree.x}, ${tree.y})`}>
-                  {/* Drop Shadow */}
-                  <ellipse cx="0" cy="8" rx={tree.w * 0.45} ry="12" fill="rgba(0, 0, 0, 0.45)" />
-                  {/* Trunk */}
-                  <rect x="-3" y="-12" width="6" height="20" fill={trunkColor} />
-                  {/* Foliage Layers */}
-                  <circle cx="-6" cy="-28" r={tree.w * 0.35} fill={foliageColor} />
-                  <circle cx="6" cy="-28" r={tree.w * 0.35} fill={foliageColor} />
-                  <circle cx="0" cy="-38" r={tree.w * 0.38} fill={foliageHighlight} />
-                </g>
-              )
-            })}
+                return (
+                  <g
+                    key={tree.id}
+                    transform={`translate(${tree.x}, ${tree.y})`}
+                  >
+                    {/* Drop Shadow */}
+                    <ellipse
+                      cx="0"
+                      cy="8"
+                      rx={tree.w * 0.45}
+                      ry="12"
+                      fill="rgba(0, 0, 0, 0.45)"
+                    />
+                    {/* Trunk */}
+                    <rect
+                      x="-3"
+                      y="-12"
+                      width="6"
+                      height="20"
+                      fill={trunkColor}
+                    />
+                    {/* Foliage Layers */}
+                    <circle
+                      cx="-6"
+                      cy="-28"
+                      r={tree.w * 0.35}
+                      fill={foliageColor}
+                    />
+                    <circle
+                      cx="6"
+                      cy="-28"
+                      r={tree.w * 0.35}
+                      fill={foliageColor}
+                    />
+                    <circle
+                      cx="0"
+                      cy="-38"
+                      r={tree.w * 0.38}
+                      fill={foliageHighlight}
+                    />
+                  </g>
+                )
+              }
+            )}
 
             {/* 9. Procedural Isometric Vehicles (Parked & Moving on Road / Parking Lot) */}
             {trafficVehicles.map((veh) => (
@@ -1439,23 +1814,25 @@ export function IsometricOffice({
 
             {/* Subtle Grout Lines Across Floor Slab */}
             <g stroke="#cfc5ae" strokeWidth="0.6" strokeOpacity="0.45">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((i) => {
-                const x1 = 700 - i * 32
-                const y1 = 120 + i * 16
-                const x2 = 1276 - i * 32
-                const y2 = 408 + i * 16
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map(
+                (i) => {
+                  const x1 = 700 - i * 32
+                  const y1 = 120 + i * 16
+                  const x2 = 1276 - i * 32
+                  const y2 = 408 + i * 16
 
-                const x3 = 700 + i * 32
-                const y3 = 120 + i * 16
-                const x4 = 124 + i * 32
-                const y4 = 408 + i * 16
-                return (
-                  <React.Fragment key={`grid-${i}`}>
-                    <line x1={x1} y1={y1} x2={x2} y2={y2} />
-                    <line x1={x3} y1={y3} x2={x4} y2={y4} />
-                  </React.Fragment>
-                )
-              })}
+                  const x3 = 700 + i * 32
+                  const y3 = 120 + i * 16
+                  const x4 = 124 + i * 32
+                  const y4 = 408 + i * 16
+                  return (
+                    <React.Fragment key={`grid-${i}`}>
+                      <line x1={x1} y1={y1} x2={x2} y2={y2} />
+                      <line x1={x3} y1={y3} x2={x4} y2={y4} />
+                    </React.Fragment>
+                  )
+                }
+              )}
             </g>
 
             {/* ==================== PERMANENT DEPARTMENT ROOM FLOORS & AMBIENT TINTS ==================== */}
@@ -1517,12 +1894,18 @@ export function IsometricOffice({
               <g className="transition-opacity duration-300">
                 {OFFICE_ZONES.map((zone) => {
                   const p1 = gridToScreen(zone.rect.x, zone.rect.y)
-                  const p2 = gridToScreen(zone.rect.x + zone.rect.w, zone.rect.y)
+                  const p2 = gridToScreen(
+                    zone.rect.x + zone.rect.w,
+                    zone.rect.y
+                  )
                   const p3 = gridToScreen(
                     zone.rect.x + zone.rect.w,
                     zone.rect.y + zone.rect.h
                   )
-                  const p4 = gridToScreen(zone.rect.x, zone.rect.y + zone.rect.h)
+                  const p4 = gridToScreen(
+                    zone.rect.x,
+                    zone.rect.y + zone.rect.h
+                  )
                   const center = gridToScreen(
                     zone.rect.x + zone.rect.w / 2,
                     zone.rect.y + zone.rect.h / 2
@@ -1596,61 +1979,215 @@ export function IsometricOffice({
             {/* ==================== ARCHITECTURAL WINDOWS ON TOP-LEFT WALL ==================== */}
             {/* Window 1 (matching ref-agent-office.png daylight & green foliage) */}
             <g transform="translate(200, 275)">
-              <polygon points="0,0 72,-36 72,54 0,90" fill="#0f172a" stroke="#334155" strokeWidth="2" />
+              <polygon
+                points="0,0 72,-36 72,54 0,90"
+                fill="#0f172a"
+                stroke="#334155"
+                strokeWidth="2"
+              />
               <polygon points="4,3 68,-29 68,50 4,82" fill="#7dd3fc" />
               <ellipse cx="36" cy="40" rx="26" ry="22" fill="#15803d" />
               <ellipse cx="24" cy="50" rx="20" ry="18" fill="#16a34a" />
               <ellipse cx="50" cy="35" rx="18" ry="16" fill="#22c55e" />
               <ellipse cx="34" cy="24" rx="22" ry="16" fill="#15803d" />
-              <line x1="36" y1="-18" x2="36" y2="67" stroke="#475569" strokeWidth="2" />
-              <line x1="0" y1="45" x2="72" y2="9" stroke="#475569" strokeWidth="1.8" />
+              <line
+                x1="36"
+                y1="-18"
+                x2="36"
+                y2="67"
+                stroke="#475569"
+                strokeWidth="2"
+              />
+              <line
+                x1="0"
+                y1="45"
+                x2="72"
+                y2="9"
+                stroke="#475569"
+                strokeWidth="1.8"
+              />
             </g>
             {/* Window 2 */}
             <g transform="translate(340, 205)">
-              <polygon points="0,0 72,-36 72,54 0,90" fill="#0f172a" stroke="#334155" strokeWidth="2" />
+              <polygon
+                points="0,0 72,-36 72,54 0,90"
+                fill="#0f172a"
+                stroke="#334155"
+                strokeWidth="2"
+              />
               <polygon points="4,3 68,-29 68,50 4,82" fill="#bae6fd" />
               <ellipse cx="36" cy="42" rx="25" ry="20" fill="#16a34a" />
               <ellipse cx="48" cy="48" rx="20" ry="18" fill="#22c55e" />
               <ellipse cx="20" cy="38" rx="18" ry="16" fill="#15803d" />
-              <line x1="36" y1="-18" x2="36" y2="67" stroke="#475569" strokeWidth="2" />
-              <line x1="0" y1="45" x2="72" y2="9" stroke="#475569" strokeWidth="1.8" />
+              <line
+                x1="36"
+                y1="-18"
+                x2="36"
+                y2="67"
+                stroke="#475569"
+                strokeWidth="2"
+              />
+              <line
+                x1="0"
+                y1="45"
+                x2="72"
+                y2="9"
+                stroke="#475569"
+                strokeWidth="1.8"
+              />
             </g>
 
             {/* ==================== ARCHITECTURAL DOORWAY ON TOP-RIGHT WALL ==================== */}
             {/* Doorway with warm hallway glow spilling across floor (matching ref-agent-office.png) */}
             <g transform="translate(1160, 310)">
               {/* Door Frame */}
-              <polygon points="-24,-52 24,-28 24,32 -24,8" fill="#1e1814" stroke="#78350f" strokeWidth="2.5" />
+              <polygon
+                points="-24,-52 24,-28 24,32 -24,8"
+                fill="#1e1814"
+                stroke="#78350f"
+                strokeWidth="2.5"
+              />
               {/* Warm Hallway Light inside Doorway */}
               <polygon points="-20,-48 20,-28 20,28 -20,8" fill="#fef3c7" />
-              <polygon points="-20,-48 20,-28 20,28 -20,8" fill="rgba(245, 158, 11, 0.45)" />
+              <polygon
+                points="-20,-48 20,-28 20,28 -20,8"
+                fill="rgba(245, 158, 11, 0.45)"
+              />
               {/* Light Spill Polygon across Floor */}
-              <polygon points="-24,8 24,32 54,46 6,22" fill="rgba(251, 191, 36, 0.28)" />
+              <polygon
+                points="-24,8 24,32 54,46 6,22"
+                fill="rgba(251, 191, 36, 0.28)"
+              />
               {/* Exit Indicator Sign */}
-              <rect x="-8" y="-58" width="18" height="6" rx="1" fill="#10b981" />
-              <text x="1" y="-53.5" fill="#ffffff" fontSize="4.5" fontFamily="monospace" fontWeight="bold" textAnchor="middle">EXIT</text>
+              <rect
+                x="-8"
+                y="-58"
+                width="18"
+                height="6"
+                rx="1"
+                fill="#10b981"
+              />
+              <text
+                x="1"
+                y="-53.5"
+                fill="#ffffff"
+                fontSize="4.5"
+                fontFamily="monospace"
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                EXIT
+              </text>
             </g>
 
             {/* ==================== SYSTEM ARCHITECTURE WHITEBOARD ==================== */}
             {/* Large Architectural Whiteboard (matching ref-agent-office.png) */}
             <g transform="translate(870, 160)">
-              <polygon points="-44,-14 44,-36 44,24 -44,46" fill="#090d16" stroke="#38bdf8" strokeWidth="1.5" />
-              <rect x="-34" y="6" width="14" height="8" rx="1" fill="#1e293b" stroke="#38bdf8" strokeWidth="0.8" />
-              <rect x="-14" y="2" width="14" height="8" rx="1" fill="#1e293b" stroke="#22c55e" strokeWidth="0.8" />
-              <line x1="-20" y1="10" x2="-14" y2="6" stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 1" />
-              <line x1="-34" y1="24" x2="30" y2="8" stroke="#38bdf8" strokeWidth="1" />
+              <polygon
+                points="-44,-14 44,-36 44,24 -44,46"
+                fill="#090d16"
+                stroke="#38bdf8"
+                strokeWidth="1.5"
+              />
+              <rect
+                x="-34"
+                y="6"
+                width="14"
+                height="8"
+                rx="1"
+                fill="#1e293b"
+                stroke="#38bdf8"
+                strokeWidth="0.8"
+              />
+              <rect
+                x="-14"
+                y="2"
+                width="14"
+                height="8"
+                rx="1"
+                fill="#1e293b"
+                stroke="#22c55e"
+                strokeWidth="0.8"
+              />
+              <line
+                x1="-20"
+                y1="10"
+                x2="-14"
+                y2="6"
+                stroke="#94a3b8"
+                strokeWidth="1"
+                strokeDasharray="2 1"
+              />
+              <line
+                x1="-34"
+                y1="24"
+                x2="30"
+                y2="8"
+                stroke="#38bdf8"
+                strokeWidth="1"
+              />
               {/* Mini Velocity Sprint Bars */}
-              <line x1="5" y1="15" x2="5" y2="7" stroke="#f59e0b" strokeWidth="3" />
-              <line x1="13" y1="13" x2="13" y2="3" stroke="#10b981" strokeWidth="3" />
-              <line x1="21" y1="11" x2="21" y2="-2" stroke="#38bdf8" strokeWidth="3" />
-              <line x1="29" y1="9" x2="29" y2="-7" stroke="#a855f7" strokeWidth="3" />
+              <line
+                x1="5"
+                y1="15"
+                x2="5"
+                y2="7"
+                stroke="#f59e0b"
+                strokeWidth="3"
+              />
+              <line
+                x1="13"
+                y1="13"
+                x2="13"
+                y2="3"
+                stroke="#10b981"
+                strokeWidth="3"
+              />
+              <line
+                x1="21"
+                y1="11"
+                x2="21"
+                y2="-2"
+                stroke="#38bdf8"
+                strokeWidth="3"
+              />
+              <line
+                x1="29"
+                y1="9"
+                x2="29"
+                y2="-7"
+                stroke="#a855f7"
+                strokeWidth="3"
+              />
             </g>
 
             {/* Round Wall Clock on Top-Right Wall */}
             <g transform="translate(1060, 260)">
-              <ellipse cx="0" cy="0" rx="14" ry="18" fill="#0f172a" stroke="#cbd5e1" strokeWidth="1.5" />
-              <line x1="0" y1="0" x2="0" y2="-10" stroke="#f8fafc" strokeWidth="1.5" />
-              <line x1="0" y1="0" x2="7" y2="3" stroke="#ef4444" strokeWidth="1" />
+              <ellipse
+                cx="0"
+                cy="0"
+                rx="14"
+                ry="18"
+                fill="#0f172a"
+                stroke="#cbd5e1"
+                strokeWidth="1.5"
+              />
+              <line
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="-10"
+                stroke="#f8fafc"
+                strokeWidth="1.5"
+              />
+              <line
+                x1="0"
+                y1="0"
+                x2="7"
+                y2="3"
+                stroke="#ef4444"
+                strokeWidth="1"
+              />
             </g>
 
             {/* Wall Bookshelf on Top-Left Wall */}
@@ -1661,11 +2198,46 @@ export function IsometricOffice({
                 stroke="#452718"
                 strokeWidth="1.5"
               />
-              <line x1="8" y1="5" x2="8" y2="45" stroke="#ef4444" strokeWidth="2.8" />
-              <line x1="16" y1="1" x2="16" y2="41" stroke="#3b82f6" strokeWidth="2.8" />
-              <line x1="24" y1="-3" x2="24" y2="37" stroke="#10b981" strokeWidth="2.8" />
-              <line x1="32" y1="-7" x2="32" y2="33" stroke="#f59e0b" strokeWidth="2.8" />
-              <line x1="40" y1="-11" x2="40" y2="29" stroke="#8b5cf6" strokeWidth="2.8" />
+              <line
+                x1="8"
+                y1="5"
+                x2="8"
+                y2="45"
+                stroke="#ef4444"
+                strokeWidth="2.8"
+              />
+              <line
+                x1="16"
+                y1="1"
+                x2="16"
+                y2="41"
+                stroke="#3b82f6"
+                strokeWidth="2.8"
+              />
+              <line
+                x1="24"
+                y1="-3"
+                x2="24"
+                y2="37"
+                stroke="#10b981"
+                strokeWidth="2.8"
+              />
+              <line
+                x1="32"
+                y1="-7"
+                x2="32"
+                y2="33"
+                stroke="#f59e0b"
+                strokeWidth="2.8"
+              />
+              <line
+                x1="40"
+                y1="-11"
+                x2="40"
+                y2="29"
+                stroke="#8b5cf6"
+                strokeWidth="2.8"
+              />
             </g>
 
             {/* Server Room Low Glass Partition (Top Center NOC) */}
@@ -1707,25 +2279,68 @@ export function IsometricOffice({
               {/* Table pedestal base */}
               <polygon points="-12,0 12,0 12,20 -12,20" fill="#1e293b" />
               {/* Round table dark wood surface */}
-              <ellipse cx="0" cy="0" rx="70" ry="35" fill="#181c26" stroke="#38bdf8" strokeWidth="2" />
+              <ellipse
+                cx="0"
+                cy="0"
+                rx="70"
+                ry="35"
+                fill="#181c26"
+                stroke="#38bdf8"
+                strokeWidth="2"
+              />
               {/* Outer oak wooden rim */}
-              <ellipse cx="0" cy="0" rx="64" ry="32" fill="#121620" stroke="#524330" strokeWidth="1.5" />
+              <ellipse
+                cx="0"
+                cy="0"
+                rx="64"
+                ry="32"
+                fill="#121620"
+                stroke="#524330"
+                strokeWidth="1.5"
+              />
               {/* Central pulsing core light */}
-              <circle cx="0" cy="0" r="8" fill="#38bdf8" className="animate-pulse" />
+              <circle
+                cx="0"
+                cy="0"
+                r="8"
+                fill="#38bdf8"
+                className="animate-pulse"
+              />
 
               {/* 12 Conference Chairs Ring around Meeting Table */}
-              {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => {
-                const rad = (deg * Math.PI) / 180
-                const cx = Math.round(Math.cos(rad) * 94)
-                const cy = Math.round(Math.sin(rad) * 48)
-                return (
-                  <g key={`brain-chair-${deg}`} transform={`translate(${cx}, ${cy})`}>
-                    <ellipse cx="0" cy="8" rx="8" ry="4" fill="rgba(0,0,0,0.3)" />
-                    <polygon points="-6,2 0,-1 6,2 0,5" fill="#1e293b" stroke="#334155" strokeWidth="0.8" />
-                    <polygon points="-5,-6 5,-6 6,2 -6,2" fill="#0f172a" stroke="#475569" strokeWidth="0.9" />
-                  </g>
-                )
-              })}
+              {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(
+                (deg) => {
+                  const rad = (deg * Math.PI) / 180
+                  const cx = Math.round(Math.cos(rad) * 94)
+                  const cy = Math.round(Math.sin(rad) * 48)
+                  return (
+                    <g
+                      key={`brain-chair-${deg}`}
+                      transform={`translate(${cx}, ${cy})`}
+                    >
+                      <ellipse
+                        cx="0"
+                        cy="8"
+                        rx="8"
+                        ry="4"
+                        fill="rgba(0,0,0,0.3)"
+                      />
+                      <polygon
+                        points="-6,2 0,-1 6,2 0,5"
+                        fill="#1e293b"
+                        stroke="#334155"
+                        strokeWidth="0.8"
+                      />
+                      <polygon
+                        points="-5,-6 5,-6 6,2 -6,2"
+                        fill="#0f172a"
+                        stroke="#475569"
+                        strokeWidth="0.9"
+                      />
+                    </g>
+                  )
+                }
+              )}
             </g>
 
             {/* ==================== PANTRY & RECEPTION COUNTER (RIGHT WING) ==================== */}
@@ -1737,7 +2352,16 @@ export function IsometricOffice({
                 stroke="#694025"
                 strokeWidth="1.5"
               />
-              <rect x="-70" y="-30" width="22" height="18" rx="2" fill="#0f172a" stroke="#cbd5e1" strokeWidth="1" />
+              <rect
+                x="-70"
+                y="-30"
+                width="22"
+                height="18"
+                rx="2"
+                fill="#0f172a"
+                stroke="#cbd5e1"
+                strokeWidth="1"
+              />
               <circle cx="-42" cy="-12" r="3" fill="#f8fafc" />
               <circle cx="-34" cy="-8" r="3" fill="#f8fafc" />
 
@@ -1762,8 +2386,23 @@ export function IsometricOffice({
               {[-65, -42, -18, 6].map((sx, idx) => (
                 <g key={`bar-stool-${idx}`} transform={`translate(${sx}, 28)`}>
                   <ellipse cx="0" cy="8" rx="6" ry="3" fill="rgba(0,0,0,0.3)" />
-                  <line x1="0" y1="8" x2="0" y2="0" stroke="#64748b" strokeWidth="1.5" />
-                  <ellipse cx="0" cy="0" rx="6" ry="3" fill="#92400e" stroke="#b45309" strokeWidth="1" />
+                  <line
+                    x1="0"
+                    y1="8"
+                    x2="0"
+                    y2="0"
+                    stroke="#64748b"
+                    strokeWidth="1.5"
+                  />
+                  <ellipse
+                    cx="0"
+                    cy="0"
+                    rx="6"
+                    ry="3"
+                    fill="#92400e"
+                    stroke="#b45309"
+                    strokeWidth="1"
+                  />
                 </g>
               ))}
             </g>
@@ -1776,9 +2415,32 @@ export function IsometricOffice({
                 stroke="#64748b"
                 strokeWidth="1"
               />
-              <rect x="-31" y="-40" width="18" height="30" fill="#090d16" stroke="#38bdf8" strokeWidth="0.8" />
-              <ellipse cx="8" cy="-16" rx="5" ry="8" fill="#38bdf8" fillOpacity="0.8" stroke="#0284c7" />
-              <rect x="4" y="-8" width="8" height="16" fill="#f8fafc" stroke="#94a3b8" />
+              <rect
+                x="-31"
+                y="-40"
+                width="18"
+                height="30"
+                fill="#090d16"
+                stroke="#38bdf8"
+                strokeWidth="0.8"
+              />
+              <ellipse
+                cx="8"
+                cy="-16"
+                rx="5"
+                ry="8"
+                fill="#38bdf8"
+                fillOpacity="0.8"
+                stroke="#0284c7"
+              />
+              <rect
+                x="4"
+                y="-8"
+                width="8"
+                height="16"
+                fill="#f8fafc"
+                stroke="#94a3b8"
+              />
               <polygon
                 points="20,-50 45,-62 45,-8 20,4"
                 fill="#cbd5e1"
@@ -1817,10 +2479,22 @@ export function IsometricOffice({
                 stroke="#1e293b"
                 strokeWidth="1.2"
               />
-              <circle cx="-12" cy="-20" r="2" fill="#22c55e" className="animate-ping" />
+              <circle
+                cx="-12"
+                cy="-20"
+                r="2"
+                fill="#22c55e"
+                className="animate-ping"
+              />
               <circle cx="-12" cy="-10" r="2" fill="#38bdf8" />
               <circle cx="-12" cy="0" r="2" fill="#22c55e" />
-              <circle cx="-12" cy="10" r="2" fill="#38bdf8" className="animate-pulse" />
+              <circle
+                cx="-12"
+                cy="10"
+                r="2"
+                fill="#38bdf8"
+                className="animate-pulse"
+              />
             </g>
 
             {/* ==================== FITNESS & WELLNESS CORNER (BOTTOM) ==================== */}
@@ -1837,26 +2511,45 @@ export function IsometricOffice({
                 stroke="#38bdf8"
                 strokeWidth="1"
               />
-              <line x1="16" y1="-8" x2="38" y2="2" stroke="#cbd5e1" strokeWidth="2.5" />
+              <line
+                x1="16"
+                y1="-8"
+                x2="38"
+                y2="2"
+                stroke="#cbd5e1"
+                strokeWidth="2.5"
+              />
               <circle cx="16" cy="-8" r="3" fill="#ef4444" />
               <circle cx="38" cy="2" r="3" fill="#ef4444" />
             </g>
 
             {/* ==================== POTTED MONSTERA & FIDDLE-LEAF PLANTS ==================== */}
             <g transform="translate(760, 170)">
-              <polygon points="-7,3 7,3 4,12 -4,12" fill="#b45309" stroke="#78350f" />
+              <polygon
+                points="-7,3 7,3 4,12 -4,12"
+                fill="#b45309"
+                stroke="#78350f"
+              />
               <circle cx="-3" cy="-2" r="6" fill="#15803d" />
               <circle cx="4" cy="-5" r="5" fill="#16a34a" />
               <circle cx="0" cy="-8" r="7" fill="#22c55e" />
             </g>
             <g transform="translate(1040, 290)">
-              <polygon points="-7,3 7,3 4,12 -4,12" fill="#b45309" stroke="#78350f" />
+              <polygon
+                points="-7,3 7,3 4,12 -4,12"
+                fill="#b45309"
+                stroke="#78350f"
+              />
               <circle cx="-4" cy="-3" r="7" fill="#15803d" />
               <circle cx="3" cy="-7" r="6" fill="#16a34a" />
               <circle cx="0" cy="-12" r="7" fill="#22c55e" />
             </g>
             <g transform="translate(260, 380)">
-              <polygon points="-7,3 7,3 4,12 -4,12" fill="#b45309" stroke="#78350f" />
+              <polygon
+                points="-7,3 7,3 4,12 -4,12"
+                fill="#b45309"
+                stroke="#78350f"
+              />
               <circle cx="0" cy="-5" r="7" fill="#15803d" />
               <circle cx="-5" cy="-2" r="5" fill="#16a34a" />
             </g>
@@ -1874,8 +2567,18 @@ export function IsometricOffice({
                   strokeDasharray="4 2"
                   className="animate-pulse"
                 />
-                <circle cx={activeLaserLink.from.x} cy={activeLaserLink.from.y - 14} r="3.5" fill="#38bdf8" />
-                <circle cx={activeLaserLink.to.x} cy={activeLaserLink.to.y - 14} r="3.5" fill="#22c55e" />
+                <circle
+                  cx={activeLaserLink.from.x}
+                  cy={activeLaserLink.from.y - 14}
+                  r="3.5"
+                  fill="#38bdf8"
+                />
+                <circle
+                  cx={activeLaserLink.to.x}
+                  cy={activeLaserLink.to.y - 14}
+                  r="3.5"
+                  fill="#22c55e"
+                />
               </g>
             )}
           </svg>
@@ -1903,19 +2606,67 @@ export function IsometricOffice({
                   className="overflow-visible"
                 >
                   {/* Floor contact shadow under chair */}
-                  <ellipse cx="16" cy="25" rx="10" ry="4.5" fill="rgba(0,0,0,0.35)" />
+                  <ellipse
+                    cx="16"
+                    cy="25"
+                    rx="10"
+                    ry="4.5"
+                    fill="rgba(0,0,0,0.35)"
+                  />
                   {/* 5-Star Wheel Base */}
-                  <line x1="16" y1="23" x2="10" y2="25" stroke="#1e293b" strokeWidth="1.8" />
-                  <line x1="16" y1="23" x2="22" y2="25" stroke="#1e293b" strokeWidth="1.8" />
-                  <line x1="16" y1="23" x2="16" y2="27" stroke="#1e293b" strokeWidth="1.8" />
-                  <line x1="16" y1="23" x2="11" y2="21" stroke="#1e293b" strokeWidth="1.8" />
-                  <line x1="16" y1="23" x2="21" y2="21" stroke="#1e293b" strokeWidth="1.8" />
+                  <line
+                    x1="16"
+                    y1="23"
+                    x2="10"
+                    y2="25"
+                    stroke="#1e293b"
+                    strokeWidth="1.8"
+                  />
+                  <line
+                    x1="16"
+                    y1="23"
+                    x2="22"
+                    y2="25"
+                    stroke="#1e293b"
+                    strokeWidth="1.8"
+                  />
+                  <line
+                    x1="16"
+                    y1="23"
+                    x2="16"
+                    y2="27"
+                    stroke="#1e293b"
+                    strokeWidth="1.8"
+                  />
+                  <line
+                    x1="16"
+                    y1="23"
+                    x2="11"
+                    y2="21"
+                    stroke="#1e293b"
+                    strokeWidth="1.8"
+                  />
+                  <line
+                    x1="16"
+                    y1="23"
+                    x2="21"
+                    y2="21"
+                    stroke="#1e293b"
+                    strokeWidth="1.8"
+                  />
                   {/* Castor Wheels */}
                   <circle cx="10" cy="25" r="1.3" fill="#0f172a" />
                   <circle cx="22" cy="25" r="1.3" fill="#0f172a" />
                   <circle cx="16" cy="27" r="1.3" fill="#0f172a" />
                   {/* Chrome Hydraulic Post */}
-                  <line x1="16" y1="23" x2="16" y2="17" stroke="#475569" strokeWidth="2.2" />
+                  <line
+                    x1="16"
+                    y1="23"
+                    x2="16"
+                    y2="17"
+                    stroke="#475569"
+                    strokeWidth="2.2"
+                  />
 
                   {isBackFacing ? (
                     // Chair facing away from camera towards NW / NE desk
@@ -1935,11 +2686,35 @@ export function IsometricOffice({
                         strokeWidth="1.2"
                       />
                       {/* Lumbar Support Ribs */}
-                      <line x1="10" y1="20" x2="22" y2="20" stroke="#1e293b" strokeWidth="1" />
-                      <line x1="9.5" y1="23" x2="22.5" y2="23" stroke="#1e293b" strokeWidth="1" />
+                      <line
+                        x1="10"
+                        y1="20"
+                        x2="22"
+                        y2="20"
+                        stroke="#1e293b"
+                        strokeWidth="1"
+                      />
+                      <line
+                        x1="9.5"
+                        y1="23"
+                        x2="22.5"
+                        y2="23"
+                        stroke="#1e293b"
+                        strokeWidth="1"
+                      />
                       {/* Armrests */}
-                      <path d="M 7,14 L 7,17 L 9,18" stroke="#475569" strokeWidth="1.2" fill="none" />
-                      <path d="M 25,14 L 25,17 L 23,18" stroke="#475569" strokeWidth="1.2" fill="none" />
+                      <path
+                        d="M 7,14 L 7,17 L 9,18"
+                        stroke="#475569"
+                        strokeWidth="1.2"
+                        fill="none"
+                      />
+                      <path
+                        d="M 25,14 L 25,17 L 23,18"
+                        stroke="#475569"
+                        strokeWidth="1.2"
+                        fill="none"
+                      />
                     </>
                   ) : (
                     // Chair facing camera towards SE / SW desk
@@ -1952,8 +2727,22 @@ export function IsometricOffice({
                         strokeWidth="1.2"
                       />
                       {/* Lumbar Support Ribs */}
-                      <line x1="10" y1="9" x2="22" y2="9" stroke="#1e293b" strokeWidth="1" />
-                      <line x1="9.5" y1="12" x2="22.5" y2="12" stroke="#1e293b" strokeWidth="1" />
+                      <line
+                        x1="10"
+                        y1="9"
+                        x2="22"
+                        y2="9"
+                        stroke="#1e293b"
+                        strokeWidth="1"
+                      />
+                      <line
+                        x1="9.5"
+                        y1="12"
+                        x2="22.5"
+                        y2="12"
+                        stroke="#1e293b"
+                        strokeWidth="1"
+                      />
                       {/* Padded Dark Seat Cushion */}
                       <polygon
                         points="8,17 16,13 24,17 16,21"
@@ -1962,8 +2751,18 @@ export function IsometricOffice({
                         strokeWidth="1"
                       />
                       {/* Armrests */}
-                      <path d="M 7,13 L 7,16 L 9,17" stroke="#475569" strokeWidth="1.2" fill="none" />
-                      <path d="M 25,13 L 25,16 L 23,17" stroke="#475569" strokeWidth="1.2" fill="none" />
+                      <path
+                        d="M 7,13 L 7,16 L 9,17"
+                        stroke="#475569"
+                        strokeWidth="1.2"
+                        fill="none"
+                      />
+                      <path
+                        d="M 25,13 L 25,16 L 23,17"
+                        stroke="#475569"
+                        strokeWidth="1.2"
+                        fill="none"
+                      />
                     </>
                   )}
                 </svg>
@@ -1977,17 +2776,28 @@ export function IsometricOffice({
             const isFounder = d.agentId === 'josiah'
             const agent = agents.find((a) => a.id === d.agentId)
             const sim = renderPositions[d.agentId]
-            const isTyping = sim?.isSeated && sim?.activity === 'typing' && !sim?.isWalking
+            const isTyping =
+              sim?.isSeated && sim?.activity === 'typing' && !sim?.isWalking
             const typeFrame = sim?.typeFrame ?? 0
-            const tool = (agent?.current_tool || agent?.current_task || '').toLowerCase()
+            const tool = (
+              agent?.current_tool ||
+              agent?.current_task ||
+              ''
+            ).toLowerCase()
 
             // Syntax colors: Blue for edit, orange for shell, cyan for read, green for test pass
             const codeColor =
-              tool.includes('edit') || tool.includes('code') || tool.includes('write') || tool.includes('refactor')
+              tool.includes('edit') ||
+              tool.includes('code') ||
+              tool.includes('write') ||
+              tool.includes('refactor')
                 ? '#38bdf8'
-                : tool.includes('sh') || tool.includes('bash') || tool.includes('run') || tool.includes('test')
-                ? '#f97316'
-                : '#06b6d4'
+                : tool.includes('sh') ||
+                    tool.includes('bash') ||
+                    tool.includes('run') ||
+                    tool.includes('test')
+                  ? '#f97316'
+                  : '#06b6d4'
 
             const facing = d.facing
 
@@ -1998,7 +2808,10 @@ export function IsometricOffice({
                 style={{
                   left: `${deskScreen.x - (isFounder ? 32 : 24)}px`,
                   top: `${deskScreen.y - 16}px`,
-                  zIndex: Math.max(1, Math.round(deskScreen.y) + (facing === 'SE' ? 14 : 6)),
+                  zIndex: Math.max(
+                    1,
+                    Math.round(deskScreen.y) + (facing === 'SE' ? 14 : 6)
+                  ),
                 }}
               >
                 <svg
@@ -2027,31 +2840,153 @@ export function IsometricOffice({
                         strokeWidth="1.2"
                       />
                       <polygon points="0,14 32,28 32,35 0,21" fill="#241710" />
-                      <polygon points="32,28 64,14 64,21 32,35" fill="#4d3326" />
+                      <polygon
+                        points="32,28 64,14 64,21 32,35"
+                        fill="#4d3326"
+                      />
 
                       {/* Left Angled Screen (Cyan telemetry) */}
-                      <polygon points="8,4 18,0 18,10 8,14" fill="#041226" stroke="#38bdf8" strokeWidth="0.8" />
-                      <line x1="10" y1="4.5" x2="16" y2="2" stroke="#38bdf8" strokeWidth="1" strokeDasharray="3 1" strokeDashoffset={isTyping ? typeFrame * 2 : 0} />
-                      <line x1="10" y1="7.5" x2="16" y2="5" stroke="#22d3ee" strokeWidth="1" strokeDasharray="2 1" />
+                      <polygon
+                        points="8,4 18,0 18,10 8,14"
+                        fill="#041226"
+                        stroke="#38bdf8"
+                        strokeWidth="0.8"
+                      />
+                      <line
+                        x1="10"
+                        y1="4.5"
+                        x2="16"
+                        y2="2"
+                        stroke="#38bdf8"
+                        strokeWidth="1"
+                        strokeDasharray="3 1"
+                        strokeDashoffset={isTyping ? typeFrame * 2 : 0}
+                      />
+                      <line
+                        x1="10"
+                        y1="7.5"
+                        x2="16"
+                        y2="5"
+                        stroke="#22d3ee"
+                        strokeWidth="1"
+                        strokeDasharray="2 1"
+                      />
 
                       {/* Center Main Ultrawide Screen (Syntax Colored Code) */}
-                      <polygon points="22,2 42,2 42,12 22,12" fill="#061022" stroke="#60a5fa" strokeWidth="0.9" />
-                      <line x1="24" y1="4.5" x2="40" y2="4.5" stroke={codeColor} strokeWidth="1.2" strokeDasharray="4 1.5" strokeDashoffset={isTyping ? typeFrame * 2.5 : 0} />
-                      <line x1="24" y1="7" x2="38" y2="7" stroke="#22c55e" strokeWidth="1" strokeDasharray="3 1" />
-                      <line x1="24" y1="9.5" x2="36" y2="9.5" stroke="#f59e0b" strokeWidth="1" strokeDasharray="2 1" />
+                      <polygon
+                        points="22,2 42,2 42,12 22,12"
+                        fill="#061022"
+                        stroke="#60a5fa"
+                        strokeWidth="0.9"
+                      />
+                      <line
+                        x1="24"
+                        y1="4.5"
+                        x2="40"
+                        y2="4.5"
+                        stroke={codeColor}
+                        strokeWidth="1.2"
+                        strokeDasharray="4 1.5"
+                        strokeDashoffset={isTyping ? typeFrame * 2.5 : 0}
+                      />
+                      <line
+                        x1="24"
+                        y1="7"
+                        x2="38"
+                        y2="7"
+                        stroke="#22c55e"
+                        strokeWidth="1"
+                        strokeDasharray="3 1"
+                      />
+                      <line
+                        x1="24"
+                        y1="9.5"
+                        x2="36"
+                        y2="9.5"
+                        stroke="#f59e0b"
+                        strokeWidth="1"
+                        strokeDasharray="2 1"
+                      />
 
                       {/* Right Angled Screen (Orange shell / build log) */}
-                      <polygon points="46,0 56,4 56,14 46,10" fill="#140a04" stroke="#f97316" strokeWidth="0.8" />
-                      <line x1="48" y1="2" x2="54" y2="4.5" stroke="#f97316" strokeWidth="1" strokeDasharray="3 1" strokeDashoffset={isTyping ? typeFrame * 2 : 0} />
-                      <line x1="48" y1="5" x2="54" y2="7.5" stroke="#fb923c" strokeWidth="1" strokeDasharray="2 1" />
+                      <polygon
+                        points="46,0 56,4 56,14 46,10"
+                        fill="#140a04"
+                        stroke="#f97316"
+                        strokeWidth="0.8"
+                      />
+                      <line
+                        x1="48"
+                        y1="2"
+                        x2="54"
+                        y2="4.5"
+                        stroke="#f97316"
+                        strokeWidth="1"
+                        strokeDasharray="3 1"
+                        strokeDashoffset={isTyping ? typeFrame * 2 : 0}
+                      />
+                      <line
+                        x1="48"
+                        y1="5"
+                        x2="54"
+                        y2="7.5"
+                        stroke="#fb923c"
+                        strokeWidth="1"
+                        strokeDasharray="2 1"
+                      />
 
                       {/* Mechanical Keyboard with dynamic flickering RGB keycaps */}
-                      <rect x="25" y="16" width="14" height="6" rx="1" fill="#090d16" stroke="#334155" strokeWidth="0.7" />
-                      <rect x="26" y="17" width="2" height="1.5" fill={isTyping && typeFrame === 0 ? '#38bdf8' : '#64748b'} />
-                      <rect x="29" y="17" width="2" height="1.5" fill={isTyping && typeFrame === 1 ? '#38bdf8' : '#64748b'} />
-                      <rect x="32" y="17" width="2" height="1.5" fill={isTyping && typeFrame === 2 ? '#38bdf8' : '#64748b'} />
-                      <rect x="35" y="17" width="2" height="1.5" fill={isTyping ? '#22c55e' : '#64748b'} />
-                      <rect x="27.5" y="19.5" width="9" height="1.2" fill={isTyping ? '#38bdf8' : '#475569'} />
+                      <rect
+                        x="25"
+                        y="16"
+                        width="14"
+                        height="6"
+                        rx="1"
+                        fill="#090d16"
+                        stroke="#334155"
+                        strokeWidth="0.7"
+                      />
+                      <rect
+                        x="26"
+                        y="17"
+                        width="2"
+                        height="1.5"
+                        fill={
+                          isTyping && typeFrame === 0 ? '#38bdf8' : '#64748b'
+                        }
+                      />
+                      <rect
+                        x="29"
+                        y="17"
+                        width="2"
+                        height="1.5"
+                        fill={
+                          isTyping && typeFrame === 1 ? '#38bdf8' : '#64748b'
+                        }
+                      />
+                      <rect
+                        x="32"
+                        y="17"
+                        width="2"
+                        height="1.5"
+                        fill={
+                          isTyping && typeFrame === 2 ? '#38bdf8' : '#64748b'
+                        }
+                      />
+                      <rect
+                        x="35"
+                        y="17"
+                        width="2"
+                        height="1.5"
+                        fill={isTyping ? '#22c55e' : '#64748b'}
+                      />
+                      <rect
+                        x="27.5"
+                        y="19.5"
+                        width="9"
+                        height="1.2"
+                        fill={isTyping ? '#38bdf8' : '#475569'}
+                      />
                     </>
                   ) : facing === 'NW' ? (
                     // Workstation facing NW (Workers sit SE facing NW; monitors face SE towards viewer)
@@ -2063,26 +2998,128 @@ export function IsometricOffice({
                         strokeWidth="1"
                       />
                       <polygon points="0,12 24,24 24,30 0,18" fill="#241710" />
-                      <polygon points="24,24 48,12 48,18 24,30" fill="#4d3326" />
+                      <polygon
+                        points="24,24 48,12 48,18 24,30"
+                        fill="#4d3326"
+                      />
 
                       {/* Left Monitor (Syntax code scrolling in sync with typing) */}
-                      <polygon points="8,4 18,0 18,8 8,12" fill="#040e1e" stroke="#38bdf8" strokeWidth="0.8" />
-                      <line x1="10" y1="4.5" x2="16" y2="2" stroke={codeColor} strokeWidth="1" strokeDasharray="3 1" strokeDashoffset={isTyping ? typeFrame * 2 : 0} />
-                      <line x1="10" y1="7" x2="16" y2="4.5" stroke="#22c55e" strokeWidth="1" strokeDasharray="2 1" />
-                      <line x1="10" y1="9.5" x2="16" y2="7" stroke="#f59e0b" strokeWidth="1" strokeDasharray="3 1" />
+                      <polygon
+                        points="8,4 18,0 18,8 8,12"
+                        fill="#040e1e"
+                        stroke="#38bdf8"
+                        strokeWidth="0.8"
+                      />
+                      <line
+                        x1="10"
+                        y1="4.5"
+                        x2="16"
+                        y2="2"
+                        stroke={codeColor}
+                        strokeWidth="1"
+                        strokeDasharray="3 1"
+                        strokeDashoffset={isTyping ? typeFrame * 2 : 0}
+                      />
+                      <line
+                        x1="10"
+                        y1="7"
+                        x2="16"
+                        y2="4.5"
+                        stroke="#22c55e"
+                        strokeWidth="1"
+                        strokeDasharray="2 1"
+                      />
+                      <line
+                        x1="10"
+                        y1="9.5"
+                        x2="16"
+                        y2="7"
+                        stroke="#f59e0b"
+                        strokeWidth="1"
+                        strokeDasharray="3 1"
+                      />
 
                       {/* Right Monitor (Terminal / Telemetry) */}
-                      <polygon points="26,0 36,5 36,13 26,8" fill="#040e1e" stroke="#22c55e" strokeWidth="0.8" />
-                      <line x1="28" y1="2" x2="34" y2="5" stroke="#22c55e" strokeWidth="1" strokeDasharray="3 1" strokeDashoffset={isTyping ? typeFrame * 2 : 0} />
-                      <line x1="28" y1="4.5" x2="34" y2="7.5" stroke={codeColor} strokeWidth="1" strokeDasharray="2 1" />
-                      <line x1="28" y1="7" x2="34" y2="10" stroke="#a855f7" strokeWidth="1" strokeDasharray="3 1" />
+                      <polygon
+                        points="26,0 36,5 36,13 26,8"
+                        fill="#040e1e"
+                        stroke="#22c55e"
+                        strokeWidth="0.8"
+                      />
+                      <line
+                        x1="28"
+                        y1="2"
+                        x2="34"
+                        y2="5"
+                        stroke="#22c55e"
+                        strokeWidth="1"
+                        strokeDasharray="3 1"
+                        strokeDashoffset={isTyping ? typeFrame * 2 : 0}
+                      />
+                      <line
+                        x1="28"
+                        y1="4.5"
+                        x2="34"
+                        y2="7.5"
+                        stroke={codeColor}
+                        strokeWidth="1"
+                        strokeDasharray="2 1"
+                      />
+                      <line
+                        x1="28"
+                        y1="7"
+                        x2="34"
+                        y2="10"
+                        stroke="#a855f7"
+                        strokeWidth="1"
+                        strokeDasharray="3 1"
+                      />
 
                       {/* Keyboard with keycaps flickering in sync with typing */}
-                      <rect x="18" y="14" width="12" height="5" rx="0.8" fill="#090d16" stroke="#334155" strokeWidth="0.6" />
-                      <rect x="19" y="15" width="2" height="1.2" fill={isTyping && typeFrame === 0 ? '#38bdf8' : '#64748b'} />
-                      <rect x="22" y="15" width="2" height="1.2" fill={isTyping && typeFrame === 1 ? '#38bdf8' : '#64748b'} />
-                      <rect x="25" y="15" width="2" height="1.2" fill={isTyping && typeFrame === 2 ? '#38bdf8' : '#64748b'} />
-                      <rect x="20" y="17" width="8" height="1" fill={isTyping ? '#38bdf8' : '#475569'} />
+                      <rect
+                        x="18"
+                        y="14"
+                        width="12"
+                        height="5"
+                        rx="0.8"
+                        fill="#090d16"
+                        stroke="#334155"
+                        strokeWidth="0.6"
+                      />
+                      <rect
+                        x="19"
+                        y="15"
+                        width="2"
+                        height="1.2"
+                        fill={
+                          isTyping && typeFrame === 0 ? '#38bdf8' : '#64748b'
+                        }
+                      />
+                      <rect
+                        x="22"
+                        y="15"
+                        width="2"
+                        height="1.2"
+                        fill={
+                          isTyping && typeFrame === 1 ? '#38bdf8' : '#64748b'
+                        }
+                      />
+                      <rect
+                        x="25"
+                        y="15"
+                        width="2"
+                        height="1.2"
+                        fill={
+                          isTyping && typeFrame === 2 ? '#38bdf8' : '#64748b'
+                        }
+                      />
+                      <rect
+                        x="20"
+                        y="17"
+                        width="8"
+                        height="1"
+                        fill={isTyping ? '#38bdf8' : '#475569'}
+                      />
                     </>
                   ) : facing === 'NE' ? (
                     // Workstation facing NE (QA / Growth rows)
@@ -2094,20 +3131,92 @@ export function IsometricOffice({
                         strokeWidth="1"
                       />
                       <polygon points="0,12 24,24 24,30 0,18" fill="#241710" />
-                      <polygon points="24,24 48,12 48,18 24,30" fill="#4d3326" />
+                      <polygon
+                        points="24,24 48,12 48,18 24,30"
+                        fill="#4d3326"
+                      />
 
                       {/* Monitor on NE rim angled towards SW */}
-                      <polygon points="18,1 36,7 36,15 18,9" fill="#061224" stroke="#10b981" strokeWidth="0.8" />
-                      <line x1="21" y1="4" x2="33" y2="8" stroke={codeColor} strokeWidth="1" strokeDasharray="3 1" strokeDashoffset={isTyping ? typeFrame * 2 : 0} />
-                      <line x1="21" y1="6.5" x2="33" y2="10.5" stroke="#10b981" strokeWidth="1" strokeDasharray="2 1" />
-                      <line x1="21" y1="9" x2="33" y2="13" stroke="#f59e0b" strokeWidth="1" strokeDasharray="3 1" />
+                      <polygon
+                        points="18,1 36,7 36,15 18,9"
+                        fill="#061224"
+                        stroke="#10b981"
+                        strokeWidth="0.8"
+                      />
+                      <line
+                        x1="21"
+                        y1="4"
+                        x2="33"
+                        y2="8"
+                        stroke={codeColor}
+                        strokeWidth="1"
+                        strokeDasharray="3 1"
+                        strokeDashoffset={isTyping ? typeFrame * 2 : 0}
+                      />
+                      <line
+                        x1="21"
+                        y1="6.5"
+                        x2="33"
+                        y2="10.5"
+                        stroke="#10b981"
+                        strokeWidth="1"
+                        strokeDasharray="2 1"
+                      />
+                      <line
+                        x1="21"
+                        y1="9"
+                        x2="33"
+                        y2="13"
+                        stroke="#f59e0b"
+                        strokeWidth="1"
+                        strokeDasharray="3 1"
+                      />
 
                       {/* Keyboard on SW rim */}
-                      <rect x="10" y="11" width="11" height="5" rx="0.8" fill="#090d16" stroke="#334155" strokeWidth="0.6" />
-                      <rect x="11" y="12" width="2" height="1.2" fill={isTyping && typeFrame === 0 ? '#10b981' : '#64748b'} />
-                      <rect x="14" y="12" width="2" height="1.2" fill={isTyping && typeFrame === 1 ? '#10b981' : '#64748b'} />
-                      <rect x="17" y="12" width="2" height="1.2" fill={isTyping && typeFrame === 2 ? '#10b981' : '#64748b'} />
-                      <rect x="12" y="14" width="7" height="1" fill={isTyping ? '#10b981' : '#475569'} />
+                      <rect
+                        x="10"
+                        y="11"
+                        width="11"
+                        height="5"
+                        rx="0.8"
+                        fill="#090d16"
+                        stroke="#334155"
+                        strokeWidth="0.6"
+                      />
+                      <rect
+                        x="11"
+                        y="12"
+                        width="2"
+                        height="1.2"
+                        fill={
+                          isTyping && typeFrame === 0 ? '#10b981' : '#64748b'
+                        }
+                      />
+                      <rect
+                        x="14"
+                        y="12"
+                        width="2"
+                        height="1.2"
+                        fill={
+                          isTyping && typeFrame === 1 ? '#10b981' : '#64748b'
+                        }
+                      />
+                      <rect
+                        x="17"
+                        y="12"
+                        width="2"
+                        height="1.2"
+                        fill={
+                          isTyping && typeFrame === 2 ? '#10b981' : '#64748b'
+                        }
+                      />
+                      <rect
+                        x="12"
+                        y="14"
+                        width="7"
+                        height="1"
+                        fill={isTyping ? '#10b981' : '#475569'}
+                      />
                     </>
                   ) : (
                     // Workstation facing SE (Executive / Manager desk facing camera)
@@ -2119,23 +3228,89 @@ export function IsometricOffice({
                         strokeWidth="1"
                       />
                       <polygon points="0,12 24,24 24,30 0,18" fill="#241710" />
-                      <polygon points="24,24 48,12 48,18 24,30" fill="#4d3326" />
+                      <polygon
+                        points="24,24 48,12 48,18 24,30"
+                        fill="#4d3326"
+                      />
 
                       {/* Monitors on SE rim facing NW towards manager; we see slim dark casing back */}
-                      <polygon points="10,13 20,8 20,16 10,21" fill="#0b1320" stroke="#1e293b" strokeWidth="0.8" />
-                      <line x1="15" y1="17" x2="15" y2="21" stroke="#64748b" strokeWidth="1.2" />
+                      <polygon
+                        points="10,13 20,8 20,16 10,21"
+                        fill="#0b1320"
+                        stroke="#1e293b"
+                        strokeWidth="0.8"
+                      />
+                      <line
+                        x1="15"
+                        y1="17"
+                        x2="15"
+                        y2="21"
+                        stroke="#64748b"
+                        strokeWidth="1.2"
+                      />
                       <circle cx="15" cy="11.5" r="0.8" fill="#38bdf8" />
 
-                      <polygon points="26,8 36,13 36,21 26,16" fill="#0b1320" stroke="#1e293b" strokeWidth="0.8" />
-                      <line x1="31" y1="17" x2="31" y2="21" stroke="#64748b" strokeWidth="1.2" />
+                      <polygon
+                        points="26,8 36,13 36,21 26,16"
+                        fill="#0b1320"
+                        stroke="#1e293b"
+                        strokeWidth="0.8"
+                      />
+                      <line
+                        x1="31"
+                        y1="17"
+                        x2="31"
+                        y2="21"
+                        stroke="#64748b"
+                        strokeWidth="1.2"
+                      />
                       <circle cx="31" cy="11.5" r="0.8" fill="#22c55e" />
 
                       {/* Keyboard on NW desk surface */}
-                      <rect x="18" y="5" width="12" height="5" rx="0.8" fill="#090d16" stroke="#334155" strokeWidth="0.6" />
-                      <rect x="19" y="6" width="2" height="1.2" fill={isTyping && typeFrame === 0 ? '#38bdf8' : '#64748b'} />
-                      <rect x="22" y="6" width="2" height="1.2" fill={isTyping && typeFrame === 1 ? '#38bdf8' : '#64748b'} />
-                      <rect x="25" y="6" width="2" height="1.2" fill={isTyping && typeFrame === 2 ? '#38bdf8' : '#64748b'} />
-                      <rect x="20" y="8" width="8" height="1" fill={isTyping ? '#38bdf8' : '#475569'} />
+                      <rect
+                        x="18"
+                        y="5"
+                        width="12"
+                        height="5"
+                        rx="0.8"
+                        fill="#090d16"
+                        stroke="#334155"
+                        strokeWidth="0.6"
+                      />
+                      <rect
+                        x="19"
+                        y="6"
+                        width="2"
+                        height="1.2"
+                        fill={
+                          isTyping && typeFrame === 0 ? '#38bdf8' : '#64748b'
+                        }
+                      />
+                      <rect
+                        x="22"
+                        y="6"
+                        width="2"
+                        height="1.2"
+                        fill={
+                          isTyping && typeFrame === 1 ? '#38bdf8' : '#64748b'
+                        }
+                      />
+                      <rect
+                        x="25"
+                        y="6"
+                        width="2"
+                        height="1.2"
+                        fill={
+                          isTyping && typeFrame === 2 ? '#38bdf8' : '#64748b'
+                        }
+                      />
+                      <rect
+                        x="20"
+                        y="8"
+                        width="8"
+                        height="1"
+                        fill={isTyping ? '#38bdf8' : '#475569'}
+                      />
                     </>
                   )}
                 </svg>
@@ -2161,13 +3336,20 @@ export function IsometricOffice({
             const speechText = activeSpeech[agent.id]
             const safeX = Number.isFinite(sim.x) ? sim.x : 540
             const safeY = Number.isFinite(sim.y) ? sim.y : 340
-            const zIndexVal = Math.max(10, Math.round(safeY) + (sim.isSeated ? 10 : 25))
+            const zIndexVal = Math.max(
+              10,
+              Math.round(safeY) + (sim.isSeated ? 10 : 25)
+            )
 
             // Activity Director mapping & Filter Highlight
             const directedActivity: AgentDirectedActivity =
               directedActivities[agent.id]?.activity || 'working'
-            const isDimmed = activeActivityFilter !== null && directedActivity !== activeActivityFilter
-            const isFilterHighlighted = activeActivityFilter !== null && directedActivity === activeActivityFilter
+            const isDimmed =
+              activeActivityFilter !== null &&
+              directedActivity !== activeActivityFilter
+            const isFilterHighlighted =
+              activeActivityFilter !== null &&
+              directedActivity === activeActivityFilter
 
             // Status dot color
             const dotColor =
@@ -2233,7 +3415,9 @@ export function IsometricOffice({
                     transform: `translateX(calc(-50% + ${tagOffset.offsetX}px))`,
                   }}
                 >
-                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
+                  <span
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`}
+                  />
                   {!tagOffset.isCollapsed && (
                     <span className="font-mono text-[9px] font-bold tracking-tight text-slate-800">
                       {agent.name}
@@ -2252,7 +3436,7 @@ export function IsometricOffice({
                 {/* Cosmetic Accessories Overlay (Preserves base sprite identity) */}
                 {agentAccessories.includes('headphones') && (
                   <div
-                    className="pointer-events-none absolute -top-1 left-1/2 -translate-x-1/2 z-10"
+                    className="pointer-events-none absolute -top-1 left-1/2 z-10 -translate-x-1/2"
                     title="Dev Headphones"
                   >
                     <div className="h-1.5 w-4 rounded-t-full border-t-2 border-slate-900" />
@@ -2260,12 +3444,12 @@ export function IsometricOffice({
                 )}
                 {agentAccessories.includes('glasses') && (
                   <div
-                    className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 z-10"
+                    className="pointer-events-none absolute top-2 left-1/2 z-10 -translate-x-1/2"
                     title="Terminal Shades"
                   >
                     <div className="flex gap-0.5">
-                      <span className="h-1 w-1.5 bg-slate-900 rounded-xs" />
-                      <span className="h-1 w-1.5 bg-slate-900 rounded-xs" />
+                      <span className="h-1 w-1.5 rounded-xs bg-slate-900" />
+                      <span className="h-1 w-1.5 rounded-xs bg-slate-900" />
                     </div>
                   </div>
                 )}
@@ -2349,14 +3533,14 @@ export function IsometricOffice({
             }}
             className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap transition active:scale-95 ${
               showAgentsDrawer
-                ? 'bg-purple-600 text-white shadow-purple-500/20 shadow-md'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
                 : 'bg-slate-900/80 text-purple-300 hover:bg-slate-800'
             }`}
             title="Open Agent Roster Panel"
           >
             <span>👥</span>
             <span>AGENTS</span>
-            <span className="rounded-full bg-purple-900/90 px-1.5 py-0.2 font-mono text-[10px] text-purple-200">
+            <span className="py-0.2 rounded-full bg-purple-900/90 px-1.5 font-mono text-[10px] text-purple-200">
               {agents.length}
             </span>
           </button>
@@ -2401,7 +3585,7 @@ export function IsometricOffice({
             }}
             className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-xs whitespace-nowrap transition active:scale-95 ${
               isTourActive
-                ? 'bg-amber-600 font-bold text-white shadow-md shadow-amber-500/20 animate-pulse'
+                ? 'animate-pulse bg-amber-600 font-bold text-white shadow-md shadow-amber-500/20'
                 : 'bg-slate-900/80 text-amber-300 hover:bg-slate-800'
             }`}
             title="Walk around: Autonomous campus tour"
@@ -2443,7 +3627,7 @@ export function IsometricOffice({
             <span>📬</span>
             <span>Needs You</span>
             {approvals.length > 0 && (
-              <span className="rounded-full bg-amber-950 px-1.5 py-0.2 font-mono text-[10px] font-black text-amber-300">
+              <span className="py-0.2 rounded-full bg-amber-950 px-1.5 font-mono text-[10px] font-black text-amber-300">
                 {approvals.length}
               </span>
             )}
@@ -2607,7 +3791,9 @@ export function IsometricOffice({
                       : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
                   }`}
                 >
-                  {dept === 'ALL' ? 'ALL' : dept.replace(' Lab', '').replace(' Core', '')}
+                  {dept === 'ALL'
+                    ? 'ALL'
+                    : dept.replace(' Lab', '').replace(' Core', '')}
                 </button>
               ))}
             </div>
@@ -2690,7 +3876,8 @@ export function IsometricOffice({
             <div className="mt-3 flex-1 space-y-3 overflow-y-auto pr-1">
               {!approvals || approvals.length === 0 ? (
                 <div className="py-8 text-center font-mono text-xs text-slate-400">
-                  ✨ All Go-Signals cleared. Autonomous studio operating normally.
+                  ✨ All Go-Signals cleared. Autonomous studio operating
+                  normally.
                 </div>
               ) : (
                 approvals.map((app) => (
@@ -2806,25 +3993,32 @@ export function IsometricOffice({
                       <span className="text-emerald-400">✓ VERIFIED</span>
                     </div>
                     <p className="mt-1 text-[11px] text-slate-300">
-                      Open-plan solid warm beige diamond slab with A* corridor routing.
+                      Open-plan solid warm beige diamond slab with A* corridor
+                      routing.
                     </p>
                   </div>
                   <div className="rounded border border-[#1e283d] bg-[#0c101a] p-2">
                     <div className="flex justify-between font-bold">
-                      <span className="text-cyan-400">2. SUPABASE REALTIME</span>
+                      <span className="text-cyan-400">
+                        2. SUPABASE REALTIME
+                      </span>
                       <span className="text-emerald-400">✓ SYNCED</span>
                     </div>
                     <p className="mt-1 text-[11px] text-slate-300">
-                      Remote tables, RLS security rails, and live broadcast channels.
+                      Remote tables, RLS security rails, and live broadcast
+                      channels.
                     </p>
                   </div>
                   <div className="rounded border border-[#1e283d] bg-[#0c101a] p-2">
                     <div className="flex justify-between font-bold">
-                      <span className="text-purple-400">3. GO-SIGNAL GATEWAY</span>
+                      <span className="text-purple-400">
+                        3. GO-SIGNAL GATEWAY
+                      </span>
                       <span className="text-emerald-400">✓ ACTIVE</span>
                     </div>
                     <p className="mt-1 text-[11px] text-slate-300">
-                      Mandatory human-in-the-loop signoff on releases and migrations.
+                      Mandatory human-in-the-loop signoff on releases and
+                      migrations.
                     </p>
                   </div>
                 </div>
@@ -2862,115 +4056,116 @@ export function IsometricOffice({
       )}
 
       {/* ==================== 9. FLOATING WORKSTATION INSPECTOR ==================== */}
-      {selectedAgentId && (() => {
-        const ag = agents.find((a) => a.id === selectedAgentId)
-        if (!ag) return null
-        return (
-          <div className="animate-in slide-in-from-bottom pointer-events-auto fixed right-4 bottom-16 z-50 flex w-96 flex-col gap-2.5 rounded-xl border border-[#1e283d] bg-[#0c101a]/95 p-3.5 shadow-2xl backdrop-blur-xl duration-200">
-            <div className="flex items-center justify-between border-b border-[#1e283d] pb-2">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    ag.status === 'working'
-                      ? 'animate-pulse bg-emerald-400'
-                      : 'bg-slate-400'
-                  }`}
+      {selectedAgentId &&
+        (() => {
+          const ag = agents.find((a) => a.id === selectedAgentId)
+          if (!ag) return null
+          return (
+            <div className="animate-in slide-in-from-bottom pointer-events-auto fixed right-4 bottom-16 z-50 flex w-96 flex-col gap-2.5 rounded-xl border border-[#1e283d] bg-[#0c101a]/95 p-3.5 shadow-2xl backdrop-blur-xl duration-200">
+              <div className="flex items-center justify-between border-b border-[#1e283d] pb-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      ag.status === 'working'
+                        ? 'animate-pulse bg-emerald-400'
+                        : 'bg-slate-400'
+                    }`}
+                  />
+                  <span className="font-mono text-xs font-bold text-amber-300 uppercase">
+                    {`${ag.name} // WORKSTATION`}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={() => onSelectAgent(null)}
+                  className="cursor-pointer font-mono text-xs text-slate-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <PixelSprite
+                  id={ag.id}
+                  name={ag.name}
+                  color={ag.color || '#3b82f6'}
+                  hair={ag.hair || '#1e293b'}
+                  skin={ag.skin || '#fcd34d'}
+                  size={36}
                 />
-                <span className="font-mono text-xs font-bold text-amber-300 uppercase">
-                  {`${ag.name} // WORKSTATION`}
-                </span>
+                <div className="min-w-0">
+                  <h4 className="truncate font-mono text-sm font-bold text-white">
+                    {ag.name}
+                  </h4>
+                  <p className="truncate font-mono text-xs text-slate-400">
+                    {ag.role}
+                  </p>
+                  <p className="font-mono text-[10px] text-cyan-300">
+                    {ag.room}
+                  </p>
+                </div>
               </div>
-              <button
-                type="button"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={() => onSelectAgent(null)}
-                className="cursor-pointer font-mono text-xs text-slate-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
 
-            <div className="flex items-center gap-3">
-              <PixelSprite
-                id={ag.id}
-                name={ag.name}
-                color={ag.color || '#3b82f6'}
-                hair={ag.hair || '#1e293b'}
-                skin={ag.skin || '#fcd34d'}
-                size={36}
-              />
-              <div className="min-w-0">
-                <h4 className="truncate font-mono text-sm font-bold text-white">
-                  {ag.name}
-                </h4>
-                <p className="truncate font-mono text-xs text-slate-400">
-                  {ag.role}
+              {/* Current Task & Progress */}
+              <div className="space-y-1 rounded border border-[#1e283d] bg-[#111625] p-2.5 font-mono text-xs">
+                <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>ACTIVE WORK:</span>
+                  <span className="font-bold text-emerald-400">
+                    {ag.progress_pct ?? 100}%
+                  </span>
+                </div>
+                <p className="truncate text-[11px] text-slate-200">
+                  {ag.current_task || 'Active at workstation'}
                 </p>
-                <p className="font-mono text-[10px] text-cyan-300">
-                  {ag.room}
-                </p>
+                {ag.terminal_preview && (
+                  <pre className="mt-1 max-h-24 overflow-x-auto rounded border border-emerald-950/60 bg-black/60 p-2 font-mono text-[10px] whitespace-pre-wrap text-emerald-400">
+                    {ag.terminal_preview}
+                  </pre>
+                )}
               </div>
-            </div>
 
-            {/* Current Task & Progress */}
-            <div className="space-y-1 rounded border border-[#1e283d] bg-[#111625] p-2.5 font-mono text-xs">
-              <div className="flex justify-between text-[10px] text-slate-400">
-                <span>ACTIVE WORK:</span>
-                <span className="font-bold text-emerald-400">
-                  {ag.progress_pct ?? 100}%
-                </span>
-              </div>
-              <p className="truncate text-[11px] text-slate-200">
-                {ag.current_task || 'Active at workstation'}
-              </p>
-              {ag.terminal_preview && (
-                <pre className="mt-1 max-h-24 overflow-x-auto rounded border border-emerald-950/60 bg-black/60 p-2 font-mono text-[10px] whitespace-pre-wrap text-emerald-400">
-                  {ag.terminal_preview}
-                </pre>
-              )}
-            </div>
-
-            {/* Directive Dispatch Form */}
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault()
-                if (!directiveInput.trim() || !onDispatchDirective) return
-                setIsSubmittingDirective(true)
-                const text = directiveInput.trim()
-                setDirectiveInput('')
-                try {
-                  await onDispatchDirective(ag.id, text)
-                } finally {
-                  setIsSubmittingDirective(false)
-                }
-              }}
-              className="flex gap-2"
-            >
-              <input
-                type="text"
-                value={directiveInput}
-                onChange={(e) => setDirectiveInput(e.target.value)}
-                placeholder={`Assign directive to ${ag.name}...`}
-                className="flex-1 rounded border border-[#1e283d] bg-[#111625] px-2.5 py-1.5 font-mono text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400"
-              />
-              <button
-                type="submit"
-                disabled={isSubmittingDirective || !directiveInput.trim()}
-                className="cursor-pointer rounded bg-cyan-600 px-3 py-1.5 font-mono text-xs font-bold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+              {/* Directive Dispatch Form */}
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault()
+                  if (!directiveInput.trim() || !onDispatchDirective) return
+                  setIsSubmittingDirective(true)
+                  const text = directiveInput.trim()
+                  setDirectiveInput('')
+                  try {
+                    await onDispatchDirective(ag.id, text)
+                  } finally {
+                    setIsSubmittingDirective(false)
+                  }
+                }}
+                className="flex gap-2"
               >
-                {isSubmittingDirective ? '...' : 'Dispatch'}
-              </button>
-            </form>
-          </div>
-        )
-      })()}
+                <input
+                  type="text"
+                  value={directiveInput}
+                  onChange={(e) => setDirectiveInput(e.target.value)}
+                  placeholder={`Assign directive to ${ag.name}...`}
+                  className="flex-1 rounded border border-[#1e283d] bg-[#111625] px-2.5 py-1.5 font-mono text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400"
+                />
+                <button
+                  type="submit"
+                  disabled={isSubmittingDirective || !directiveInput.trim()}
+                  className="cursor-pointer rounded bg-cyan-600 px-3 py-1.5 font-mono text-xs font-bold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+                >
+                  {isSubmittingDirective ? '...' : 'Dispatch'}
+                </button>
+              </form>
+            </div>
+          )
+        })()}
 
       {/* ==================== 10. SETTINGS MODAL ==================== */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl border border-cyan-500/40 bg-[#0c101a] p-5 shadow-2xl space-y-4">
+          <div className="max-h-[90vh] w-full max-w-2xl space-y-4 overflow-y-auto rounded-xl border border-cyan-500/40 bg-[#0c101a] p-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-[#1e283d] pb-3">
-              <h3 className="font-mono text-sm font-bold text-slate-100 flex items-center gap-2">
+              <h3 className="flex items-center gap-2 font-mono text-sm font-bold text-slate-100">
                 <span>⚙️</span>
                 <span>HQ OFFICE PREFERENCES &amp; SUPABASE DATA HEALTH</span>
               </h3>
@@ -2987,8 +4182,7 @@ export function IsometricOffice({
             {/* Live Supabase Data Health Panel */}
             <DataHealthPanel compact />
 
-            <div className="space-y-3 font-mono text-xs border-t border-slate-800 pt-3">
-
+            <div className="space-y-3 border-t border-slate-800 pt-3 font-mono text-xs">
               <div className="flex items-center justify-between pt-1">
                 <span className="text-slate-300">Audio Synthesizer</span>
                 <button
@@ -2996,7 +4190,9 @@ export function IsometricOffice({
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={() => setSoundEnabled((prev) => !prev)}
                   className={`cursor-pointer rounded px-2.5 py-1 ${
-                    soundEnabled ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'
+                    soundEnabled
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-800 text-slate-400'
                   }`}
                 >
                   {soundEnabled ? 'ENABLED' : 'MUTED'}
@@ -3008,11 +4204,19 @@ export function IsometricOffice({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-300">Simulation Speed</span>
-                <span className="font-bold text-emerald-400">1x (Real-Time Studio)</span>
+                <span className="font-bold text-emerald-400">
+                  1x (Real-Time Studio)
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-300">Supabase Realtime Sync</span>
-                <span className={supabaseActive ? 'text-emerald-400 font-bold' : 'text-slate-400'}>
+                <span
+                  className={
+                    supabaseActive
+                      ? 'font-bold text-emerald-400'
+                      : 'text-slate-400'
+                  }
+                >
                   {supabaseActive ? 'ONLINE & SYNCED' : 'HYBRID MODE'}
                 </span>
               </div>
@@ -3035,7 +4239,7 @@ export function IsometricOffice({
           <div className="w-full max-w-md rounded-xl border border-emerald-500/50 bg-[#0c101a] p-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-[#1e283d] pb-3">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
                 <h3 className="font-mono text-sm font-bold text-emerald-300">
                   ONBOARD SPECIALIST AGENT
                 </h3>
@@ -3049,9 +4253,12 @@ export function IsometricOffice({
                 ✕
               </button>
             </div>
-            <form onSubmit={handleAddAgentSubmit} className="mt-4 space-y-3.5 font-mono text-xs">
+            <form
+              onSubmit={handleAddAgentSubmit}
+              className="mt-4 space-y-3.5 font-mono text-xs"
+            >
               <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                <label className="mb-1 block text-[11px] font-semibold text-slate-300">
                   Full Name / Callsign
                 </label>
                 <input
@@ -3064,7 +4271,7 @@ export function IsometricOffice({
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                <label className="mb-1 block text-[11px] font-semibold text-slate-300">
                   Role & Specialization
                 </label>
                 <input
@@ -3077,13 +4284,13 @@ export function IsometricOffice({
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                <label className="mb-1 block text-[11px] font-semibold text-slate-300">
                   Department / Office Room
                 </label>
                 <select
                   value={newAgentDept}
                   onChange={(e) => setNewAgentDept(e.target.value)}
-                  className="w-full rounded border border-[#1e283d] bg-[#111625] px-3 py-1.5 text-white outline-none focus:border-emerald-400 cursor-pointer"
+                  className="w-full cursor-pointer rounded border border-[#1e283d] bg-[#111625] px-3 py-1.5 text-white outline-none focus:border-emerald-400"
                 >
                   <option value="Engineering Core">Engineering Core</option>
                   <option value="QA & SecOps NOC">QA & SecOps NOC</option>
@@ -3094,17 +4301,26 @@ export function IsometricOffice({
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                <label className="mb-1 block text-[11px] font-semibold text-slate-300">
                   Badge Color
                 </label>
                 <div className="flex items-center gap-2">
-                  {['#3b82f6', '#10b981', '#06b6d4', '#a855f7', '#f59e0b', '#ec4899'].map((c) => (
+                  {[
+                    '#3b82f6',
+                    '#10b981',
+                    '#06b6d4',
+                    '#a855f7',
+                    '#f59e0b',
+                    '#ec4899',
+                  ].map((c) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setNewAgentColor(c)}
-                      className={`h-6 w-6 rounded-full border-2 transition cursor-pointer ${
-                        newAgentColor === c ? 'scale-110 border-white' : 'border-transparent opacity-70 hover:opacity-100'
+                      className={`h-6 w-6 cursor-pointer rounded-full border-2 transition ${
+                        newAgentColor === c
+                          ? 'scale-110 border-white'
+                          : 'border-transparent opacity-70 hover:opacity-100'
                       }`}
                       style={{ backgroundColor: c }}
                     />
@@ -3118,17 +4334,21 @@ export function IsometricOffice({
                   />
                 </div>
               </div>
-              <div className="pt-2 flex gap-2">
+              <div className="flex gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddAgentModal(false)}
-                  className="flex-1 cursor-pointer rounded border border-[#1e283d] bg-slate-900 py-2 font-bold text-slate-300 hover:bg-slate-800 transition"
+                  className="flex-1 cursor-pointer rounded border border-[#1e283d] bg-slate-900 py-2 font-bold text-slate-300 transition hover:bg-slate-800"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isAddingAgent || !newAgentName.trim() || !newAgentRole.trim()}
+                  disabled={
+                    isAddingAgent ||
+                    !newAgentName.trim() ||
+                    !newAgentRole.trim()
+                  }
                   className="flex-1 cursor-pointer rounded bg-emerald-500 py-2 font-bold text-black transition hover:bg-emerald-400 disabled:opacity-50"
                 >
                   {isAddingAgent ? 'Deploying...' : 'Deploy to Office'}
@@ -3144,7 +4364,7 @@ export function IsometricOffice({
         <div className="pointer-events-auto absolute top-0 right-0 z-50 flex h-full w-96 flex-col border-l border-purple-500/50 bg-[#0c101a]/98 shadow-2xl backdrop-blur-xl">
           <div className="flex items-center justify-between border-b border-[#1e283d] p-4">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
+              <span className="h-2 w-2 animate-pulse rounded-full bg-purple-400" />
               <span className="font-mono text-sm font-bold text-purple-300">
                 ALL HANDS TRANSCRIPT
               </span>
@@ -3161,7 +4381,7 @@ export function IsometricOffice({
               ✕
             </button>
           </div>
-          <div className="p-3 border-b border-[#1e283d] bg-[#111625]/60 flex items-center justify-between">
+          <div className="flex items-center justify-between border-b border-[#1e283d] bg-[#111625]/60 p-3">
             <span className="font-mono text-[11px] text-slate-400">
               Session: EasyUp HQ All Hands
             </span>
@@ -3183,17 +4403,23 @@ export function IsometricOffice({
           <div className="flex-1 space-y-3 overflow-y-auto p-4 font-mono text-xs">
             {meetingTranscript.length === 0 ? (
               <div className="py-12 text-center text-slate-500">
-                No meeting speeches recorded yet. Start All Hands to begin deliberation.
+                No meeting speeches recorded yet. Start All Hands to begin
+                deliberation.
               </div>
             ) : (
               meetingTranscript.map((t, idx) => (
-                <div key={idx} className="rounded-lg border border-[#1e283d] bg-[#111625] p-3 space-y-1">
+                <div
+                  key={idx}
+                  className="space-y-1 rounded-lg border border-[#1e283d] bg-[#111625] p-3"
+                >
                   <div className="flex items-center justify-between text-[10px]">
-                    <span className="font-bold text-amber-300">{t.speaker}</span>
+                    <span className="font-bold text-amber-300">
+                      {t.speaker}
+                    </span>
                     <span className="text-slate-500">{t.time}</span>
                   </div>
                   <div className="text-[10px] text-cyan-400">{t.role}</div>
-                  <p className="text-slate-200 text-[11px] leading-relaxed pt-1">
+                  <p className="pt-1 text-[11px] leading-relaxed text-slate-200">
                     &ldquo;{t.text}&rdquo;
                   </p>
                 </div>

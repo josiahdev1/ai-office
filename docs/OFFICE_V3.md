@@ -1,9 +1,11 @@
 # EasyUp Software Solution HQ — Office V3 Architecture & Goals
 
 ## Executive Summary
+
 Office V3 upgrades the EasyUp Software Solution HQ AI Office into a production-grade, 2.5D isometric 3×3 building architecture matching reference designs (`ref-layout-3x3.png`, `ref-room-closeup.png`, `ref-building-cutaway.png`, `ref-table-topdown.png`, `ref-brain-center.png`, and video frames `v01`–`v13`).
 
 The upgrade introduces:
+
 1. **Authentic 3×3 Isometric Layout**: A central Command Center housing **THE BRAIN** (pulsing cyan holographic core, particle orbit, arc console ring, curved wall displays) surrounded by **eight specialized walled rooms** connected by **2-tile checkered corridors** and doorways.
 2. **Real Cutaway Thick Walls & Floor Materials**:
    - Dark navy perimeter and room partition walls with visible thickness, lighter beveled top edges, and door cutaways.

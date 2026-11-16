@@ -5,9 +5,7 @@ import {
   reminderManager,
   ReminderEventKind,
 } from '@/lib/reminders/reminderEngine'
-import {
-  parseReminderNaturalLanguage,
-} from '@/lib/reminders/parse'
+import { parseReminderNaturalLanguage } from '@/lib/reminders/parse'
 import {
   Bell,
   Clock,
@@ -31,14 +29,35 @@ interface RemindersDrawerProps {
 const KIND_COLORS: Record<ReminderEventKind, { bg: string; text: string }> = {
   scheduled: { bg: 'bg-cyan-500/10 border-cyan-500/30', text: 'text-cyan-300' },
   claimed: { bg: 'bg-blue-500/10 border-blue-500/30', text: 'text-blue-300' },
-  ringing: { bg: 'bg-amber-500/10 border-amber-500/30', text: 'text-amber-300' },
-  answered: { bg: 'bg-emerald-500/10 border-emerald-500/30', text: 'text-emerald-300' },
+  ringing: {
+    bg: 'bg-amber-500/10 border-amber-500/30',
+    text: 'text-amber-300',
+  },
+  answered: {
+    bg: 'bg-emerald-500/10 border-emerald-500/30',
+    text: 'text-emerald-300',
+  },
   declined: { bg: 'bg-rose-500/10 border-rose-500/30', text: 'text-rose-300' },
-  acknowledged: { bg: 'bg-teal-500/10 border-teal-500/30', text: 'text-teal-300' },
-  snoozed: { bg: 'bg-yellow-500/10 border-yellow-500/30', text: 'text-yellow-300' },
-  escalated: { bg: 'bg-orange-500/10 border-orange-500/30', text: 'text-orange-300' },
-  push_sent: { bg: 'bg-indigo-500/10 border-indigo-500/30', text: 'text-indigo-300' },
-  channel_sent: { bg: 'bg-purple-500/10 border-purple-500/30', text: 'text-purple-300' },
+  acknowledged: {
+    bg: 'bg-teal-500/10 border-teal-500/30',
+    text: 'text-teal-300',
+  },
+  snoozed: {
+    bg: 'bg-yellow-500/10 border-yellow-500/30',
+    text: 'text-yellow-300',
+  },
+  escalated: {
+    bg: 'bg-orange-500/10 border-orange-500/30',
+    text: 'text-orange-300',
+  },
+  push_sent: {
+    bg: 'bg-indigo-500/10 border-indigo-500/30',
+    text: 'text-indigo-300',
+  },
+  channel_sent: {
+    bg: 'bg-purple-500/10 border-purple-500/30',
+    text: 'text-purple-300',
+  },
   missed: { bg: 'bg-rose-600/20 border-rose-500/40', text: 'text-rose-400' },
   failed: { bg: 'bg-red-500/10 border-red-500/30', text: 'text-red-300' },
   cancelled: { bg: 'bg-slate-800 border-slate-700', text: 'text-slate-400' },
@@ -46,12 +65,16 @@ const KIND_COLORS: Record<ReminderEventKind, { bg: string; text: string }> = {
 }
 
 export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'events' | 'settings'>('upcoming')
+  const [activeTab, setActiveTab] = useState<
+    'upcoming' | 'events' | 'settings'
+  >('upcoming')
   const [tick, setTick] = useState(0)
 
   // Creation form state
   const [naturalInput, setNaturalInput] = useState('')
-  const [previewParse, setPreviewParse] = useState<ReturnType<typeof parseReminderNaturalLanguage> | null>(null)
+  const [previewParse, setPreviewParse] = useState<ReturnType<
+    typeof parseReminderNaturalLanguage
+  > | null>(null)
   const [isCreatingManual, setIsCreatingManual] = useState(false)
   const [manualTitle, setManualTitle] = useState('')
   const [manualMessage, setManualMessage] = useState('')
@@ -62,7 +85,9 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
   const [ringDuration, setRingDuration] = useState(settings.ringDurationSecs)
   const [snoozeMins, setSnoozeMins] = useState(settings.snoozeMinutes)
   const [volume, setVolume] = useState(settings.ringtoneVolume)
-  const [audioUnlocked, setAudioUnlocked] = useState(reminderManager.isAudioActive())
+  const [audioUnlocked, setAudioUnlocked] = useState(
+    reminderManager.isAudioActive()
+  )
 
   // Events filter
   const [selectedKind, setSelectedKind] = useState<string>('ALL')
@@ -125,7 +150,9 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
       title: manualTitle,
       message: manualMessage || manualTitle,
       triggerKind: 'time',
-      dueAt: manualDue ? new Date(manualDue).toISOString() : new Date(Date.now() + 600000).toISOString(),
+      dueAt: manualDue
+        ? new Date(manualDue).toISOString()
+        : new Date(Date.now() + 600000).toISOString(),
       createdBy: 'ui',
     })
 
@@ -162,7 +189,7 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col border-l border-cyan-500/30 bg-slate-950/95 text-slate-100 shadow-2xl backdrop-blur-xl animate-in slide-in-from-right duration-200">
+    <div className="animate-in slide-in-from-right fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col border-l border-cyan-500/30 bg-slate-950/95 text-slate-100 shadow-2xl backdrop-blur-xl duration-200">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-cyan-500/20 px-6 py-4">
         <div className="flex items-center gap-3">
@@ -170,10 +197,10 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
             <Bell className="h-5 w-5 text-cyan-400" />
           </div>
           <div>
-            <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight text-white">
               JARVIS REMINDERS & CALLS
               {missedReminders.length > 0 && (
-                <span className="rounded-full bg-rose-500/20 border border-rose-500/40 px-2 py-0.5 text-xs text-rose-300 font-semibold">
+                <span className="rounded-full border border-rose-500/40 bg-rose-500/20 px-2 py-0.5 text-xs font-semibold text-rose-300">
                   {missedReminders.length} Missed
                 </span>
               )}
@@ -198,7 +225,7 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
         <button
           type="button"
           onClick={() => setActiveTab('upcoming')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold tracking-wider uppercase transition-colors ${
             activeTab === 'upcoming'
               ? 'border-cyan-400 text-cyan-300'
               : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -210,7 +237,7 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
         <button
           type="button"
           onClick={() => setActiveTab('events')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold tracking-wider uppercase transition-colors ${
             activeTab === 'events'
               ? 'border-cyan-400 text-cyan-300'
               : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -222,7 +249,7 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
         <button
           type="button"
           onClick={() => setActiveTab('settings')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold tracking-wider uppercase transition-colors ${
             activeTab === 'settings'
               ? 'border-cyan-400 text-cyan-300'
               : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -234,7 +261,7 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 space-y-6 overflow-y-auto p-6">
         {activeTab === 'upcoming' && (
           <div className="space-y-6">
             {/* Missed Calls Alert */}
@@ -251,12 +278,16 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
                       className="flex items-center justify-between rounded-lg border border-rose-500/20 bg-rose-900/20 p-3"
                     >
                       <div>
-                        <div className="text-sm font-medium text-white">{m.title}</div>
+                        <div className="text-sm font-medium text-white">
+                          {m.title}
+                        </div>
                         <div className="text-xs text-rose-200">{m.message}</div>
                       </div>
                       <button
                         type="button"
-                        onClick={() => reminderManager.acknowledgeReminder(m.id)}
+                        onClick={() =>
+                          reminderManager.acknowledgeReminder(m.id)
+                        }
                         className="rounded-lg bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/30"
                       >
                         Acknowledge
@@ -268,8 +299,8 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
             )}
 
             {/* Quick Natural Voice Parser Box */}
-            <div className="rounded-xl border border-cyan-500/30 bg-slate-900/80 p-4 space-y-3">
-              <label className="text-xs font-semibold text-cyan-300 uppercase tracking-wider block">
+            <div className="space-y-3 rounded-xl border border-cyan-500/30 bg-slate-900/80 p-4">
+              <label className="block text-xs font-semibold tracking-wider text-cyan-300 uppercase">
                 Quick Schedule (Natural Language)
               </label>
               <div className="flex gap-2">
@@ -283,8 +314,8 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
               </div>
 
               {previewParse && previewParse.ok && (
-                <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 space-y-2 text-xs">
-                  <div className="text-emerald-300 font-medium">
+                <div className="space-y-2 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 text-xs">
+                  <div className="font-medium text-emerald-300">
                     {previewParse.readBack}
                   </div>
                   <div className="flex items-center justify-between pt-1">
@@ -304,9 +335,10 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
               )}
 
               {previewParse && !previewParse.ok && (
-                <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-3 text-xs text-amber-300 flex items-center gap-2">
+                <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-950/20 p-3 text-xs text-amber-300">
                   <AlertTriangle className="h-4 w-4 shrink-0" />
-                  {previewParse.clarifyingQuestion || 'Please enter a valid time.'}
+                  {previewParse.clarifyingQuestion ||
+                    'Please enter a valid time.'}
                 </div>
               )}
             </div>
@@ -314,7 +346,7 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
             {/* Upcoming List */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
                   Active Reminders
                 </span>
                 <button
@@ -330,7 +362,7 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
               {isCreatingManual && (
                 <form
                   onSubmit={handleCreateManualReminder}
-                  className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 space-y-3"
+                  className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/90 p-4"
                 >
                   <div>
                     <label className="text-xs text-slate-400">Title</label>
@@ -340,26 +372,30 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
                       placeholder="e.g. Check Deployment"
                       value={manualTitle}
                       onChange={(e) => setManualTitle(e.target.value)}
-                      className="w-full mt-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400">Message / Details</label>
+                    <label className="text-xs text-slate-400">
+                      Message / Details
+                    </label>
                     <textarea
                       placeholder="Spoken by JARVIS during incoming call"
                       value={manualMessage}
                       onChange={(e) => setManualMessage(e.target.value)}
-                      className="w-full mt-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
                       rows={2}
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400">Due Date & Time</label>
+                    <label className="text-xs text-slate-400">
+                      Due Date & Time
+                    </label>
                     <input
                       type="datetime-local"
                       value={manualDue}
                       onChange={(e) => setManualDue(e.target.value)}
-                      className="w-full mt-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
                     />
                   </div>
                   <div className="flex justify-end gap-2 pt-2">
@@ -382,36 +418,43 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
 
               {reminders.length === 0 ? (
                 <div className="rounded-xl border border-slate-800 p-8 text-center text-xs text-slate-500">
-                  No upcoming reminders. Say &ldquo;call me at 2pm&rdquo; to schedule one.
+                  No upcoming reminders. Say &ldquo;call me at 2pm&rdquo; to
+                  schedule one.
                 </div>
               ) : (
                 reminders.map((r) => (
                   <div
                     key={r.id}
-                    className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 transition-colors hover:border-slate-700 space-y-2"
+                    className="space-y-2 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 transition-colors hover:border-slate-700"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-cyan-400" />
-                        <span className="font-semibold text-sm text-white">{r.title}</span>
+                        <span className="text-sm font-semibold text-white">
+                          {r.title}
+                        </span>
                       </div>
-                      <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-xs text-cyan-300 font-mono">
+                      <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 font-mono text-xs text-cyan-300">
                         {r.status}
                       </span>
                     </div>
 
                     <p className="text-xs text-slate-300">{r.message}</p>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
-                      <span className="text-slate-400 flex items-center gap-1 font-mono">
+                    <div className="flex items-center justify-between border-t border-slate-800/60 pt-2 text-xs">
+                      <span className="flex items-center gap-1 font-mono text-slate-400">
                         <Clock className="h-3.5 w-3.5 text-slate-500" />
-                        {r.due_at ? new Date(r.due_at).toLocaleTimeString() : 'Event Triggered'}
+                        {r.due_at
+                          ? new Date(r.due_at).toLocaleTimeString()
+                          : 'Event Triggered'}
                       </span>
 
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => reminderManager.snoozeReminder(r.id, 10)}
+                          onClick={() =>
+                            reminderManager.snoozeReminder(r.id, 10)
+                          }
                           className="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-amber-300"
                         >
                           Snooze 10m
@@ -461,21 +504,28 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
 
             <div className="space-y-2">
               {filteredEvents.map((ev) => {
-                const badge = KIND_COLORS[ev.kind] || { bg: 'bg-slate-800', text: 'text-slate-300' }
+                const badge = KIND_COLORS[ev.kind] || {
+                  bg: 'bg-slate-800',
+                  text: 'text-slate-300',
+                }
                 return (
                   <div
                     key={ev.id}
-                    className="rounded-lg border border-slate-800/80 bg-slate-900/40 p-3 space-y-1.5"
+                    className="space-y-1.5 rounded-lg border border-slate-800/80 bg-slate-900/40 p-3"
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`rounded px-2 py-0.5 text-xs font-mono font-medium border ${badge.bg} ${badge.text}`}>
+                      <span
+                        className={`rounded border px-2 py-0.5 font-mono text-xs font-medium ${badge.bg} ${badge.text}`}
+                      >
                         {ev.kind.toUpperCase()}
                       </span>
-                      <span className="text-xs text-slate-400 font-mono">{ev.ts_pht}</span>
+                      <span className="font-mono text-xs text-slate-400">
+                        {ev.ts_pht}
+                      </span>
                     </div>
                     <div className="text-xs text-slate-300">{ev.detail}</div>
                     {ev.tab_id && (
-                      <div className="text-[10px] text-slate-500 font-mono">
+                      <div className="font-mono text-[10px] text-slate-500">
                         Claimed Tab: {ev.tab_id}
                       </div>
                     )}
@@ -489,12 +539,15 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
         {activeTab === 'settings' && (
           <div className="space-y-6 text-sm">
             {/* Audio & Notification Unlocking */}
-            <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/20 p-4 space-y-3">
+            <div className="space-y-3 rounded-xl border border-cyan-500/30 bg-cyan-950/20 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-semibold text-white">Audio & Web Push Permissions</h4>
+                  <h4 className="font-semibold text-white">
+                    Audio & Web Push Permissions
+                  </h4>
                   <p className="text-xs text-slate-400">
-                    Required for synthesized Web Audio ringtone and notifications
+                    Required for synthesized Web Audio ringtone and
+                    notifications
                   </p>
                 </div>
                 <button
@@ -506,8 +559,10 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
                 </button>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-cyan-500/20">
-                <span className="text-xs text-slate-300">Test Incoming Call</span>
+              <div className="flex items-center justify-between border-t border-cyan-500/20 pt-2">
+                <span className="text-xs text-slate-300">
+                  Test Incoming Call
+                </span>
                 <button
                   type="button"
                   onClick={() => reminderManager.triggerTestCall()}
@@ -520,11 +575,13 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
             </div>
 
             {/* Ring & Snooze Controls */}
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4">
+            <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
               <div>
-                <div className="flex justify-between text-xs mb-1">
+                <div className="mb-1 flex justify-between text-xs">
                   <span className="text-slate-300">Ring Duration</span>
-                  <span className="text-cyan-300 font-mono">{ringDuration} seconds</span>
+                  <span className="font-mono text-cyan-300">
+                    {ringDuration} seconds
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -542,9 +599,11 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
               </div>
 
               <div>
-                <div className="flex justify-between text-xs mb-1">
+                <div className="mb-1 flex justify-between text-xs">
                   <span className="text-slate-300">Default Snooze Length</span>
-                  <span className="text-cyan-300 font-mono">{snoozeMins} minutes</span>
+                  <span className="font-mono text-cyan-300">
+                    {snoozeMins} minutes
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -562,9 +621,11 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
               </div>
 
               <div>
-                <div className="flex justify-between text-xs mb-1">
+                <div className="mb-1 flex justify-between text-xs">
                   <span className="text-slate-300">Ringtone Volume</span>
-                  <span className="text-cyan-300 font-mono">{Math.round(volume * 100)}%</span>
+                  <span className="font-mono text-cyan-300">
+                    {Math.round(volume * 100)}%
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -583,18 +644,20 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
             </div>
 
             {/* Channels Status */}
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
-              <h4 className="font-semibold text-white text-xs uppercase tracking-wider">
+            <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+              <h4 className="text-xs font-semibold tracking-wider text-white uppercase">
                 External Channels Status
               </h4>
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between rounded border border-slate-800 p-2">
                   <span>Web Audio Incoming Call</span>
-                  <span className="text-emerald-400 font-semibold">ALWAYS ACTIVE</span>
+                  <span className="font-semibold text-emerald-400">
+                    ALWAYS ACTIVE
+                  </span>
                 </div>
                 <div className="flex items-center justify-between rounded border border-slate-800 p-2">
                   <span>Browser Web Push</span>
-                  <span className="text-cyan-400 font-semibold">ACTIVE</span>
+                  <span className="font-semibold text-cyan-400">ACTIVE</span>
                 </div>
                 <div className="flex items-center justify-between rounded border border-slate-800 p-2">
                   <span>Telegram Bot (@ai_office_bot)</span>
@@ -606,7 +669,9 @@ export function RemindersDrawer({ isOpen, onClose }: RemindersDrawerProps) {
                 </div>
                 <div className="flex items-center justify-between rounded border border-slate-800 p-2">
                   <span>Phone Call / SMS (Twilio)</span>
-                  <span className="text-slate-500">DISABLED (SEE DOCS/REMINDERS.MD)</span>
+                  <span className="text-slate-500">
+                    DISABLED (SEE DOCS/REMINDERS.MD)
+                  </span>
                 </div>
               </div>
             </div>

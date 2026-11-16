@@ -52,6 +52,7 @@
 ## Add-on: Pixtuoid-Style Features + Live Coding-Agent Bridge
 
 ### Phase 9: Multi-Floor Cutaway + Elevator
+
 - [ ] Split building into cutaway slab floors:
   - Ground Floor: Lobby, Canteen & Pantry, Gym & Recreation
   - Floor 1: Engineering Core, QA & SecOps NOC, Operations Hub
@@ -69,6 +70,7 @@
   - Update `validateMap` and tests for multi-floor reachability
 
 ### Phase 10: Atmosphere
+
 - [ ] Time-of-day slider and clock (Dawn, Day, Dusk, Night)
   - Ambient canvas lighting and window backdrop adjustments
   - Day light shafts, glowing monitors and night lamps
@@ -86,6 +88,7 @@
   - Respect `prefers-reduced-motion` and maintain 60 FPS
 
 ### Phase 11: Office Life
+
 - [ ] Pets:
   - Resident cat or dog per floor roaming aisles, pantry, and sofas
   - Sleeping near idle agents
@@ -119,6 +122,7 @@
   - Team-color accents on tags, desk trims, and rugs (never recolor character sprites)
 
 ### Phase 12: Live Coding-Agent Bridge
+
 - [ ] Database Schema:
   - Migration `supabase/migrations/0003_external_sessions.sql`
   - Support external sessions (`kind`: resident | external, `cli`: claude-code | antigravity | codex, `session_id`, `cwd_hash`, `status`, `current_tool`, `tokens_used`, `tool_call_count`, `started_at`, `last_seen_at`, `ended_at`)
@@ -143,6 +147,7 @@
   - Vitest test suite for ingest schema, token auth, hook shim exit-0, and guest lifecycle
 
 ### Phase 13: Floating Window + Final QA
+
 - [ ] Floating Window:
   - Compact `/floating` route
   - Document Picture-in-Picture API with popup fallback
@@ -155,6 +160,7 @@
 ---
 
 ## Phase 15: Outdoor Campus + Real Moving Cars & Arrivals
+
 - [x] Campus Map Architecture:
   - [x] Outdoor green lawn slab around the building, perimeter fence/hedge, entrance gate
   - [x] Trees (multiple species with gentle sway), bushes, flower beds, garden pond, benches, bike rack, flagpole, lamp posts
@@ -186,6 +192,7 @@
 ---
 
 ## Phase 16: Live Activity Counters + Decision Cards
+
 - [x] Live Counter Card (Bottom Right):
   - [x] Monospace labels: `WORKING`, `EATING`, `IN THE GYM`, `IN MEETING`, `ON BREAK`, `ARRIVING`, `WAITING ON YOU`, `OPEN TASKS`, `ACCESSORIES`
   - [x] Realtime counts dynamically derived from `office_agents`, `office_tasks`, `office_approvals`
@@ -213,4 +220,3 @@
 - [x] Vitest Suite & Browser QA:
   - [x] Unit tests for traffic following, collision avoidance, deadlock breaking, bay reservation, counter parity, arrival flow (75/75 passing)
   - [x] Playwright screenshots: full campus view, parking lot, moving cars yielding at crosswalk, arrival walk, night mode with headlights/lamps, counter card matching screen, decision cards (`docs/campus-overview.png`, `docs/traffic-cars-crosswalk.png`, `docs/night-headlights-lamps.png`, `docs/live-counters-decision-cards.png`)
-

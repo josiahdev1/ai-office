@@ -1,6 +1,6 @@
 /**
  * Cosmetic Accessories System for EasyUp Software Solution HQ
- * 
+ *
  * Unlocked by completing tasks and milestones.
  * Rendered as lightweight layered additions over employee sprites and desks,
  * strictly preserving character identity per keep-existing-sprites.

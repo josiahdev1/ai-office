@@ -65,7 +65,7 @@ export default function OfficeCanvas3D({
 
   return (
     <div
-      className={`relative h-full w-full select-none overflow-hidden ${className}`}
+      className={`relative h-full w-full overflow-hidden select-none ${className}`}
       style={{ backgroundColor: bgColor }}
     >
       {/* Three.js 3D Viewport (Isometric Orthographic or Eye-Level Walk-Inside Perspective) */}
@@ -127,11 +127,13 @@ export default function OfficeCanvas3D({
       {/* Floating Bottom-Left Viewport HUD Controls */}
       <div className="pointer-events-none absolute bottom-4 left-4 z-20 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[11px] text-slate-300 shadow-xl backdrop-blur-md">
-          <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
           <span className="tracking-wide text-slate-400">
             {isWalkMode ? 'WALK-INSIDE 3D:' : 'VIEWPORT (3D):'}
           </span>
-          <span className="font-bold text-cyan-300">{mode.replace('_', ' ')}</span>
+          <span className="font-bold text-cyan-300">
+            {mode.replace('_', ' ')}
+          </span>
         </div>
 
         {onToggleWalkMode && (
@@ -139,7 +141,7 @@ export default function OfficeCanvas3D({
             type="button"
             data-testid="walk-inside-toggle-btn"
             onClick={onToggleWalkMode}
-            className={`pointer-events-auto cursor-pointer flex items-center gap-1.5 rounded-lg border px-3 py-1.5 font-mono text-[11px] font-bold shadow-xl backdrop-blur-md transition-all whitespace-nowrap ${
+            className={`pointer-events-auto flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 font-mono text-[11px] font-bold whitespace-nowrap shadow-xl backdrop-blur-md transition-all ${
               isWalkMode
                 ? 'border-emerald-400 bg-emerald-500 text-slate-950'
                 : 'border-slate-700/80 bg-slate-900/90 text-slate-200 hover:border-cyan-400 hover:text-cyan-300'
@@ -154,9 +156,9 @@ export default function OfficeCanvas3D({
             type="button"
             data-testid="bottom-toolbar-jarvis-btn"
             onClick={onClickCore}
-            className="pointer-events-auto cursor-pointer flex items-center gap-1.5 rounded-lg border border-cyan-400/70 bg-cyan-950/90 px-3 py-1.5 font-mono text-[11px] font-bold text-cyan-200 shadow-[0_0_16px_rgba(0,229,255,0.28)] backdrop-blur-md transition-all hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
+            className="pointer-events-auto flex cursor-pointer items-center gap-1.5 rounded-lg border border-cyan-400/70 bg-cyan-950/90 px-3 py-1.5 font-mono text-[11px] font-bold whitespace-nowrap text-cyan-200 shadow-[0_0_16px_rgba(0,229,255,0.28)] backdrop-blur-md transition-all hover:bg-cyan-500 hover:text-slate-950"
           >
-            <span className="h-2 w-2 rounded-full bg-cyan-300 animate-ping" />
+            <span className="h-2 w-2 animate-ping rounded-full bg-cyan-300" />
             <span>JARVIS [J]</span>
           </button>
         )}
@@ -165,7 +167,7 @@ export default function OfficeCanvas3D({
           <button
             type="button"
             onClick={onResetCamera}
-            className="pointer-events-auto cursor-pointer rounded-lg border border-slate-800/80 bg-slate-900/90 px-3 py-1.5 font-mono text-[11px] font-medium text-slate-300 shadow-xl backdrop-blur-md transition-all hover:bg-slate-800 hover:text-white whitespace-nowrap"
+            className="pointer-events-auto cursor-pointer rounded-lg border border-slate-800/80 bg-slate-900/90 px-3 py-1.5 font-mono text-[11px] font-medium whitespace-nowrap text-slate-300 shadow-xl backdrop-blur-md transition-all hover:bg-slate-800 hover:text-white"
           >
             Reset ⟲
           </button>
@@ -188,7 +190,8 @@ export default function OfficeCanvas3D({
                   E
                 </kbd>
                 <span className="whitespace-nowrap">
-                  {openDoors.has(nearbyDoor.id) ? 'Close' : 'Open'} {nearbyDoor.label}
+                  {openDoors.has(nearbyDoor.id) ? 'Close' : 'Open'}{' '}
+                  {nearbyDoor.label}
                 </span>
               </div>
             </div>
@@ -197,9 +200,11 @@ export default function OfficeCanvas3D({
       )}
 
       {/* Help tooltip */}
-      <div className="pointer-events-none absolute bottom-4 right-4 z-20 hidden 2xl:flex items-center gap-1.5 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-xs text-slate-400 shadow-xl backdrop-blur-md">
+      <div className="pointer-events-none absolute right-4 bottom-4 z-20 hidden items-center gap-1.5 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-xs text-slate-400 shadow-xl backdrop-blur-md 2xl:flex">
         {isWalkMode ? (
-          <span>WASD / Arrows to Walk • Drag to Look • E for Doors • V to Exit Walk</span>
+          <span>
+            WASD / Arrows to Walk • Drag to Look • E for Doors • V to Exit Walk
+          </span>
         ) : (
           <span>J for JARVIS • V to Walk Inside • F for Fullscreen</span>
         )}

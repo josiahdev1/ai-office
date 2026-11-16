@@ -35,7 +35,12 @@ describe('Facilities & Cleaners Engine (Phase K6)', () => {
 
       // 21 drinks = 84% depletion -> 16% remaining (<= 20% threshold)
       for (let i = 0; i < 21; i++) {
-        fm.recordActivityImpression('gian', 'drink', 'CORRIDORS', 'dispenser_corridor_north')
+        fm.recordActivityImpression(
+          'gian',
+          'drink',
+          'CORRIDORS',
+          'dispenser_corridor_north'
+        )
       }
 
       const updatedJug = fm.getRecord('fac_dispenser_corridor_north_jug')!
@@ -109,9 +114,24 @@ describe('Facilities & Cleaners Engine (Phase K6)', () => {
 
   describe('Cleaners Priority Queue & Water Jug Replacement', () => {
     it('orders cleaning tasks by priority: urgent > high > normal > low', () => {
-      fm.ensureCleaningTask('CORRIDORS', 'mop', 'low', 'Routine corridor dusting')
-      fm.ensureCleaningTask('CAFETERIA', 'wipe_tables', 'normal', 'Lunch crumbs')
-      fm.ensureCleaningTask('COMFORT_ROOM', 'clean_cr', 'urgent', 'Spill in stall 2')
+      fm.ensureCleaningTask(
+        'CORRIDORS',
+        'mop',
+        'low',
+        'Routine corridor dusting'
+      )
+      fm.ensureCleaningTask(
+        'CAFETERIA',
+        'wipe_tables',
+        'normal',
+        'Lunch crumbs'
+      )
+      fm.ensureCleaningTask(
+        'COMFORT_ROOM',
+        'clean_cr',
+        'urgent',
+        'Spill in stall 2'
+      )
       fm.ensureCleaningTask('GYM', 'mop', 'high', 'Sweat sanitization')
 
       const pending = fm.getPendingTasks()
@@ -123,7 +143,12 @@ describe('Facilities & Cleaners Engine (Phase K6)', () => {
     })
 
     it('posts wet floor sign while mopping and removes it after task completion', async () => {
-      fm.ensureCleaningTask('CAFETERIA', 'mop', 'high', 'Mopping after spilled drinks')
+      fm.ensureCleaningTask(
+        'CAFETERIA',
+        'mop',
+        'high',
+        'Mopping after spilled drinks'
+      )
       expect(fm.isWetFloor('CAFETERIA')).toBe(false)
 
       const task = fm.getNextCleaningTask('cleaner_1')
@@ -160,7 +185,12 @@ describe('Facilities & Cleaners Engine (Phase K6)', () => {
 
   describe('Cleaners Maintenance Loop & Break Protection', () => {
     it('assigns tasks to active cleaners when energy is adequate', () => {
-      fm.ensureCleaningTask('COMFORT_ROOM', 'clean_cr', 'high', 'Restocking soap')
+      fm.ensureCleaningTask(
+        'COMFORT_ROOM',
+        'clean_cr',
+        'high',
+        'Restocking soap'
+      )
 
       // Ensure cleaner_1 has high energy
       const rec = needsManager.getNeedsRecord('cleaner_1')
@@ -186,7 +216,9 @@ describe('Facilities & Cleaners Engine (Phase K6)', () => {
 
   describe('JARVIS Function Calling Tools for Facilities', () => {
     it('executes get_facility_status and returns structured facility health and scores', () => {
-      const res = executeJarvisTool('get_facility_status', { roomId: 'CAFETERIA' })
+      const res = executeJarvisTool('get_facility_status', {
+        roomId: 'CAFETERIA',
+      })
       expect(res.output).toBeDefined()
       expect(res.output.hqAverageCleanliness).toBeGreaterThan(0)
       expect(res.output.roomReport).toBeDefined()

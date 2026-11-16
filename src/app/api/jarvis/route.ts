@@ -22,8 +22,9 @@ import {
   runJarvisTurn,
 } from '@/lib/jarvis/orchestrator'
 
-let cachedFastOfficeState: Awaited<ReturnType<typeof getFastOfficeState>> | null =
-  null
+let cachedFastOfficeState: Awaited<
+  ReturnType<typeof getFastOfficeState>
+> | null = null
 let cachedFastOfficeStateAt = 0
 
 async function getUltraFastOfficeState() {

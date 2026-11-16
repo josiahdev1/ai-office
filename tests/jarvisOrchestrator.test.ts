@@ -326,14 +326,13 @@ describe('Phase J7: Real Gemini Conversation, Function-Calling Tools & Memory Wi
     )
     expect(cmdRes.officeCommand?.mode).toBe('PANTRY')
 
-    const listAgentsRes = executeJarvisTool(
-      'list_agents',
-      {},
-      MOCK_OFFICE_DATA
-    )
+    const listAgentsRes = executeJarvisTool('list_agents', {}, MOCK_OFFICE_DATA)
     expect(listAgentsRes.output.totalAgents).toBe(3)
     expect(listAgentsRes.output.modelBreakdown).toBeDefined()
-    const agentsList = listAgentsRes.output.agents as Array<{ name: string; assignedModel: string }>
+    const agentsList = listAgentsRes.output.agents as Array<{
+      name: string
+      assignedModel: string
+    }>
     expect(agentsList[0].assignedModel).toBeDefined()
 
     const brainRes = executeJarvisTool(
@@ -353,11 +352,14 @@ describe('Phase J7: Real Gemini Conversation, Function-Calling Tools & Memory Wi
 
   it('validates schemas, intent classification, and persona prompt formatting', () => {
     expect(JarvisRequestSchema.safeParse({ prompt: '' }).success).toBe(false)
+    expect(classifyJarvisIntent('Send everyone to Pantry', MOCK_AGENTS)).toBe(
+      'OFFICE_COMMAND'
+    )
     expect(
-      classifyJarvisIntent('Send everyone to Pantry', MOCK_AGENTS)
-    ).toBe('OFFICE_COMMAND')
-    expect(
-      classifyJarvisIntent('what ai model do my 24 assistants use?', MOCK_AGENTS)
+      classifyJarvisIntent(
+        'what ai model do my 24 assistants use?',
+        MOCK_AGENTS
+      )
     ).toBe('STATUS')
     expect(
       classifyJarvisIntent('which model is arwin running?', MOCK_AGENTS)
@@ -379,7 +381,9 @@ describe('Phase J7: Real Gemini Conversation, Function-Calling Tools & Memory Wi
   it('7. routes individual agents, strips **** markdown symbols, and runs Hugging Face neural Local SLM', async () => {
     // Verify **** and ** are stripped cleanly from AI responses
     expect(
-      cleanJarvisReplyText('****Hello **Josiah**, here is `code` and ****bold****!')
+      cleanJarvisReplyText(
+        '****Hello **Josiah**, here is `code` and ****bold****!'
+      )
     ).toBe('Hello Josiah, here is code and bold!')
 
     // Verify AVAILABLE_MODELS keeps jarvis-local-slm-v1 and includes Hugging Face local neural SLMs

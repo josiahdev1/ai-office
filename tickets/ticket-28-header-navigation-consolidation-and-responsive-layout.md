@@ -5,11 +5,12 @@
 **Date**: 2026-11-12  
 **Commit SHA**: `10a5e58`  
 **Branch**: `office-v3`  
-**Author / Assignee**: Josiah (Lead Architect) & Antigravity Autonomous Engineering Fleet  
+**Author / Assignee**: Josiah (Lead Architect) & Antigravity Autonomous Engineering Fleet
 
 ---
 
 ## 1. Context & Objectives
+
 - **Header Overflow at 100% Browser Zoom**: Top header bar consolidated into a clean, responsive layout. Removed duplicate `JARVIS [J]` from top header (retaining footer dock and `J` hotkey). Kept EASYUP branding, PHT clock, 31 AGENTS ROSTER, 3D/2D toggle, and a responsive `[☰ MENU ▾]` popover containing Camera & Rooms and Operations & Logs.
 - **Enclosed West Wing Architecture & Zero Overlaps**:
   - Full-height dividing walls and dedicated corridor doorways separating Nap Room, Men's CR, Women's CR, Server Room, Facilities, and Grand Cafeteria.
@@ -26,6 +27,7 @@
   - 3D & 2D (`?v=2`) rendering in complete architectural parity.
 
 ## 2. Architectural Design & Key Changes
+
 1. **Top Header Consolidation & Clean Menu Popover (100% Zoom Fit)**:
    - Header reduced to EASYUP brand title, live Date & Time (PHT • Iloilo), `31 AGENTS ROSTER` dropdown, `3D View / 2D View` toggle, and `[☰ MENU ▾]` popover.
    - Popover cleanly groups Camera & Rooms and Operations & Logs with click-outside dismissal and all original data-testids intact.
@@ -41,11 +43,13 @@
    - Running leg stride animation added to 2D canvas agents in gym.
 
 ## 3. Data & Schema Modifications
+
 - `supabase/migrations/0019_expanded_campus_architectural_overhaul_and_gym_trainer.sql`:
   - Upserted `coach_miguel` into `public.agents`, `public.office_agents` (total: 31), and `public.office_agent_needs`.
   - Applied via `scripts/apply-coach-miguel.mjs`.
 
 ## 4. Verification & Quality Gates
+
 - **Lint**: PASSED (`npm run lint` -> 0 errors, 7 warnings)
 - **Type Check**: PASSED (`npx tsc --noEmit` -> 0 errors)
 - **Unit & Integration Tests**: PASSED (`npm test` -> 28 test files, 267/267 tests passed in 11.16s)
@@ -54,4 +58,5 @@
 - **Supabase Row Count**: PASSED (31 agents verified in `public.office_agents` and `public.agents`)
 
 ## 5. Notes & Dependencies
+
 - Strictly follows `AGENTS.md` Ticket-First Development Workflow, Tailwind CSS v4 canonical class rules, Autonomous Supabase Database & MCP Migration Rules, and Mandatory Playwright E2E Verification.

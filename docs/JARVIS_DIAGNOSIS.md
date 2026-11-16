@@ -9,14 +9,17 @@
 ## 1. Which Provider & Code Path Answered the User's Messages?
 
 When the user asked:
+
 1. `"Tell me a quick witty joke about software engineers"` -> answered `"Always listening, Josiah. How would you like to proceed?"` + `"Live Supabase: 24/24 active (24 desk, 0 pantry, 0 gym) • 24 tasks • 0 approvals"`
 2. `"Why was your reply always the same before? Can we talk like the real JARVIS now?"` -> answered `"Indeed, Josiah. I'm right here with you inside The Brain Core — give me a topic, a question, or a mission for the team and I'm on it."` + `"Live Supabase: 24/24 active..."`
 3. `"what is the programming?"` -> answered `"Always listening, Josiah. How would you like to proceed?"` + `"Live Supabase: 24/24 active..."`
 
 ### Exact Code Path Executed
+
 **Neither Gemini, Anthropic, nor OpenAI answered those messages.** Instead, the server-side Gemini call threw an error and was silently swallowed by the `catch` block in [`src/lib/jarvis/orchestrator.ts`](../src/lib/jarvis/orchestrator.ts) (lines 733–750), which fell through to `buildGroundedFallbackReply()` (lines 562–636).
 
 Specifically:
+
 - **Where `"Always listening, Josiah..."` and `"Indeed, Josiah..."` came from**:
   In `src/lib/jarvis/orchestrator.ts` lines 626–635, `buildGroundedFallbackReply()` defined a 4-element hardcoded template array:
   ```ts
@@ -69,13 +72,13 @@ Specifically:
 
 With `thinkingConfig: { thinkingBudget: 0 }` and model `gemini-3.5-flash` (with automatic failover to `gemini-3.1-flash-lite-preview` and `gemini-3.6-flash`), we executed live server-side calls:
 
-| Field | Result |
-| :--- | :--- |
-| **Provider** | `GEMINI` (`https://generativelanguage.googleapis.com/v1beta`) |
-| **Model** | `gemini-3.1-flash-lite-preview` / `gemini-3.5-flash` (configurable via `process.env.GEMINI_MODEL`) |
-| **HTTP Status** | `200 OK` |
-| **Latency** | `1186 ms` (`gemini-3.1-flash-lite-preview`) / `1342 ms` (`gemini-3.5-flash`) |
-| **Test Prompt** | `"Tell me a quick witty joke about software engineers"` |
+| Field                    | Result                                                                                                                                                    |
+| :----------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Provider**             | `GEMINI` (`https://generativelanguage.googleapis.com/v1beta`)                                                                                             |
+| **Model**                | `gemini-3.1-flash-lite-preview` / `gemini-3.5-flash` (configurable via `process.env.GEMINI_MODEL`)                                                        |
+| **HTTP Status**          | `200 OK`                                                                                                                                                  |
+| **Latency**              | `1186 ms` (`gemini-3.1-flash-lite-preview`) / `1342 ms` (`gemini-3.5-flash`)                                                                              |
+| **Test Prompt**          | `"Tell me a quick witty joke about software engineers"`                                                                                                   |
 | **First Words of Reply** | `"A software engineer’s wife tells him, \"While you're at the store, get some milk,\" and he never comes back because he's stuck in an infinite loop..."` |
 
 ---
@@ -92,31 +95,33 @@ With `thinkingConfig: { thinkingBudget: 0 }` and model `gemini-3.5-flash` (with 
    - Jokes, small talk, general coding questions (`"what is programming?"`), and Taglish chat call **zero tools** and inject **zero office context**.
    - The collapsible `Sources` footer is rendered **only** when one or more tools were actually called during that turn.
 
-
 ---
 
 ## 5. Phase J10 Root Cause Diagnosis: Why "Listening" Showed While Speaking
 
 **Symptoms Observed**:
+
 - When JARVIS began speaking via `speechSynthesis`, the status indicator and HUD label frequently displayed `"LISTENING"` instead of `"SPEAKING"`.
 - The microphone button in `JarvisInterior.tsx` displayed `🎙 LISTENING...` unconditionally whenever voice was enabled, regardless of whether JARVIS was speaking or thinking.
 
 **Technical Root Causes Identified**:
+
 1. **Scattered Flags & Competing Asynchronous State Transitions**:
    - The application lacked a single authority for voice state. State was split across `coreState` (`'idle' | 'listening' | 'thinking' | 'executing' | 'speaking' | 'error'`), `voiceEnabledRef`, `isSpeakingTtsRef`, `isRecognitionRunningRef`, `isTransmitting`, and `jarvisCoreState` in `page.tsx`.
    - In `sendChatMessage()` ([`src/components/jarvis/JarvisInterior.tsx`](../src/components/jarvis/JarvisInterior.tsx) lines 639–646), a `finally` block scheduled `setTimeout(() => onCoreStateChange(voiceEnabledRef.current ? 'listening' : 'idle'), 300)`.
-   - Because `window.speechSynthesis.speak(utterance)` is asynchronous, `utterance.onstart` often fired *after* or coincided with this 300ms timer, causing the scheduled `onCoreStateChange('listening')` to overwrite `'speaking'`.
+   - Because `window.speechSynthesis.speak(utterance)` is asynchronous, `utterance.onstart` often fired _after_ or coincided with this 300ms timer, causing the scheduled `onCoreStateChange('listening')` to overwrite `'speaking'`.
    - Continuous recognition auto-restart loops in `instance.onend` ([`JarvisInterior.tsx`](../src/components/jarvis/JarvisInterior.tsx) lines 754–765) also triggered `onCoreStateChange('listening')` asynchronously while the TTS utterance was still being synthesized or queued by the browser engine.
 2. **Fallback Label Masking in Page HUD**:
    - In [`src/app/page.tsx`](../src/app/page.tsx) line 1273, the office HUD ternary check:
      `jarvisCoreState === 'speaking' ? 'SPEAKING' : jarvisCoreState === 'thinking' ? 'THINKING' : 'LISTENING'`
-     defaulted to `'LISTENING'` for *any* other state, including `'idle'`, `'executing'`, or transient transition gaps.
+     defaulted to `'LISTENING'` for _any_ other state, including `'idle'`, `'executing'`, or transient transition gaps.
 3. **Hardcoded Button State**:
    - In [`src/components/jarvis/JarvisInterior.tsx`](../src/components/jarvis/JarvisInterior.tsx) line 1602:
      `<span>{voiceEnabled ? '🎙 LISTENING...' : '🎙 MIC OFF'}</span>`
      evaluated only `voiceEnabled`, persistently labeling the button as `"LISTENING..."` even during active speech output.
 
 **Resolution in Phase J10**:
+
 - Replaced all scattered flags and arbitrary timeouts with **ONE deterministic reducer-based state machine** ([`src/lib/jarvis/voiceState.ts`](../src/lib/jarvis/voiceState.ts)).
 - States: strictly `idle`, `listening`, `thinking`, `executing`, `speaking`, `error`.
 - Implemented instant **Barge-In** detection and hardware echo protection (`echoCancellation`, `noiseSuppression`, `autoGainControl`).
@@ -125,15 +130,16 @@ With `thinkingConfig: { thinkingBudget: 0 }` and model `gemini-3.5-flash` (with 
 
 ## 6. Comprehensive Root Cause Audit & 5-Point Verification Matrix
 
-| # | Check Point | Mechanism Found | Verification & Prevention Implemented |
-|---|---|---|---|
-| **1** | **Microphone hearing JARVIS through speakers (Acoustic Echo)** | The browser's `webkitSpeechRecognition` captures raw system microphone input before Web Audio DSP processing. Loudspeaker output of Daniel/Arthur UK voice leaked into the mic, causing `onresult` to fire with JARVIS's own words, falsely triggering speech recognition and transitioning back to `listening`. | **Default (Reliable)**: Microphone and recognition are **strictly PAUSED** while JARVIS speaks so he cannot hear himself.<br>**Optional Headphones Mode**: Implemented `checkEchoOverlap()` in [`src/lib/jarvis/voiceState.ts`](../src/lib/jarvis/voiceState.ts) checking against recent sentences (last 8s). Any transcript with $>60\%$ word overlap or $<2$ novel words is rejected as acoustic echo. |
-| **2** | **Separate mic-open flag driving the label** | The button rendered `{voiceEnabled ? '🎙 LISTENING...' : '🎙 MIC OFF'}` and `page.tsx` HUD defaulted to `'LISTENING'`. A boolean `voiceEnabled` flag was conflated with active operational listening. | Refactored button and HUD labels to read strictly from `voiceMachine.current`: only displays `LISTENING` when state is actually `'listening'`. Displays `SPEAKING`, `THINKING`, `EXECUTING`, `READY (SPEAK)`, or `MIC OFF` appropriately. |
-| **3** | **`speechSynthesis` onend/onerror/cancel firing early or never** | Chromium bug: long `SpeechSynthesisUtterance` instances pause or drop `onend` after 15 seconds, or fire early if garbage collected. | Added a **100ms Watchdog Timer**: polls `speechSynthesis.speaking` every 100ms. If state is `speaking` but `window.speechSynthesis.speaking` is false for $>1000$ms, the watchdog dispatches `WATCHDOG_TIMEOUT (speaking_no_playback)` to safely return to `idle`. Utterances are referenced in memory to prevent GC. |
-| **4** | **Continuous recognition restarting itself while speaking** | `instance.onend` had an auto-restart timeout that re-invoked `startContinuousRecognition()` and called `onCoreStateChange('listening')` even when `window.speechSynthesis.speaking` was active. | Added strict guard in `instance.onend`: auto-restart is blocked if `isSpeakingTtsRef.current` or `voiceMachine.current === 'speaking'` is true. Auto-restart only resumes when speech playback officially finishes. |
-| **5** | **Several components setting state independently** | Keyboard typing in `commandInput` `onChange` called `onCoreStateChange('listening')` on keydown. Multiple timers in `JarvisInterior` and `page.tsx` dispatched disparate state strings without coordinating with the reducer. | Unified all transitions through `dispatchVoice(action)` in [`src/lib/jarvis/voiceState.ts`](../src/lib/jarvis/voiceState.ts). Keyboard input no longer modifies voice state. All 6 states follow deterministic transitions logged in the 30-item diagnostic ring buffer. |
+| #     | Check Point                                                      | Mechanism Found                                                                                                                                                                                                                                                                                                  | Verification & Prevention Implemented                                                                                                                                                                                                                                                                                                                                                                    |
+| ----- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1** | **Microphone hearing JARVIS through speakers (Acoustic Echo)**   | The browser's `webkitSpeechRecognition` captures raw system microphone input before Web Audio DSP processing. Loudspeaker output of Daniel/Arthur UK voice leaked into the mic, causing `onresult` to fire with JARVIS's own words, falsely triggering speech recognition and transitioning back to `listening`. | **Default (Reliable)**: Microphone and recognition are **strictly PAUSED** while JARVIS speaks so he cannot hear himself.<br>**Optional Headphones Mode**: Implemented `checkEchoOverlap()` in [`src/lib/jarvis/voiceState.ts`](../src/lib/jarvis/voiceState.ts) checking against recent sentences (last 8s). Any transcript with $>60\%$ word overlap or $<2$ novel words is rejected as acoustic echo. |
+| **2** | **Separate mic-open flag driving the label**                     | The button rendered `{voiceEnabled ? '🎙 LISTENING...' : '🎙 MIC OFF'}` and `page.tsx` HUD defaulted to `'LISTENING'`. A boolean `voiceEnabled` flag was conflated with active operational listening.                                                                                                              | Refactored button and HUD labels to read strictly from `voiceMachine.current`: only displays `LISTENING` when state is actually `'listening'`. Displays `SPEAKING`, `THINKING`, `EXECUTING`, `READY (SPEAK)`, or `MIC OFF` appropriately.                                                                                                                                                                |
+| **3** | **`speechSynthesis` onend/onerror/cancel firing early or never** | Chromium bug: long `SpeechSynthesisUtterance` instances pause or drop `onend` after 15 seconds, or fire early if garbage collected.                                                                                                                                                                              | Added a **100ms Watchdog Timer**: polls `speechSynthesis.speaking` every 100ms. If state is `speaking` but `window.speechSynthesis.speaking` is false for $>1000$ms, the watchdog dispatches `WATCHDOG_TIMEOUT (speaking_no_playback)` to safely return to `idle`. Utterances are referenced in memory to prevent GC.                                                                                    |
+| **4** | **Continuous recognition restarting itself while speaking**      | `instance.onend` had an auto-restart timeout that re-invoked `startContinuousRecognition()` and called `onCoreStateChange('listening')` even when `window.speechSynthesis.speaking` was active.                                                                                                                  | Added strict guard in `instance.onend`: auto-restart is blocked if `isSpeakingTtsRef.current` or `voiceMachine.current === 'speaking'` is true. Auto-restart only resumes when speech playback officially finishes.                                                                                                                                                                                      |
+| **5** | **Several components setting state independently**               | Keyboard typing in `commandInput` `onChange` called `onCoreStateChange('listening')` on keydown. Multiple timers in `JarvisInterior` and `page.tsx` dispatched disparate state strings without coordinating with the reducer.                                                                                    | Unified all transitions through `dispatchVoice(action)` in [`src/lib/jarvis/voiceState.ts`](../src/lib/jarvis/voiceState.ts). Keyboard input no longer modifies voice state. All 6 states follow deterministic transitions logged in the 30-item diagnostic ring buffer.                                                                                                                                 |
 
 ### Reproduction & Fix Validation
+
 - **Before Fix**: Open mic, speak directive. JARVIS replies; after 300ms, the mic button and HUD indicator flip to "LISTENING" while Daniel/Arthur UK voice is still audibly reading sentence 2 of 3. Loudspeaker sound causes `onresult` to transcribe fragments of JARVIS's own speech into the input box.
 - **After Fix**: Open mic, speak directive. JARVIS transitions to `thinking` (token beat pulses), then `speaking`. While speaking:
   - State label stays locked on `SPEAKING`.
@@ -141,4 +147,3 @@ With `thinkingConfig: { thinkingBudget: 0 }` and model `gemini-3.5-flash` (with 
   - Banner shows: `JARVIS is speaking: press Space or tap Interrupt to talk`.
   - Pressing `Space` or clicking `Interrupt` instantly cancels `speechSynthesis` and transitions cleanly to `listening`.
   - Diagnostics drawer tracks every transition with timestamp, reason, and live telemetry values.
-

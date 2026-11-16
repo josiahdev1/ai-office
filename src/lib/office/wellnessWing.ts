@@ -335,32 +335,35 @@ export const SERVER_RACKS: ServerRackSlot[] = [
 ]
 
 // 32 Dining Seats arranged across 8 four-person cafeteria tables
-export const CAFETERIA_SEATS: DiningSeat[] = Array.from({ length: 32 }, (_, i) => {
-  const tableIdx = Math.floor(i / 4) + 1
-  const seatIdx = (i % 4) + 1
-  const tableRow = Math.floor((tableIdx - 1) / 4) // 0 or 1
-  const tableCol = (tableIdx - 1) % 4 // 0, 1, 2, 3
+export const CAFETERIA_SEATS: DiningSeat[] = Array.from(
+  { length: 32 },
+  (_, i) => {
+    const tableIdx = Math.floor(i / 4) + 1
+    const seatIdx = (i % 4) + 1
+    const tableRow = Math.floor((tableIdx - 1) / 4) // 0 or 1
+    const tableCol = (tableIdx - 1) % 4 // 0, 1, 2, 3
 
-  const tableBaseX = -39.5 + tableCol * 3.0
-  const tableBaseZ = 14.2 + tableRow * 4.2
+    const tableBaseX = -39.5 + tableCol * 3.0
+    const tableBaseZ = 14.2 + tableRow * 4.2
 
-  const offsets: Record<number, [number, number]> = {
-    1: [-0.85, 0],
-    2: [0.85, 0],
-    3: [0, -0.85],
-    4: [0, 0.85],
+    const offsets: Record<number, [number, number]> = {
+      1: [-0.85, 0],
+      2: [0.85, 0],
+      3: [0, -0.85],
+      4: [0, 0.85],
+    }
+    const [ox, oz] = offsets[seatIdx] || [0, 0]
+
+    return {
+      id: `cafe_seat_${i + 1}`,
+      tableIndex: tableIdx,
+      seatIndex: seatIdx,
+      position: [tableBaseX + ox, 0.45, tableBaseZ + oz],
+      approachTile: [tableBaseX + ox * 1.3, 0, tableBaseZ + oz * 1.3],
+      isOccupied: false,
+    }
   }
-  const [ox, oz] = offsets[seatIdx] || [0, 0]
-
-  return {
-    id: `cafe_seat_${i + 1}`,
-    tableIndex: tableIdx,
-    seatIndex: seatIdx,
-    position: [tableBaseX + ox, 0.45, tableBaseZ + oz],
-    approachTile: [tableBaseX + ox * 1.3, 0, tableBaseZ + oz * 1.3],
-    isOccupied: false,
-  }
-})
+)
 
 export const WATER_DISPENSERS: WaterDispenser[] = [
   {
@@ -469,7 +472,10 @@ export class WellnessSlotManager {
   }
 
   // --- CR Stall Reservations ---
-  occupyStall(agentId: string, preferredStallId?: string): ComfortRoomStall | null {
+  occupyStall(
+    agentId: string,
+    preferredStallId?: string
+  ): ComfortRoomStall | null {
     for (const stall of this.stalls.values()) {
       if (stall.occupiedBy === agentId) return stall
     }
@@ -568,14 +574,62 @@ export const wellnessSlotManager = new WellnessSlotManager()
 // =============================================================================
 
 export const DEFAULT_DEPARTMENTS: DepartmentRecord[] = [
-  { id: 'ENGINEERING', name: 'Engineering Core', color: '#6366f1', roomId: 'ENGINEERING', kind: 'open_office' },
-  { id: 'OPERATIONS', name: 'Operations Hub', color: '#22c55e', roomId: 'OPERATIONS', kind: 'open_office' },
-  { id: 'GROWTH', name: 'Growth Lab', color: '#3b82f6', roomId: 'GROWTH', kind: 'lab' },
-  { id: 'EXECUTIVE', name: 'Executive Lounge', color: '#a855f7', roomId: 'EXECUTIVE', kind: 'studio' },
-  { id: 'COMMAND', name: 'Command Center ("The Brain")', color: '#00e5ff', roomId: 'COMMAND', kind: 'meeting' },
-  { id: 'SECOPS', name: 'QA & SecOps NOC', color: '#ec4899', roomId: 'SECOPS', kind: 'lab' },
-  { id: 'INTELLIGENCE', name: 'Intelligence Lab', color: '#14b8a6', roomId: 'INTELLIGENCE', kind: 'lab' },
-  { id: 'FACILITIES_WELLNESS', name: 'Facilities & Wellness', color: '#10b981', roomId: 'WELLNESS', kind: 'wellness' },
+  {
+    id: 'ENGINEERING',
+    name: 'Engineering Core',
+    color: '#6366f1',
+    roomId: 'ENGINEERING',
+    kind: 'open_office',
+  },
+  {
+    id: 'OPERATIONS',
+    name: 'Operations Hub',
+    color: '#22c55e',
+    roomId: 'OPERATIONS',
+    kind: 'open_office',
+  },
+  {
+    id: 'GROWTH',
+    name: 'Growth Lab',
+    color: '#3b82f6',
+    roomId: 'GROWTH',
+    kind: 'lab',
+  },
+  {
+    id: 'EXECUTIVE',
+    name: 'Executive Lounge',
+    color: '#a855f7',
+    roomId: 'EXECUTIVE',
+    kind: 'studio',
+  },
+  {
+    id: 'COMMAND',
+    name: 'Command Center ("The Brain")',
+    color: '#00e5ff',
+    roomId: 'COMMAND',
+    kind: 'meeting',
+  },
+  {
+    id: 'SECOPS',
+    name: 'QA & SecOps NOC',
+    color: '#ec4899',
+    roomId: 'SECOPS',
+    kind: 'lab',
+  },
+  {
+    id: 'INTELLIGENCE',
+    name: 'Intelligence Lab',
+    color: '#14b8a6',
+    roomId: 'INTELLIGENCE',
+    kind: 'lab',
+  },
+  {
+    id: 'FACILITIES_WELLNESS',
+    name: 'Facilities & Wellness',
+    color: '#10b981',
+    roomId: 'WELLNESS',
+    kind: 'wellness',
+  },
 ]
 
 export interface AddDepartmentInput {
@@ -594,9 +648,15 @@ export function validateAndCreateDepartment(input: AddDepartmentInput): {
   department?: DepartmentRecord
   error?: string
 } {
-  const normId = input.id.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_')
+  const normId = input.id
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9_]/g, '_')
   if (!normId || normId.length < 2) {
-    return { valid: false, error: 'Department ID must be at least 2 alphanumeric characters' }
+    return {
+      valid: false,
+      error: 'Department ID must be at least 2 alphanumeric characters',
+    }
   }
   if (!input.name || input.name.trim().length === 0) {
     return { valid: false, error: 'Department name is required' }

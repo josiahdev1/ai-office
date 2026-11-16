@@ -5,11 +5,12 @@
 **Date**: 2026-11-13  
 **Commit SHA**: recorded-on-merge  
 **Branch**: `office-v3`  
-**Author / Assignee**: Josiah (Lead Architect) & Antigravity Autonomous Engineering Fleet  
+**Author / Assignee**: Josiah (Lead Architect) & Antigravity Autonomous Engineering Fleet
 
 ---
 
 ## 1. Context & Objectives
+
 - **2D Server Room Visual Glitch (`image_0dee1a.png` vs `image_0dedd7.png`)**: In 3D (`image_0dee1a.png`), the expanded Server Room renders cleanly with aligned racks, cable trays, Rex's terminal, and clear doorway access. In 2D (`?v=2`, `image_0dedd7.png`), the Server Room shows dark/misaligned overlapping geometry, clipped rack/cable tray rendering, and cramped lighting/contrast glitches.
 - **Full Floor-to-Ceiling Room Walls & Interactive Hinged Doors (`E` Key) in Walk-3D**: While 2D View, 3D View, and Walk-3D share the exact same layout and live state, in **Walk-3D** every room in the office must have full-height solid architectural walls (with glass office partitions/windows where appropriate) so walking inside feels like a real-world building interior—and every doorway must feature a realistic hinged door with an on-screen prompt (`Press [E] to Open` / `Press [E] to Close`) that smoothly swings open/closed and toggles doorway walkability/collision.
 - **Walk-3D Solid Wall & Prop Collision (No Walking Through Walls)**: Currently in Walk-3D mode, the player camera can pass straight through interior and exterior walls ("noclip"). Movement must enforce real solid wall, closed door, window, partition, and furniture collision with smooth wall-sliding while allowing passage through open doors.
@@ -19,6 +20,7 @@
 - **Smooth System-Wide UI & Mode Transition Animations**: Add polished, fluid motion and micro-interactions across the entire interface—smooth camera & view transitions when clicking **3D View**, **3D Walk**, and **2D View**, animated sidebar navigation indicators, smooth drawer/modal/popover reveals, interactive button press/hover transitions, and smooth panel state changes.
 
 ## 2. Architectural Design & Key Changes
+
 1. **Fix 2D Server Room Rendering & Lighting (`OfficeCanvas2D.tsx`)**:
    - Audit `OfficeCanvas2D.tsx` Server Room drawing coordinates, isometric z-sort order, floor lighting/contrast, server rack positions, overhead cable tray alignment, CRAC unit, and Rex's workstation so it matches the 3D Server Room (`image_0dee1a.png`) cleanly without dark overlapping blocks or clipping.
 2. **Full-Height Interior Room Walls & Interactive Doors (`E` Key) in Walk-3D (`OfficeCanvas3D.tsx`, `CameraController.tsx`)**:
@@ -45,9 +47,11 @@
    - Add consistent, smooth transitions (`transition-all duration-200 ease-out`) across sidebar items, drawers, modals, roster cards, action buttons, and toast/status badges using canonical Tailwind v4 classes per `AGENTS.md`.
 
 ## 3. Data & Schema Modifications
+
 - No database schema changes required; consumes active `office_map_versions`, live `office_agents` department/role metadata, and real Iloilo PHT sun/time state.
 
 ## 4. Verification & Quality Gates
+
 - **Lint**: PASS (`npm run lint` — 0 errors, 7 pre-existing warnings; canonical Tailwind v4 classes)
 - **Type Check**: PASS (`npx tsc --noEmit` — 0 errors)
 - **Unit & Integration Tests**: PASS (`npm test -- --run` — 28/28 test files, 267/267 tests passed in 11.32s)
@@ -57,5 +61,6 @@
   - **Walk-3D**: Verified full-height 3.0m interior room walls with 4.4m Brain archway, crisp HD role-specific monitor textures (`MonitorTextures.ts`), interactive hinged doors (`DOOR_DEFINITIONS` + `[E]` HUD prompt), circle-vs-AABB wall/closed-door/rack collision (`walkCollision.ts`), dynamic Sun/Moon/Clouds sky dome (`BuildingArchitecture.tsx`), and smooth mode-switch transition overlay (`globals.css`, `page.tsx`); zero React/hydration errors.
 
 ## 5. Notes & Dependencies
+
 - Follows `tickets/ticket-30-walkable-3d-office-server-room-expansion-and-sidebar-ui.md`.
 - Visual references attached by Josiah: `image_0dee1a.png` (clean 3D Server Room reference) and `image_0dedd7.png` (2D Server Room glitch to fix).

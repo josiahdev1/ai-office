@@ -57,11 +57,13 @@ Tailwind's scale is based on `1 unit = 4px` (0.25rem). Avoid arbitrary pixel bra
 This project operates on an autonomous AI team workflow where Josiah is the lead architect accompanied by an autonomous engineering fleet. To continuously track progress, farm GitHub contributions (PRs & merges), and maintain zero-drift release integrity:
 
 ### 1. Active Working Branch: `office-v3`
+
 - All active development, features, and fixes must be developed and committed on the `office-v3` branch.
 - Never commit broken code or secrets (`.env.local`, API keys) to any branch.
 - Before every commit, verify all quality gates pass: `npm run lint`, `npx tsc --noEmit`, `npm test`, and `npm run build`.
 
 ### 2. Autonomous Pull Request Creation & Conflict Prevention
+
 - After committing and pushing to `office-v3`, compare `office-v3` with the base `main` branch.
 - **Zero-Conflict Guarantee**: If `main` has advanced with new commits (e.g. from upstream merges or Dependabot), fetch `main` and test the merge into `office-v3` first:
   ```bash
@@ -71,6 +73,7 @@ This project operates on an autonomous AI team workflow where Josiah is the lead
 - If any merge conflict is detected, **resolve all conflicts immediately** on `office-v3`, verify tests and build pass cleanly, and commit the resolved merge before proceeding. Never push or merge with unresolved conflict markers.
 
 ### 3. Automated Pull Request & Merge Workflow
+
 - Never require manual Pull Request creation or manual merging on the GitHub UI.
 - Open an automated Pull Request from `office-v3` targeting `main`:
   - Handled automatically in the cloud on every push via `.github/workflows/auto-pr-merge.yml`.
@@ -83,10 +86,12 @@ This project operates on an autonomous AI team workflow where Josiah is the lead
 This project uses Supabase (project ref: `spacfnutrnhzxxbkjrji`) with installed skills in `docs/skills/supabase`, `docs/skills/supabase-postgres-best-practices`, and `docs/skills/supabase-realtime-data` (symlinked at `.agent/skills/`).
 
 ### 1. Mandatory Read & Zero Manual Ops
+
 - Before making any database schema, RLS, Realtime, or seed changes, always read `supabase/README.md` and `.agent/skills/supabase/SKILL.md` first.
 - **Zero Manual Dashboard Ops**: Never instruct Josiah to open the Supabase Web Dashboard, click SQL Editor, or manually copy-paste SQL.
 
 ### 2. Autonomous MCP Execution
+
 - Whenever `supabase/migrations/*.sql` or `supabase/seed.sql` is created or modified, immediately apply it to project `spacfnutrnhzxxbkjrji` using the Supabase MCP tools (`apply_migration` for schema migrations and `execute_sql` for `supabase/seed.sql`).
 - After applying any migration or seed update, verify row counts and table integrity via `execute_sql` (e.g., confirming all 8 tables and 23 agents exist in `public.agents`) before marking the task complete.
 
@@ -95,6 +100,7 @@ This project uses Supabase (project ref: `spacfnutrnhzxxbkjrji`) with installed 
 Before marking any ticket `COMPLETED` or pushing changes to `office-v3`, agents **must** run Playwright against the live application to verify everything works end-to-end and visually looks right:
 
 ### 1. Live Browser Verification Gate
+
 - Start or target the local Next.js server (`http://localhost:3000`) and run Playwright checks (`npx playwright test` or a headless Playwright verification script) covering:
   - **Zero Runtime & Hydration Errors**: Assert zero `console.error`, uncaught page errors, or React hydration mismatch warnings on initial load and reload.
   - **3D & 2D (`?v=2`) Parity & Framing**: Verify both 3D view and 2D view render cleanly at 100% viewport zoom (`1440x900` and `1280x800`) without clipping rooms, overlapping HUD chrome, or requiring manual zoom-out.
@@ -102,6 +108,7 @@ Before marking any ticket `COMPLETED` or pushing changes to `office-v3`, agents 
 - Confirm UI layout quality visually before concluding (never leave untracked screenshot junk files in the repo).
 
 ### 2. Fix-Before-Ship Rule
+
 - If Playwright detects any layout overlap, broken interaction, hydration warning, or console error, **fix the defect and re-run Playwright** until all checks pass 100%. Record the Playwright test command and pass summary in `4. Verification & Quality Gates` of the active ticket.
 
 <!-- BEGIN:nextjs-agent-feedback -->

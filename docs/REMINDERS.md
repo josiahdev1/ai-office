@@ -11,13 +11,14 @@ All reminder time computations are deterministic and executed strictly in code (
 - **Server-Agnostic PHT Math**: Cloud deployment servers (e.g. Vercel) execute in UTC (`Date.now()`). The parser maps calendar years, months, days, hours, and minutes explicitly via `Intl.DateTimeFormat` with `timeZone: 'Asia/Manila'`.
 - **Next-Day Rollover Policy**: When an operator requests an hour that has already passed today (e.g., asking for "2:00 PM" at 5:30 PM PHT), JARVIS automatically schedules for the next day's 2:00 PM and explicitly clarifies this in the verbal read-back.
 - **Read-Back Confirmation**: Before persisting any reminder, JARVIS recites the exact date and time in words and numbers:
-  > *"I will call you today, Thursday 12 November, at 2:00 PM Philippine time. Shall I?"*
+  > _"I will call you today, Thursday 12 November, at 2:00 PM Philippine time. Shall I?"_
 
 ---
 
 ## 2. In-App Incoming Call Experience
 
 When a reminder triggers while the application is active:
+
 1. **Full-Screen Incoming Call Modal**: `IncomingCallOverlay.tsx` displays in JARVIS dark-cyan holographic aesthetics.
 2. **Web Audio Ringtone**: Synthesizes a pulsing 880 Hz harmonic chime using pure browser `AudioContext` and `OscillatorNode` (no external MP3/audio files).
 3. **Voice Interaction**:
@@ -30,10 +31,11 @@ When a reminder triggers while the application is active:
 ## 3. Web Push & Offline Delivery
 
 When the browser tab is closed or in background:
+
 - **Service Worker Web Push**: Dispatches standard web-push notification via VAPID (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`).
 - **Atomic Occurrence Claiming**: Uses atomic conditional updates on `office_reminders` (`status = 'due'`, unique `occurrence_key`) to ensure that multiple open tabs or scheduled cron ticks never trigger duplicate calls.
 - **Honest Missed-Call Catch-Up**: If a due reminder could not be delivered (e.g. device was offline during due window), it is marked `missed` with an event in `office_reminder_events`. On the next application launch, an unacknowledged missed-call banner alerts the operator:
-  > *"You missed a call from JARVIS scheduled for 2:00 PM."*
+  > _"You missed a call from JARVIS scheduled for 2:00 PM."_
 
 ---
 

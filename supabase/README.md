@@ -16,17 +16,17 @@ This directory contains the database schema, seed data, and Next.js SSR integrat
 3. **Consolidated Migration Script**:
    - `supabase/migrations/0016_consolidated_missing_tables.sql` is 100% safe, additive, and non-destructive (no DROP, no CASCADE) for running in the Supabase SQL editor without warnings or errors.
 
-1. **Apply Schema Migration**
+4. **Apply Schema Migration**
    - Read `supabase/migrations/0001_ai_office.sql` (and any subsequent migration files in chronological order).
    - Call the Supabase MCP **`apply_migration`** tool on project `spacfnutrnhzxxbkjrji` with the migration name and SQL contents.
    - This creates all 8 tables (`agents`, `tasks`, `approvals`, `activity_log`, `audit_log`, `messages`, `goals`, `office_settings`), configures indexes, sets up Row Level Security (RLS) policies, and enables Supabase Realtime replication.
 
-2. **Execute Seed Data**
+5. **Execute Seed Data**
    - Read `supabase/seed.sql`.
    - Call the Supabase MCP **`execute_sql`** tool on project `spacfnutrnhzxxbkjrji` to run the seed script.
    - This seeds all 23 specialized engineering agents, live tasks, approvals, messages, and office settings.
 
-3. **Automated Verification**
+6. **Automated Verification**
    - Run `SELECT count(*) AS agent_count FROM public.agents;` via **`execute_sql`** and confirm `23` agents exist across all 8 tables.
 
 ---
@@ -48,102 +48,99 @@ npx skills add supabase/agent-skills
 ### B. Required Client & Middleware Files
 
 **`utils/supabase/server.ts`**
+
 ```ts
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
-export const createClient = (cookieStore: Awaited<ReturnType<typeof cookies>>) => {
-  return createServerClient(
-    supabaseUrl!,
-    supabaseKey!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing user sessions.
-          }
-        },
+export const createClient = (
+  cookieStore: Awaited<ReturnType<typeof cookies>>
+) => {
+  return createServerClient(supabaseUrl!, supabaseKey!, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          )
+        } catch {
+          // The `setAll` method was called from a Server Component.
+          // This can be ignored if you have middleware refreshing user sessions.
+        }
       },
     },
-  );
-};
+  })
+}
 ```
 
 **`utils/supabase/client.ts`**
-```ts
-import { createBrowserClient } from "@supabase/ssr";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+```ts
+import { createBrowserClient } from '@supabase/ssr'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 export const createClient = () =>
-  createBrowserClient(
-    supabaseUrl!,
-    supabaseKey!,
-  );
+  createBrowserClient(supabaseUrl!, supabaseKey!)
 ```
 
 **`utils/supabase/middleware.ts`**
-```ts
-import { createServerClient } from "@supabase/ssr";
-import { type NextRequest, NextResponse } from "next/server";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+```ts
+import { createServerClient } from '@supabase/ssr'
+import { type NextRequest, NextResponse } from 'next/server'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 export const createClient = (request: NextRequest) => {
   let supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,
     },
-  });
+  })
 
-  const supabase = createServerClient(
-    supabaseUrl!,
-    supabaseKey!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({
-            request,
-          });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
+  const supabase = createServerClient(supabaseUrl!, supabaseKey!, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) =>
+          request.cookies.set(name, value)
+        )
+        supabaseResponse = NextResponse.next({
+          request,
+        })
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options)
+        )
       },
     },
-  );
+  })
 
-  return supabaseResponse;
-};
+  return supabaseResponse
+}
 ```
 
 **Example Server Component Usage (`app/supabase-test/page.tsx` or `page.tsx`)**
+
 ```tsx
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
 
 export default async function Page() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
+  const cookieStore = await cookies()
+  const supabase = createClient(cookieStore)
 
-  const { data: agents } = await supabase.from('agents').select();
+  const { data: agents } = await supabase.from('agents').select()
 
   return (
     <ul>
@@ -151,7 +148,7 @@ export default async function Page() {
         <li key={agent.id}>{agent.name}</li>
       ))}
     </ul>
-  );
+  )
 }
 ```
 

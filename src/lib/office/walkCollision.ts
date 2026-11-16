@@ -31,23 +31,163 @@ function boxToAABB(cx: number, cz: number, width: number, depth: number): AABB {
 
 export const DOOR_DEFINITIONS: DoorDefinition[] = [
   // Exterior Building Entrances (South & East)
-  { id: 'ext-south', label: 'South Main Entrance', x: 0, z: 23.2, axis: 'x', width: 2.6, thickness: 0.18, hingeSide: -1, openDirection: -1 },
-  { id: 'ext-east', label: 'East Parking Entrance', x: 23.2, z: 0, axis: 'z', width: 2.6, thickness: 0.18, hingeSide: -1, openDirection: -1 },
+  {
+    id: 'ext-south',
+    label: 'South Main Entrance',
+    x: 0,
+    z: 23.2,
+    axis: 'x',
+    width: 2.6,
+    thickness: 0.18,
+    hingeSide: -1,
+    openDirection: -1,
+  },
+  {
+    id: 'ext-east',
+    label: 'East Parking Entrance',
+    x: 23.2,
+    z: 0,
+    axis: 'z',
+    width: 2.6,
+    thickness: 0.18,
+    hingeSide: -1,
+    openDirection: -1,
+  },
   // Main Building Interior Department Doors
-  { id: 'door-eng', label: 'Engineering Door', x: -16, z: -8, axis: 'x', width: 2.6, thickness: 0.16, hingeSide: -1, openDirection: -1 },
-  { id: 'door-pantry', label: 'Pantry Door', x: -16, z: 8, axis: 'x', width: 2.6, thickness: 0.16, hingeSide: -1, openDirection: 1 },
-  { id: 'door-growth', label: 'Growth Lab Door', x: 16, z: -8, axis: 'x', width: 2.6, thickness: 0.16, hingeSide: -1, openDirection: -1 },
-  { id: 'door-intel', label: 'Intelligence Lab Door', x: 16, z: 8, axis: 'x', width: 2.6, thickness: 0.16, hingeSide: -1, openDirection: 1 },
+  {
+    id: 'door-eng',
+    label: 'Engineering Door',
+    x: -16,
+    z: -8,
+    axis: 'x',
+    width: 2.6,
+    thickness: 0.16,
+    hingeSide: -1,
+    openDirection: -1,
+  },
+  {
+    id: 'door-pantry',
+    label: 'Pantry Door',
+    x: -16,
+    z: 8,
+    axis: 'x',
+    width: 2.6,
+    thickness: 0.16,
+    hingeSide: -1,
+    openDirection: 1,
+  },
+  {
+    id: 'door-growth',
+    label: 'Growth Lab Door',
+    x: 16,
+    z: -8,
+    axis: 'x',
+    width: 2.6,
+    thickness: 0.16,
+    hingeSide: -1,
+    openDirection: -1,
+  },
+  {
+    id: 'door-intel',
+    label: 'Intelligence Lab Door',
+    x: 16,
+    z: 8,
+    axis: 'x',
+    width: 2.6,
+    thickness: 0.16,
+    hingeSide: -1,
+    openDirection: 1,
+  },
   // Main Building <-> West Wing Connectors
-  { id: 'portal-nw', label: 'West Wing North Door', x: -23.2, z: -8, axis: 'z', width: 2.4, thickness: 0.16, hingeSide: -1, openDirection: -1 },
-  { id: 'portal-sw', label: 'West Wing South Door', x: -23.2, z: 8, axis: 'z', width: 2.4, thickness: 0.16, hingeSide: 1, openDirection: -1 },
+  {
+    id: 'portal-nw',
+    label: 'West Wing North Door',
+    x: -23.2,
+    z: -8,
+    axis: 'z',
+    width: 2.4,
+    thickness: 0.16,
+    hingeSide: -1,
+    openDirection: -1,
+  },
+  {
+    id: 'portal-sw',
+    label: 'West Wing South Door',
+    x: -23.2,
+    z: 8,
+    axis: 'z',
+    width: 2.4,
+    thickness: 0.16,
+    hingeSide: 1,
+    openDirection: -1,
+  },
   // West Wing Room Doors (x = -28.9)
-  { id: 'door-nap', label: 'Nap Room Door', x: -28.9, z: -16, axis: 'z', width: 2.2, thickness: 0.14, hingeSide: -1, openDirection: -1 },
-  { id: 'door-mens-cr', label: "Men's CR Door", x: -28.9, z: -8, axis: 'z', width: 2.2, thickness: 0.14, hingeSide: -1, openDirection: -1 },
-  { id: 'door-womens-cr', label: "Women's CR Door", x: -28.9, z: -2, axis: 'z', width: 2.2, thickness: 0.14, hingeSide: -1, openDirection: -1 },
-  { id: 'door-server', label: 'Server Room Door', x: -28.9, z: 3.5, axis: 'z', width: 2.4, thickness: 0.16, hingeSide: -1, openDirection: -1 },
-  { id: 'door-facilities', label: 'Facilities Door', x: -28.9, z: 9, axis: 'z', width: 2.2, thickness: 0.14, hingeSide: -1, openDirection: -1 },
-  { id: 'door-cafeteria', label: 'Cafeteria Door', x: -28.9, z: 16, axis: 'z', width: 2.2, thickness: 0.14, hingeSide: -1, openDirection: -1 },
+  {
+    id: 'door-nap',
+    label: 'Nap Room Door',
+    x: -28.9,
+    z: -16,
+    axis: 'z',
+    width: 2.2,
+    thickness: 0.14,
+    hingeSide: -1,
+    openDirection: -1,
+  },
+  {
+    id: 'door-mens-cr',
+    label: "Men's CR Door",
+    x: -28.9,
+    z: -8,
+    axis: 'z',
+    width: 2.2,
+    thickness: 0.14,
+    hingeSide: -1,
+    openDirection: -1,
+  },
+  {
+    id: 'door-womens-cr',
+    label: "Women's CR Door",
+    x: -28.9,
+    z: -2,
+    axis: 'z',
+    width: 2.2,
+    thickness: 0.14,
+    hingeSide: -1,
+    openDirection: -1,
+  },
+  {
+    id: 'door-server',
+    label: 'Server Room Door',
+    x: -28.9,
+    z: 3.5,
+    axis: 'z',
+    width: 2.4,
+    thickness: 0.16,
+    hingeSide: -1,
+    openDirection: -1,
+  },
+  {
+    id: 'door-facilities',
+    label: 'Facilities Door',
+    x: -28.9,
+    z: 9,
+    axis: 'z',
+    width: 2.2,
+    thickness: 0.14,
+    hingeSide: -1,
+    openDirection: -1,
+  },
+  {
+    id: 'door-cafeteria',
+    label: 'Cafeteria Door',
+    x: -28.9,
+    z: 16,
+    axis: 'z',
+    width: 2.2,
+    thickness: 0.14,
+    hingeSide: -1,
+    openDirection: -1,
+  },
 ]
 
 export const STATIC_WALL_COLLIDERS: AABB[] = [
@@ -113,7 +253,9 @@ export const STATIC_WALL_COLLIDERS: AABB[] = [
   boxToAABB(0, 0, 2.8, 2.8),
 
   // Server Racks & CRAC Chillers & Rex NOC Desk
-  ...SERVER_RACKS.map((r) => boxToAABB(r.position[0], r.position[2], 1.25, 0.85)),
+  ...SERVER_RACKS.map((r) =>
+    boxToAABB(r.position[0], r.position[2], 1.25, 0.85)
+  ),
   boxToAABB(-45, 4.25, 1.45, 1.05),
   boxToAABB(-35.5, 6.35, 1.45, 1.05),
   boxToAABB(-32.5, 3.8, 1.65, 0.9),
@@ -181,7 +323,11 @@ export function resolveWalkCollision(
 /**
  * Find the closest interactive door within maxDist meters of (x, z).
  */
-export function findNearestDoor(x: number, z: number, maxDist = 3.2): DoorDefinition | null {
+export function findNearestDoor(
+  x: number,
+  z: number,
+  maxDist = 3.2
+): DoorDefinition | null {
   let best: DoorDefinition | null = null
   let bestDist = maxDist
   for (const door of DOOR_DEFINITIONS) {

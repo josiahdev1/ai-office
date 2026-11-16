@@ -5,6 +5,7 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K1: Data Foundation + Real Clock + Working-Is-Real + Scheduler
+
 - [x] Phase K1 Completed:
   - Added migration 0009 with office_map_versions, office_settings, office_calendar, office_schedule_blocks, and office_world_state.
   - Implemented real Iloilo solar clock (Asia/Manila, UTC+8) driving 3D sky/lighting and triple-tier hybrid scheduler (docs/SCHEDULING.md).
@@ -22,6 +23,7 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K2: Wellness Wing + Departments + New Agents
+
 - [x] Phase K2 Completed:
   - Modeled full 3D Wellness Wing: Nap Room (8 beds, lamps, DND lights), Comfort Room (6 stalls, mirrors, dryers), Cafeteria (buffet, fridge, 24 dining seats), Facilities (yellow cart, jugs shelf), and 6 water dispensers.
   - Implemented data-driven `office_departments` table + interactive "+ DEPT" Provisioning Wizard modal with full validation.
@@ -37,6 +39,7 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K3: Needs Engine (Human-Like) + Plan + Activity Log
+
 - [x] Phase K3 Completed:
   - Added idempotent tables in migration 0011: office_agent_needs, office_needs_config, office_break_requests, office_agent_plan, and office_agent_activity_log.
   - Implemented human-like Needs Engine with deterministic lazy evaluation, circadian rhythm curve, caffeine/sleep debt, traits, and break request dispatch.
@@ -50,6 +53,7 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K4: Real Activities in the 3D Office
+
 - [x] Phase K4 Completed:
   - Implemented ActivitySlotManager managing reservations, FIFO queues, and deadlock timeouts across Nap Beds (8), CR Stalls (6), Dining Seats (24), Dispensers (6), and Gym spots.
   - Added procedural 3D activity poses, props (meal trays, coffee cups, mop/cart), sleep Z particles, and sprite nameplate activity status icons (💤, 🍽️, ☕, 🚻, 🏋️, 💧, 💻, 🧹, 🟢).
@@ -61,6 +65,7 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K5: Jarvis Wellness Manager + Policy + Approvals + Wellness UI
+
 - [x] Phase K5 Completed:
   - Stored Jarvis Autonomy policy in Supabase (Ask me for everything, Standing policy, Off), with 30% department cap, work protection, pins (Never rest, Must rest), and remembered operator decisions.
   - Implemented 7 Zod-validated function calling tools in Jarvis (`get_wellness`, `propose_break`, `list_resting`, `wake_agent`, `set_policy`, `get_agent_log`, `what_should_agent_do_next`).
@@ -74,6 +79,7 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K6: Cleaners and Facilities
+
 - [x] Phase K6 Completed:
   - Added idempotent tables in migration 0013: office_facility_state (dirt, fill_level, supplies_level, water jugs) and office_cleaning_requests.
   - Implemented real-use event-driven dirt accumulation (meals, CR, sweat, coffee), 6 water dispenser jug tracking/replacement (-4% per drink), and cleaners priority queue with break protection.
@@ -85,6 +91,7 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K7: Boss Gathering + Brain Learning Log
+
 - [x] Phase K7 Completed:
   - Idempotent schema migration 0014: `office_gather_runs`, `office_brain_learning_log`, `office_agent_insights`, and `office_jarvis_memory` with permissive RLS, indexes, and Realtime publication.
   - Built `BrainLearningManager` engine with secret sanitization/rejection filter, deterministic statistics, semantic deduplication (`kind: 'duplicate'`), daily token cap, and RFC-4180 CSV export.
@@ -96,6 +103,7 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K8: Jarvis Reminders and "Jarvis Calls Me"
+
 - [x] Phase K8 Completed:
   - Idempotent schema migration 0015: `office_reminders`, `office_reminder_events`, and `office_push_subscriptions` with indexes, RLS, and Realtime publication.
   - Implemented `parseReminderNaturalLanguage` in `Asia/Manila` with next-day rollover, verbal read-backs, and `ReminderManager` with atomic claim, offline missed call catch-up, and Web Audio ringtone synthesis.
@@ -108,6 +116,7 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 ---
 
 ### Phase K9: Full Supabase Data Audit (No Mock Data Anywhere)
+
 - [x] Phase K9 Completed:
   - Built `scripts/verify-supabase.mjs` (`npm run verify:supabase`) and consolidated migration `0016_consolidated_missing_tables.sql` mapping all 39 `office_*` tables, row counts, newest row times in PHT, and Realtime status.
   - Executed automated Feature Write-Test Matrix (`tests/featureMatrix.test.ts` & `scripts/feature-write-matrix.mjs`) verifying round-trip write/readback and zero-residual cleanup across all 18 office features.
@@ -117,10 +126,10 @@ This document tracks progress on the Office Life, Real Iloilo Time, Needs Engine
 - [x] Data Health panel in Settings and Jarvis dashboard
 - [x] Hardcoded data scan enforcement test
 
-
 ---
 
 ### Phase K10: Final QA
+
 - [x] Phase K10 Completed:
   - Modeled enclosed Server Room (blinking LED racks, CRAC chiller, cable trays, Rex PC desk) and split Comfort Room into labeled Men's CR & Women's CR with A* reachability.
   - Eliminated desk-bound idle loops for Boss, Cleaner 1, and Cleaner 2 into continuous office roaming, cleaning, and server rack inspection loops.

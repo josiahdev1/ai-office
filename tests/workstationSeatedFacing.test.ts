@@ -66,7 +66,10 @@ describe('Workstation Seated Facing & Face Visibility Rules (Phase 1C)', () => {
   })
 
   it('verifies SE and SW seated poses are drawn from back-three-quarter angle with NO eyes, NO mouth, and NO flat gray block', () => {
-    const sidePoses = [SPRITE_CHAR_SEATED_TYPING_SE_0, SPRITE_CHAR_SEATED_TYPING_SW_0]
+    const sidePoses = [
+      SPRITE_CHAR_SEATED_TYPING_SE_0,
+      SPRITE_CHAR_SEATED_TYPING_SW_0,
+    ]
 
     sidePoses.forEach((pose) => {
       let skinPixelsInHead = 0
@@ -85,13 +88,22 @@ describe('Workstation Seated Facing & Face Visibility Rules (Phase 1C)', () => {
       }
 
       // No flat gray square block in upper head
-      expect(graySquarePixelsInHead, `${pose.id} must not have a flat gray square in head`).toBe(0)
+      expect(
+        graySquarePixelsInHead,
+        `${pose.id} must not have a flat gray square in head`
+      ).toBe(0)
 
       // Recognizable blue baseball cap dome
-      expect(blueCapPixelsInHead, `${pose.id} must have a prominent blue cap dome`).toBeGreaterThanOrEqual(20)
+      expect(
+        blueCapPixelsInHead,
+        `${pose.id} must have a prominent blue cap dome`
+      ).toBeGreaterThanOrEqual(20)
 
       // Only subtle profile contour (ear/jawline) allowed (<= 4 pixels), strictly NO eyes or mouth
-      expect(skinPixelsInHead, `${pose.id} has too many face pixels for a back 3/4 view`).toBeLessThanOrEqual(4)
+      expect(
+        skinPixelsInHead,
+        `${pose.id} has too many face pixels for a back 3/4 view`
+      ).toBeLessThanOrEqual(4)
     })
   })
 
@@ -174,7 +186,9 @@ describe('Workstation Seated Facing & Face Visibility Rules (Phase 1C)', () => {
   })
 
   it('contains at least 36 distinct office props across all categories', () => {
-    const props = ALL_V3_SPRITES.filter((s) => s.category !== 'floors' && s.category !== 'walls')
+    const props = ALL_V3_SPRITES.filter(
+      (s) => s.category !== 'floors' && s.category !== 'walls'
+    )
     expect(props.length).toBeGreaterThanOrEqual(36)
 
     const keyProps = [
@@ -228,7 +242,10 @@ describe('Workstation Seated Facing & Face Visibility Rules (Phase 1C)', () => {
 
     keyProps.forEach((propId) => {
       const found = ALL_V3_SPRITES.find((s) => s.id === propId)
-      expect(found, `Required prop ${propId} must be defined in sprite catalog`).toBeDefined()
+      expect(
+        found,
+        `Required prop ${propId} must be defined in sprite catalog`
+      ).toBeDefined()
     })
   })
 

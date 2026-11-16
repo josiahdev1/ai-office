@@ -65,8 +65,14 @@ export function CameraController({
 
   // First-person Walk-Inside state (Eye-level y = 1.65m)
   const walkKeysRef = useRef<Record<string, boolean>>({})
-  const walkAnglesRef = useRef<{ yaw: number; pitch: number }>({ yaw: 0, pitch: -0.04 })
-  const smoothAnglesRef = useRef<{ yaw: number; pitch: number }>({ yaw: 0, pitch: -0.04 })
+  const walkAnglesRef = useRef<{ yaw: number; pitch: number }>({
+    yaw: 0,
+    pitch: -0.04,
+  })
+  const smoothAnglesRef = useRef<{ yaw: number; pitch: number }>({
+    yaw: 0,
+    pitch: -0.04,
+  })
   const walkVelRef = useRef<{ x: number; z: number }>({ x: 0, z: 0 })
   const isDraggingRef = useRef(false)
   const lastPointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -156,8 +162,10 @@ export function CameraController({
       const keys = walkKeysRef.current
       const dt = Math.min(delta, 0.05)
       const lookLerp = 1 - Math.exp(-18 * dt)
-      smoothAnglesRef.current.yaw += (walkAnglesRef.current.yaw - smoothAnglesRef.current.yaw) * lookLerp
-      smoothAnglesRef.current.pitch += (walkAnglesRef.current.pitch - smoothAnglesRef.current.pitch) * lookLerp
+      smoothAnglesRef.current.yaw +=
+        (walkAnglesRef.current.yaw - smoothAnglesRef.current.yaw) * lookLerp
+      smoothAnglesRef.current.pitch +=
+        (walkAnglesRef.current.pitch - smoothAnglesRef.current.pitch) * lookLerp
 
       const { yaw, pitch } = smoothAnglesRef.current
 
@@ -194,9 +202,20 @@ export function CameraController({
       walkVelRef.current.z += (targetVz - walkVelRef.current.z) * accelLerp
 
       if (Math.hypot(walkVelRef.current.x, walkVelRef.current.z) > 0.01) {
-        const rawX = Math.max(-45.5, Math.min(22.5, cam.position.x + walkVelRef.current.x * dt))
-        const rawZ = Math.max(-22.5, Math.min(22.5, cam.position.z + walkVelRef.current.z * dt))
-        const resolved = resolveWalkCollision(rawX, rawZ, 0.42, openDoorsRef.current)
+        const rawX = Math.max(
+          -45.5,
+          Math.min(22.5, cam.position.x + walkVelRef.current.x * dt)
+        )
+        const rawZ = Math.max(
+          -22.5,
+          Math.min(22.5, cam.position.z + walkVelRef.current.z * dt)
+        )
+        const resolved = resolveWalkCollision(
+          rawX,
+          rawZ,
+          0.42,
+          openDoorsRef.current
+        )
         cam.position.set(resolved.x, 1.65, resolved.z)
       } else {
         cam.position.y = 1.65
@@ -228,7 +247,8 @@ export function CameraController({
       savedCameraRef.current = {
         target: controls.target.clone(),
         position: state.camera.position.clone(),
-        zoom: orthoCam && typeof orthoCam.zoom === 'number' ? orthoCam.zoom : 20,
+        zoom:
+          orthoCam && typeof orthoCam.zoom === 'number' ? orthoCam.zoom : 20,
       }
       targetVec.current.set(0, 1.9, 0)
       targetZoom.current = 82
@@ -240,7 +260,11 @@ export function CameraController({
         targetZoom.current = savedCameraRef.current.zoom
       } else {
         const preset = CAMERA_PRESETS[mode] || CAMERA_PRESETS.OVERVIEW
-        targetVec.current.set(preset.target[0], preset.target[1], preset.target[2])
+        targetVec.current.set(
+          preset.target[0],
+          preset.target[1],
+          preset.target[2]
+        )
         targetZoom.current = preset.zoom
       }
     }
@@ -250,11 +274,17 @@ export function CameraController({
       const w = state.size.width
       const h = state.size.height
       const fitZoom = Math.min(12.5, Math.max(8.0, Math.min(w / 140, h / 72)))
-      targetZoom.current = Math.max(7.5, Math.min(60, fitZoom + userZoomOffsetRef.current))
+      targetZoom.current = Math.max(
+        7.5,
+        Math.min(60, fitZoom + userZoomOffsetRef.current)
+      )
       targetVec.current.set(-7.5, 0, 0)
     } else if (!isDivingToJarvis) {
       const preset = CAMERA_PRESETS[mode] || CAMERA_PRESETS.OVERVIEW
-      targetZoom.current = Math.max(8, Math.min(80, preset.zoom + userZoomOffsetRef.current))
+      targetZoom.current = Math.max(
+        8,
+        Math.min(80, preset.zoom + userZoomOffsetRef.current)
+      )
     }
 
     const speed = isDivingToJarvis ? 6.5 : 4.5

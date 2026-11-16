@@ -133,8 +133,8 @@ describe('Isometric Office Map & Collision Validation (Bug 3 Prevention)', () =>
 
     // Must have a healthy variety of facings instead of all facing the camera
     expect(nwDesks.length).toBeGreaterThanOrEqual(10) // Behind view facing monitor
-    expect(neDesks.length).toBeGreaterThanOrEqual(3)  // QA NOC rows facing up-right
-    expect(seDesks.length).toBeGreaterThanOrEqual(4)  // Managers and back-to-back facing camera
+    expect(neDesks.length).toBeGreaterThanOrEqual(3) // QA NOC rows facing up-right
+    expect(seDesks.length).toBeGreaterThanOrEqual(4) // Managers and back-to-back facing camera
     expect(nwDesks.length + neDesks.length + seDesks.length).toBe(24)
   })
 })

@@ -6,13 +6,22 @@ import { isAgentActivelyWorking } from '../src/config/characterStyles'
 describe('Hardcoded Data & Real Working Audit Scanner', () => {
   it('1. verifies isAgentActivelyWorking strictly requires a real task', () => {
     // Agent with empty task is NOT working
-    expect(isAgentActivelyWorking({ status: 'working', current_task: '' })).toBe(false)
-    expect(isAgentActivelyWorking({ status: 'working', current_task: '   ' })).toBe(false)
-    expect(isAgentActivelyWorking({ status: 'working', current_task: null })).toBe(false)
+    expect(
+      isAgentActivelyWorking({ status: 'working', current_task: '' })
+    ).toBe(false)
+    expect(
+      isAgentActivelyWorking({ status: 'working', current_task: '   ' })
+    ).toBe(false)
+    expect(
+      isAgentActivelyWorking({ status: 'working', current_task: null })
+    ).toBe(false)
 
     // Agent with idle/break/gym status is NOT working even if task text was leftover
     expect(
-      isAgentActivelyWorking({ status: 'on_break', current_task: 'Fix auth bug' })
+      isAgentActivelyWorking({
+        status: 'on_break',
+        current_task: 'Fix auth bug',
+      })
     ).toBe(false)
     expect(
       isAgentActivelyWorking({ status: 'at_gym', current_task: 'Fix auth bug' })
@@ -58,7 +67,10 @@ describe('Hardcoded Data & Real Working Audit Scanner', () => {
         const fullPath = path.join(dir, entry.name)
         if (entry.isDirectory()) {
           results.push(...scanDir(fullPath))
-        } else if (entry.isFile() && (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts'))) {
+        } else if (
+          entry.isFile() &&
+          (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts'))
+        ) {
           results.push(fullPath)
         }
       }
@@ -70,7 +82,12 @@ describe('Hardcoded Data & Real Working Audit Scanner', () => {
 
     for (const file of files) {
       // Exclude audio synthesis which uses random for noise/particles/sfx
-      if (file.includes('audio') || file.includes('sfx') || file.includes('lofiSynth')) continue
+      if (
+        file.includes('audio') ||
+        file.includes('sfx') ||
+        file.includes('lofiSynth')
+      )
+        continue
 
       const content = fs.readFileSync(file, 'utf8')
       const lines = content.split('\n')
@@ -109,7 +126,10 @@ describe('Hardcoded Data & Real Working Audit Scanner', () => {
         const fullPath = path.join(dir, entry.name)
         if (entry.isDirectory()) {
           results.push(...scanDir(fullPath))
-        } else if (entry.isFile() && (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts'))) {
+        } else if (
+          entry.isFile() &&
+          (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts'))
+        ) {
           results.push(fullPath)
         }
       }
@@ -137,7 +157,10 @@ describe('Hardcoded Data & Real Working Audit Scanner', () => {
         const fullPath = path.join(dir, entry.name)
         if (entry.isDirectory()) {
           results.push(...scanDir(fullPath))
-        } else if (entry.isFile() && (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts'))) {
+        } else if (
+          entry.isFile() &&
+          (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts'))
+        ) {
           results.push(fullPath)
         }
       }
@@ -153,7 +176,12 @@ describe('Hardcoded Data & Real Working Audit Scanner', () => {
       lines.forEach((line, idx) => {
         const lower = line.toLowerCase()
         // Ignore comments that mention sample algorithms or geometry sampling
-        if (lower.includes('sample every other waypoint') || lower.includes('resample') || lower.includes('downsample')) return
+        if (
+          lower.includes('sample every other waypoint') ||
+          lower.includes('resample') ||
+          lower.includes('downsample')
+        )
+          return
         if (
           lower.includes('mockdata') ||
           lower.includes('dummydata') ||
@@ -161,7 +189,9 @@ describe('Hardcoded Data & Real Working Audit Scanner', () => {
           lower.includes('fakeagents') ||
           lower.includes('mock_agents')
         ) {
-          mockViolations.push(`${path.relative(process.cwd(), file)}:${idx + 1}: ${line.trim()}`)
+          mockViolations.push(
+            `${path.relative(process.cwd(), file)}:${idx + 1}: ${line.trim()}`
+          )
         }
       })
     }

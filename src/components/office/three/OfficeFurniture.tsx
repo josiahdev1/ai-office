@@ -28,13 +28,19 @@ export function OfficeFurniture() {
     }
     // High-frequency blinking LED strips in Server Room
     if (serverLedGreenRef.current) {
-      serverLedGreenRef.current.color.set(Math.sin(t * 10) > 0 ? '#22c55e' : '#064e3b')
+      serverLedGreenRef.current.color.set(
+        Math.sin(t * 10) > 0 ? '#22c55e' : '#064e3b'
+      )
     }
     if (serverLedBlueRef.current) {
-      serverLedBlueRef.current.color.set(Math.cos(t * 7) > 0 ? '#0ea5e9' : '#0c4a6e')
+      serverLedBlueRef.current.color.set(
+        Math.cos(t * 7) > 0 ? '#0ea5e9' : '#0c4a6e'
+      )
     }
     if (serverLedAmberRef.current) {
-      serverLedAmberRef.current.color.set(Math.sin(t * 12 + 1) > 0 ? '#f59e0b' : '#78350f')
+      serverLedAmberRef.current.color.set(
+        Math.sin(t * 12 + 1) > 0 ? '#f59e0b' : '#78350f'
+      )
     }
   })
 
@@ -50,7 +56,11 @@ export function OfficeFurniture() {
             {/* Rack Cabinet */}
             <mesh castShadow receiveShadow>
               <boxGeometry args={[1.4, 2.4, 0.7]} />
-              <meshStandardMaterial color="#090d16" metalness={0.8} roughness={0.3} />
+              <meshStandardMaterial
+                color="#090d16"
+                metalness={0.8}
+                roughness={0.3}
+              />
             </mesh>
             {/* Rack Door Grid */}
             <mesh position={[0, 0, 0.36]}>
@@ -60,11 +70,17 @@ export function OfficeFurniture() {
             {/* LED Status Strips */}
             <mesh position={[-0.4, 0.8, 0.37]}>
               <boxGeometry args={[0.1, 0.04, 0.02]} />
-              <meshBasicMaterial ref={i === 0 ? ledRef1 : undefined} color="#22c55e" />
+              <meshBasicMaterial
+                ref={i === 0 ? ledRef1 : undefined}
+                color="#22c55e"
+              />
             </mesh>
             <mesh position={[-0.4, 0.6, 0.37]}>
               <boxGeometry args={[0.1, 0.04, 0.02]} />
-              <meshBasicMaterial ref={i === 0 ? ledRef2 : undefined} color="#38bdf8" />
+              <meshBasicMaterial
+                ref={i === 0 ? ledRef2 : undefined}
+                color="#38bdf8"
+              />
             </mesh>
           </group>
         ))}
@@ -254,7 +270,11 @@ export function OfficeFurniture() {
           <group position={[-1.4, 0.8, 0]}>
             <mesh castShadow>
               <boxGeometry args={[0.7, 0.5, 0.5]} />
-              <meshStandardMaterial color="#334155" metalness={0.9} roughness={0.2} />
+              <meshStandardMaterial
+                color="#334155"
+                metalness={0.9}
+                roughness={0.2}
+              />
             </mesh>
             {/* Coffee Spout & Cups */}
             <mesh position={[0.1, 0.25, 0.1]}>
@@ -320,7 +340,12 @@ export function OfficeFurniture() {
         {[-3, 0, 3].map((x, i) => (
           <group key={`treadmill-${i}`} position={[x, 0.3, -2]}>
             {/* Belt Deck (Slightly inclined) */}
-            <mesh position={[0, 0.1, 0]} rotation={[0.08, 0, 0]} castShadow receiveShadow>
+            <mesh
+              position={[0, 0.1, 0]}
+              rotation={[0.08, 0, 0]}
+              castShadow
+              receiveShadow
+            >
               <boxGeometry args={[1.0, 0.18, 2.2]} />
               <meshStandardMaterial color="#0f172a" roughness={0.9} />
             </mesh>
@@ -353,7 +378,11 @@ export function OfficeFurniture() {
           </mesh>
           {/* Dumbbells on Rack */}
           {[-0.8, -0.3, 0.2, 0.7].map((dx, idx) => (
-            <mesh key={`db-${idx}`} position={[dx, 0.45, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <mesh
+              key={`db-${idx}`}
+              position={[dx, 0.45, 0]}
+              rotation={[0, 0, Math.PI / 2]}
+            >
               <cylinderGeometry args={[0.1, 0.1, 0.3, 12]} />
               <meshStandardMaterial color="#475569" metalness={0.9} />
             </mesh>
@@ -380,7 +409,11 @@ export function OfficeFurniture() {
           <group key={`gpu-${idx}`} position={[offset, 1.1, -5.8]}>
             <mesh castShadow receiveShadow>
               <boxGeometry args={[1.5, 2.2, 0.8]} />
-              <meshStandardMaterial color="#042f2e" metalness={0.8} roughness={0.3} />
+              <meshStandardMaterial
+                color="#042f2e"
+                metalness={0.8}
+                roughness={0.3}
+              />
             </mesh>
             {/* Ventilation Grille with Glowing Cyan/Teal Underlight */}
             <mesh position={[0, 0, 0.41]}>
@@ -418,12 +451,21 @@ export function OfficeFurniture() {
         {/* Modern Executive Desk */}
         <mesh position={[0, 0.36, 0]} castShadow receiveShadow>
           <boxGeometry args={[1.6, 0.72, 0.8]} />
-          <meshStandardMaterial color="#090d16" roughness={0.3} metalness={0.7} />
+          <meshStandardMaterial
+            color="#090d16"
+            roughness={0.3}
+            metalness={0.7}
+          />
         </mesh>
         {/* Polished Glass Desktop Surface */}
         <mesh position={[0, 0.73, 0]}>
           <boxGeometry args={[1.65, 0.02, 0.85]} />
-          <meshStandardMaterial color="#00e5ff" transparent opacity={0.3} roughness={0.1} />
+          <meshStandardMaterial
+            color="#00e5ff"
+            transparent
+            opacity={0.3}
+            roughness={0.1}
+          />
         </mesh>
         {/* Dual Curved Holographic Monitors */}
         <group position={[0, 1.05, -0.15]}>
@@ -463,7 +505,11 @@ export function OfficeFurniture() {
           {/* Gold Metallic Clip at top */}
           <mesh position={[0, 0.17, 0.012]}>
             <boxGeometry args={[0.1, 0.04, 0.02]} />
-            <meshStandardMaterial color="#facc15" metalness={0.9} roughness={0.2} />
+            <meshStandardMaterial
+              color="#facc15"
+              metalness={0.9}
+              roughness={0.2}
+            />
           </mesh>
           {/* White Paper Report Sheet */}
           <mesh position={[0, -0.01, 0.01]}>
@@ -484,7 +530,11 @@ export function OfficeFurniture() {
               {/* Dispenser Floor Base Cabinet */}
               <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
                 <boxGeometry args={[0.42, 0.9, 0.42]} />
-                <meshStandardMaterial color="#e2e8f0" roughness={0.3} metalness={0.2} />
+                <meshStandardMaterial
+                  color="#e2e8f0"
+                  roughness={0.3}
+                  metalness={0.2}
+                />
               </mesh>
               {/* Recessed Dispensing Alcove & Drip Tray */}
               <mesh position={[0, 0.58, 0.16]}>
@@ -537,14 +587,19 @@ export function OfficeFurniture() {
       {/* ========================================================================= */}
       <group position={[-35, 0, -16]} name="NapRoomProps">
         {/* Ambient Dark Pod Mood Lighting */}
-        <pointLight color="#818cf8" intensity={0.4} distance={8} position={[0, 2.2, 0]} />
+        <pointLight
+          color="#818cf8"
+          intensity={0.4}
+          distance={8}
+          position={[0, 2.2, 0]}
+        />
 
         {/* 8 Wellness Beds (4 Single + 2 Bunk Beds = 8 Sleep Slots) */}
         {WELLNESS_BEDS.map((bed) => {
           // Relativize position to Nap Room center [-35, 0, -16]
-          const rx = bed.position[0] - (-35)
+          const rx = bed.position[0] - -35
           const ry = bed.position[1]
-          const rz = bed.position[2] - (-16)
+          const rz = bed.position[2] - -16
           const isBunkUpper = bed.type === 'bunk_upper'
           const isBunkLower = bed.type === 'bunk_lower'
 
@@ -564,7 +619,11 @@ export function OfficeFurniture() {
                   [-0.55, 0.95],
                   [0.55, 0.95],
                 ].map(([px, pz], pidx) => (
-                  <mesh key={`post-${pidx}`} position={[px, 1.1, pz]} castShadow>
+                  <mesh
+                    key={`post-${pidx}`}
+                    position={[px, 1.1, pz]}
+                    castShadow
+                  >
                     <boxGeometry args={[0.08, 2.2, 0.08]} />
                     <meshStandardMaterial color="#451a03" roughness={0.8} />
                   </mesh>
@@ -688,18 +747,26 @@ export function OfficeFurniture() {
         <group position={[5.8, 2.1, 0]}>
           <mesh>
             <boxGeometry args={[0.08, 0.35, 1.0]} />
-            <meshStandardMaterial color="#1e3a8a" roughness={0.3} metalness={0.5} />
+            <meshStandardMaterial
+              color="#1e3a8a"
+              roughness={0.3}
+              metalness={0.5}
+            />
           </mesh>
           <mesh position={[-0.05, 0, 0]}>
             <boxGeometry args={[0.02, 0.2, 0.8]} />
-            <meshStandardMaterial color="#60a5fa" emissive="#3b82f6" emissiveIntensity={0.6} />
+            <meshStandardMaterial
+              color="#60a5fa"
+              emissive="#3b82f6"
+              emissiveIntensity={0.6}
+            />
           </mesh>
         </group>
 
         {/* 3 Individual Toilet Stalls */}
         {MENS_CR_STALLS.map((stall) => {
-          const rx = stall.position[0] - (-35)
-          const rz = stall.position[2] - (-8)
+          const rx = stall.position[0] - -35
+          const rz = stall.position[2] - -8
           return (
             <group key={stall.id} position={[rx, 0, rz]}>
               {/* Stall Partition Enclosure */}
@@ -710,7 +777,11 @@ export function OfficeFurniture() {
               {/* Stall Door with Chrome Handle */}
               <mesh position={[0.66, 0.95, 0]}>
                 <boxGeometry args={[0.04, 1.9, 0.9]} />
-                <meshStandardMaterial color="#0284c7" roughness={0.6} metalness={0.2} />
+                <meshStandardMaterial
+                  color="#0284c7"
+                  roughness={0.6}
+                  metalness={0.2}
+                />
               </mesh>
               {/* Occupied / Vacant Indicator Plate */}
               <mesh position={[0.69, 1.25, 0]}>
@@ -739,14 +810,22 @@ export function OfficeFurniture() {
               </mesh>
               <mesh position={[-0.15, 0.12, 0]}>
                 <cylinderGeometry args={[0.02, 0.02, 0.24, 8]} />
-                <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.1} />
+                <meshStandardMaterial
+                  color="#e2e8f0"
+                  metalness={0.9}
+                  roughness={0.1}
+                />
               </mesh>
             </group>
           ))}
           {/* Vanity Mirror */}
           <mesh position={[-0.32, 1.05, 0]}>
             <planeGeometry args={[0.05, 1.1]} />
-            <meshStandardMaterial color="#f8fafc" roughness={0.1} metalness={0.9} />
+            <meshStandardMaterial
+              color="#f8fafc"
+              roughness={0.1}
+              metalness={0.9}
+            />
           </mesh>
           {/* Commercial Hand Dryer */}
           <mesh position={[-0.25, 0.8, 1.6]}>
@@ -764,18 +843,26 @@ export function OfficeFurniture() {
         <group position={[5.8, 2.1, 0]}>
           <mesh>
             <boxGeometry args={[0.08, 0.35, 1.0]} />
-            <meshStandardMaterial color="#831843" roughness={0.3} metalness={0.5} />
+            <meshStandardMaterial
+              color="#831843"
+              roughness={0.3}
+              metalness={0.5}
+            />
           </mesh>
           <mesh position={[-0.05, 0, 0]}>
             <boxGeometry args={[0.02, 0.2, 0.8]} />
-            <meshStandardMaterial color="#f472b6" emissive="#db2777" emissiveIntensity={0.6} />
+            <meshStandardMaterial
+              color="#f472b6"
+              emissive="#db2777"
+              emissiveIntensity={0.6}
+            />
           </mesh>
         </group>
 
         {/* 3 Individual Toilet Stalls */}
         {WOMENS_CR_STALLS.map((stall) => {
-          const rx = stall.position[0] - (-35)
-          const rz = stall.position[2] - (-2)
+          const rx = stall.position[0] - -35
+          const rz = stall.position[2] - -2
           return (
             <group key={stall.id} position={[rx, 0, rz]}>
               {/* Stall Partition Enclosure */}
@@ -786,7 +873,11 @@ export function OfficeFurniture() {
               {/* Stall Door with Chrome Handle */}
               <mesh position={[0.66, 0.95, 0]}>
                 <boxGeometry args={[0.04, 1.9, 0.9]} />
-                <meshStandardMaterial color="#9d174d" roughness={0.6} metalness={0.2} />
+                <meshStandardMaterial
+                  color="#9d174d"
+                  roughness={0.6}
+                  metalness={0.2}
+                />
               </mesh>
               {/* Occupied / Vacant Indicator Plate */}
               <mesh position={[0.69, 1.25, 0]}>
@@ -815,14 +906,22 @@ export function OfficeFurniture() {
               </mesh>
               <mesh position={[-0.15, 0.12, 0]}>
                 <cylinderGeometry args={[0.02, 0.02, 0.24, 8]} />
-                <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.1} />
+                <meshStandardMaterial
+                  color="#e2e8f0"
+                  metalness={0.9}
+                  roughness={0.1}
+                />
               </mesh>
             </group>
           ))}
           {/* Large Vanity Mirror */}
           <mesh position={[-0.32, 1.05, 0]}>
             <planeGeometry args={[0.05, 1.1]} />
-            <meshStandardMaterial color="#f8fafc" roughness={0.1} metalness={0.9} />
+            <meshStandardMaterial
+              color="#f8fafc"
+              roughness={0.1}
+              metalness={0.9}
+            />
           </mesh>
           {/* Commercial Hand Dryer */}
           <mesh position={[-0.25, 0.8, 1.6]}>
@@ -840,29 +939,45 @@ export function OfficeFurniture() {
         <group position={[8.3, 2.1, -0.75]}>
           <mesh>
             <boxGeometry args={[0.08, 0.35, 1.2]} />
-            <meshStandardMaterial color="#451a03" roughness={0.4} metalness={0.6} />
+            <meshStandardMaterial
+              color="#451a03"
+              roughness={0.4}
+              metalness={0.6}
+            />
           </mesh>
           <mesh position={[-0.05, 0, 0]}>
             <boxGeometry args={[0.02, 0.22, 1.0]} />
-            <meshStandardMaterial color="#f59e0b" emissive="#d97706" emissiveIntensity={0.8} />
+            <meshStandardMaterial
+              color="#f59e0b"
+              emissive="#d97706"
+              emissiveIntensity={0.8}
+            />
           </mesh>
         </group>
 
         {/* 6 Dual-Aisle Server Racks with Blinking Activity LEDs */}
         {SERVER_RACKS.map((rack) => {
-          const rx = rack.position[0] - (-37.5)
+          const rx = rack.position[0] - -37.5
           const rz = rack.position[2] - 4.25
           return (
             <group key={rack.id} position={[rx, 1.25, rz]}>
               {/* Heavy Metal Rack Chassis */}
               <mesh castShadow receiveShadow>
                 <boxGeometry args={[1.2, 2.5, 0.8]} />
-                <meshStandardMaterial color="#090d16" metalness={0.85} roughness={0.25} />
+                <meshStandardMaterial
+                  color="#090d16"
+                  metalness={0.85}
+                  roughness={0.25}
+                />
               </mesh>
               {/* Glass Perforated Front Panel */}
               <mesh position={[0, 0, 0.41]}>
                 <planeGeometry args={[1.05, 2.3]} />
-                <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.5} />
+                <meshStandardMaterial
+                  color="#1e293b"
+                  roughness={0.4}
+                  metalness={0.5}
+                />
               </mesh>
               {/* Internal Blade Server Drawers */}
               {[-0.8, -0.4, 0, 0.4, 0.8].map((slotY, sidx) => (
@@ -874,14 +989,22 @@ export function OfficeFurniture() {
                   <mesh position={[-0.35, 0, 0.015]}>
                     <boxGeometry args={[0.08, 0.04, 0.02]} />
                     <meshBasicMaterial
-                      ref={sidx % 3 === 0 ? serverLedGreenRef : sidx % 3 === 1 ? serverLedBlueRef : serverLedAmberRef}
+                      ref={
+                        sidx % 3 === 0
+                          ? serverLedGreenRef
+                          : sidx % 3 === 1
+                            ? serverLedBlueRef
+                            : serverLedAmberRef
+                      }
                       color="#22c55e"
                     />
                   </mesh>
                   <mesh position={[-0.2, 0, 0.015]}>
                     <boxGeometry args={[0.08, 0.04, 0.02]} />
                     <meshBasicMaterial
-                      ref={sidx % 2 === 0 ? serverLedBlueRef : serverLedGreenRef}
+                      ref={
+                        sidx % 2 === 0 ? serverLedBlueRef : serverLedGreenRef
+                      }
                       color="#0ea5e9"
                     />
                   </mesh>
@@ -899,7 +1022,11 @@ export function OfficeFurniture() {
           <group key={`crac-${idx}`} position={[cx, cy, cz]}>
             <mesh castShadow receiveShadow>
               <boxGeometry args={[1.4, 2.2, 1.0]} />
-              <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+              <meshStandardMaterial
+                color="#334155"
+                metalness={0.8}
+                roughness={0.3}
+              />
             </mesh>
             <mesh position={[-0.71, 0, 0]}>
               <planeGeometry args={[0.8, 1.8]} />
@@ -907,7 +1034,11 @@ export function OfficeFurniture() {
             </mesh>
             <mesh position={[0, 0.8, 0.51]}>
               <planeGeometry args={[0.6, 0.25]} />
-              <meshStandardMaterial color="#0284c7" emissive="#0284c7" emissiveIntensity={0.8} />
+              <meshStandardMaterial
+                color="#0284c7"
+                emissive="#0284c7"
+                emissiveIntensity={0.8}
+              />
             </mesh>
           </group>
         ))}
@@ -935,7 +1066,11 @@ export function OfficeFurniture() {
           <group key={`cable-tray-${idx}`} position={[-2.0, 2.45, tz]}>
             <mesh>
               <boxGeometry args={[10.5, 0.06, 0.4]} />
-              <meshStandardMaterial color="#475569" metalness={0.9} roughness={0.3} />
+              <meshStandardMaterial
+                color="#475569"
+                metalness={0.9}
+                roughness={0.3}
+              />
             </mesh>
             <mesh position={[0, 0.05, -0.1]} rotation={[0, 0, Math.PI / 2]}>
               <cylinderGeometry args={[0.03, 0.03, 10.2, 8]} />
@@ -957,7 +1092,11 @@ export function OfficeFurniture() {
         <group position={[5.0, 0, -0.45]}>
           <mesh position={[0, 0.38, 0]} castShadow receiveShadow>
             <boxGeometry args={[1.6, 0.76, 0.85]} />
-            <meshStandardMaterial color="#1e293b" metalness={0.5} roughness={0.4} />
+            <meshStandardMaterial
+              color="#1e293b"
+              metalness={0.5}
+              roughness={0.4}
+            />
           </mesh>
           <group position={[-0.1, 0.95, -0.2]} rotation={[0, 0.15, 0]}>
             <mesh castShadow>
@@ -1021,11 +1160,19 @@ export function OfficeFurniture() {
         <group position={[5.8, 2.1, -0.5]}>
           <mesh>
             <boxGeometry args={[0.08, 0.35, 1.2]} />
-            <meshStandardMaterial color="#713f12" roughness={0.4} metalness={0.5} />
+            <meshStandardMaterial
+              color="#713f12"
+              roughness={0.4}
+              metalness={0.5}
+            />
           </mesh>
           <mesh position={[-0.05, 0, 0]}>
             <boxGeometry args={[0.02, 0.22, 1.0]} />
-            <meshStandardMaterial color="#eab308" emissive="#ca8a04" emissiveIntensity={0.7} />
+            <meshStandardMaterial
+              color="#eab308"
+              emissive="#ca8a04"
+              emissiveIntensity={0.7}
+            />
           </mesh>
         </group>
 
@@ -1095,7 +1242,11 @@ export function OfficeFurniture() {
                 rotation={[Math.PI / 2, 0, 0]}
               >
                 <cylinderGeometry args={[0.14, 0.14, 0.42, 12]} />
-                <meshStandardMaterial color="#0284c7" transparent opacity={0.7} />
+                <meshStandardMaterial
+                  color="#0284c7"
+                  transparent
+                  opacity={0.7}
+                />
               </mesh>
             ))
           )}
@@ -1105,13 +1256,19 @@ export function OfficeFurniture() {
         <group position={[-2.5, 1.0, 1.2]}>
           <mesh castShadow receiveShadow>
             <boxGeometry args={[2.0, 2.0, 0.55]} />
-            <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.4} />
+            <meshStandardMaterial
+              color="#475569"
+              metalness={0.8}
+              roughness={0.4}
+            />
           </mesh>
           {/* Detergent Spray Bottles */}
           {[-0.6, -0.2, 0.2, 0.6].map((bx, bidx) => (
             <mesh key={`bot-${bidx}`} position={[bx, 0.3, 0.1]}>
               <cylinderGeometry args={[0.05, 0.06, 0.28, 8]} />
-              <meshStandardMaterial color={bidx % 2 === 0 ? '#10b981' : '#3b82f6'} />
+              <meshStandardMaterial
+                color={bidx % 2 === 0 ? '#10b981' : '#3b82f6'}
+              />
             </mesh>
           ))}
         </group>
@@ -1126,12 +1283,21 @@ export function OfficeFurniture() {
           {/* Stainless Counter Base */}
           <mesh castShadow receiveShadow>
             <boxGeometry args={[8.4, 0.92, 1.2]} />
-            <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.2} />
+            <meshStandardMaterial
+              color="#94a3b8"
+              metalness={0.85}
+              roughness={0.2}
+            />
           </mesh>
           {/* Angled Glass Sneeze Guard */}
           <mesh position={[0, 0.72, 0.4]} rotation={[0.2, 0, 0]}>
             <boxGeometry args={[8.2, 0.45, 0.04]} />
-            <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+            <meshStandardMaterial
+              color="#38bdf8"
+              transparent
+              opacity={0.4}
+              roughness={0.1}
+            />
           </mesh>
           {/* Gastronorm Hot Steam Trays (Time-Based Food Props) */}
           {[-3.0, -1.5, 0, 1.5, 3.0].map((tx, tidx) => (
@@ -1148,12 +1314,12 @@ export function OfficeFurniture() {
                     tidx === 0
                       ? '#f8fafc' // Garlic Jasmine Rice
                       : tidx === 1
-                      ? '#78350f' // Chicken Adobo
-                      : tidx === 2
-                      ? '#ca8a04' // Sinigang Soup Broth
-                      : tidx === 3
-                      ? '#15803d' // Sautéed Kangkong & Veggies
-                      : '#f59e0b' // Fresh Tropical Fruits
+                        ? '#78350f' // Chicken Adobo
+                        : tidx === 2
+                          ? '#ca8a04' // Sinigang Soup Broth
+                          : tidx === 3
+                            ? '#15803d' // Sautéed Kangkong & Veggies
+                            : '#f59e0b' // Fresh Tropical Fruits
                   }
                   roughness={0.8}
                 />
@@ -1204,7 +1370,9 @@ export function OfficeFurniture() {
                   ]}
                   castShadow
                 >
-                  <boxGeometry args={[cx !== 0 ? 0.05 : 0.4, 0.45, cz !== 0 ? 0.05 : 0.4]} />
+                  <boxGeometry
+                    args={[cx !== 0 ? 0.05 : 0.4, 0.45, cz !== 0 ? 0.05 : 0.4]}
+                  />
                   <meshStandardMaterial color="#f97316" roughness={0.5} />
                 </mesh>
               </group>
@@ -1218,7 +1386,11 @@ export function OfficeFurniture() {
           <group position={[0, 1.1, -1.5]}>
             <mesh castShadow receiveShadow>
               <boxGeometry args={[0.9, 2.2, 1.2]} />
-              <meshStandardMaterial color="#cbd5e1" metalness={0.85} roughness={0.2} />
+              <meshStandardMaterial
+                color="#cbd5e1"
+                metalness={0.85}
+                roughness={0.2}
+              />
             </mesh>
             {/* Handles */}
             <mesh position={[-0.46, 0, 0.1]}>
@@ -1247,7 +1419,11 @@ export function OfficeFurniture() {
                 {/* Glowing LED Timer Window */}
                 <mesh position={[-0.26, 0.05, 0]}>
                   <planeGeometry args={[0.02, 0.18]} />
-                  <meshStandardMaterial color="#22c55e" emissive="#16a34a" emissiveIntensity={0.8} />
+                  <meshStandardMaterial
+                    color="#22c55e"
+                    emissive="#16a34a"
+                    emissiveIntensity={0.8}
+                  />
                 </mesh>
               </group>
             ))}
@@ -1261,7 +1437,11 @@ export function OfficeFurniture() {
             { label: 'COMPOST', color: '#16a34a' },
             { label: 'RECYCLE', color: '#0284c7' },
           ].map((bin, bidx) => (
-            <mesh key={`bin-${bidx}`} position={[0, 0, (bidx - 1) * 0.7]} castShadow>
+            <mesh
+              key={`bin-${bidx}`}
+              position={[0, 0, (bidx - 1) * 0.7]}
+              castShadow
+            >
               <boxGeometry args={[0.5, 0.9, 0.55]} />
               <meshStandardMaterial color={bin.color} roughness={0.6} />
             </mesh>

@@ -228,7 +228,7 @@ export function calculateSolarTimes(
   // True solar time and current solar altitude & azimuth
   const timeOffset = eqtime + 4 * longitude - 480
   const trueSolarTimeMin = pht.decimalHour * 60 + timeOffset
-  const currentHaDeg = (trueSolarTimeMin / 4) - 180
+  const currentHaDeg = trueSolarTimeMin / 4 - 180
   const currentHaRad = (currentHaDeg * Math.PI) / 180
 
   // Solar zenith & altitude
@@ -242,7 +242,8 @@ export function calculateSolarTimes(
   const cosAzimuth =
     (Math.sin(decl) - Math.sin(latRad) * Math.cos(currentZenithRad)) /
     (Math.cos(latRad) * Math.sin(currentZenithRad))
-  let azimuthDeg = (Math.acos(Math.max(-1, Math.min(1, cosAzimuth))) * 180) / Math.PI
+  let azimuthDeg =
+    (Math.acos(Math.max(-1, Math.min(1, cosAzimuth))) * 180) / Math.PI
   if (currentHaDeg > 0) {
     azimuthDeg = 360 - azimuthDeg
   }
@@ -280,7 +281,10 @@ export function computeSolarLighting(
 
   // Map solar azimuth and altitude to 3D directional light vector
   const dist = 70
-  const altRad = Math.max(0.1, (Math.max(0, solar.solarAltitudeDeg) * Math.PI) / 180)
+  const altRad = Math.max(
+    0.1,
+    (Math.max(0, solar.solarAltitudeDeg) * Math.PI) / 180
+  )
   const azRad = (solar.solarAzimuthDeg * Math.PI) / 180
 
   const sunX = dist * Math.cos(altRad) * Math.sin(azRad)
@@ -337,7 +341,8 @@ export function computeSolarLighting(
 
   // Full Daylight (Sunny Philippine tropical sun)
   // Higher intensity near noon
-  const noonProximity = 1 - Math.min(1, Math.abs(pht.decimalHour - solar.sunsetDecimal / 2) / 6)
+  const noonProximity =
+    1 - Math.min(1, Math.abs(pht.decimalHour - solar.sunsetDecimal / 2) / 6)
   const dayIntensity = 1.6 + noonProximity * 0.4
 
   return {

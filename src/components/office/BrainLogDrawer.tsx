@@ -12,19 +12,48 @@ interface BrainLogDrawerProps {
   onGatherTriggered?: (createdCount: number) => void
 }
 
-const KIND_BADGES: Record<LearningKind, { bg: string; text: string; label: string }> = {
-  learned: { bg: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300', text: 'text-emerald-400', label: 'LEARNED' },
-  updated: { bg: 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300', text: 'text-cyan-400', label: 'UPDATED' },
-  duplicate: { bg: 'bg-slate-800 border-slate-700 text-slate-400', text: 'text-slate-400', label: 'DUPLICATE' },
-  rejected: { bg: 'bg-rose-500/20 border-rose-500/40 text-rose-300', text: 'text-rose-400', label: 'REJECTED' },
-  forgotten: { bg: 'bg-amber-500/20 border-amber-500/40 text-amber-300', text: 'text-amber-400', label: 'FORGOTTEN' },
+const KIND_BADGES: Record<
+  LearningKind,
+  { bg: string; text: string; label: string }
+> = {
+  learned: {
+    bg: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300',
+    text: 'text-emerald-400',
+    label: 'LEARNED',
+  },
+  updated: {
+    bg: 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300',
+    text: 'text-cyan-400',
+    label: 'UPDATED',
+  },
+  duplicate: {
+    bg: 'bg-slate-800 border-slate-700 text-slate-400',
+    text: 'text-slate-400',
+    label: 'DUPLICATE',
+  },
+  rejected: {
+    bg: 'bg-rose-500/20 border-rose-500/40 text-rose-300',
+    text: 'text-rose-400',
+    label: 'REJECTED',
+  },
+  forgotten: {
+    bg: 'bg-amber-500/20 border-amber-500/40 text-amber-300',
+    text: 'text-amber-400',
+    label: 'FORGOTTEN',
+  },
 }
 
-export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogDrawerProps) {
+export function BrainLogDrawer({
+  isOpen,
+  onClose,
+  onGatherTriggered,
+}: BrainLogDrawerProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL')
   const [selectedKind, setSelectedKind] = useState<string>('ALL')
-  const [isGatheringOn, setIsGatheringOn] = useState<boolean>(brainLearningManager.isGatheringEnabled())
+  const [isGatheringOn, setIsGatheringOn] = useState<boolean>(
+    brainLearningManager.isGatheringEnabled()
+  )
   const [tick, setTick] = useState(0)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
@@ -43,7 +72,8 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
 
   const filteredLogs = useMemo(() => {
     return logs.filter((item) => {
-      if (selectedCategory !== 'ALL' && item.category !== selectedCategory) return false
+      if (selectedCategory !== 'ALL' && item.category !== selectedCategory)
+        return false
       if (selectedKind !== 'ALL' && item.kind !== selectedKind) return false
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase()
@@ -68,7 +98,9 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
     setTick((t) => t + 1)
     onGatherTriggered?.(res.insightsCreated)
 
-    setToastMessage(`Boss delivered ${res.insightsCreated} new insights to THE BRAIN (${res.duplicatesSkipped} duplicates skipped).`)
+    setToastMessage(
+      `Boss delivered ${res.insightsCreated} new insights to THE BRAIN (${res.duplicatesSkipped} duplicates skipped).`
+    )
     setTimeout(() => {
       setToastMessage(null)
     }, 4500)
@@ -109,10 +141,10 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-fade-in">
+    <div className="animate-fade-in fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm">
       {/* Toast Notification Banner */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-60 flex items-center gap-2 rounded-xl border border-cyan-500/50 bg-slate-950/95 px-4 py-2.5 font-mono text-xs font-bold text-cyan-300 shadow-xl shadow-cyan-950/50 animate-bounce">
+        <div className="fixed top-5 right-5 z-60 flex animate-bounce items-center gap-2 rounded-xl border border-cyan-500/50 bg-slate-950/95 px-4 py-2.5 font-mono text-xs font-bold text-cyan-300 shadow-xl shadow-cyan-950/50">
           <span className="text-base">🧠</span>
           <span>{toastMessage}</span>
         </div>
@@ -120,13 +152,13 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
 
       <div className="relative flex h-full w-full max-w-2xl flex-col border-l border-slate-800 bg-slate-950/95 text-slate-100 shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800/80 px-4 py-3 bg-slate-900/40">
+        <div className="flex items-center justify-between border-b border-slate-800/80 bg-slate-900/40 px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <span className="h-3 w-3 rounded-full bg-cyan-400 animate-pulse shadow-md shadow-cyan-400/50" />
+            <span className="h-3 w-3 animate-pulse rounded-full bg-cyan-400 shadow-md shadow-cyan-400/50" />
             <span className="font-mono text-sm font-bold tracking-wider text-slate-100 uppercase">
               THE BRAIN // LEARNING LOG
             </span>
-            <span className="rounded bg-cyan-950/80 border border-cyan-500/40 px-1.5 py-0.5 font-mono text-[9px] font-bold text-cyan-300">
+            <span className="rounded border border-cyan-500/40 bg-cyan-950/80 px-1.5 py-0.5 font-mono text-[9px] font-bold text-cyan-300">
               {insights.filter((i) => !i.deleted).length} ACTIVE INSIGHTS
             </span>
           </div>
@@ -135,7 +167,7 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
             <button
               type="button"
               onClick={onClose}
-              className="cursor-pointer rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-colors"
+              className="cursor-pointer rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-100"
               aria-label="Close Brain Log"
             >
               ✕
@@ -149,7 +181,7 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
             <button
               type="button"
               onClick={handleRunGather}
-              className="cursor-pointer flex items-center gap-1.5 rounded-lg border border-cyan-500/50 bg-cyan-950/60 px-3 py-1 font-mono text-xs font-bold text-cyan-200 hover:bg-cyan-900/80 transition-colors whitespace-nowrap shadow-sm"
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-cyan-500/50 bg-cyan-950/60 px-3 py-1 font-mono text-xs font-bold whitespace-nowrap text-cyan-200 shadow-sm transition-colors hover:bg-cyan-900/80"
             >
               <span>🧠</span>
               <span>Run Boss Gather Now</span>
@@ -158,7 +190,7 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
             <button
               type="button"
               onClick={handleToggleGathering}
-              className={`cursor-pointer rounded-lg border px-2.5 py-1 font-mono text-[11px] font-bold transition-colors whitespace-nowrap ${
+              className={`cursor-pointer rounded-lg border px-2.5 py-1 font-mono text-[11px] font-bold whitespace-nowrap transition-colors ${
                 isGatheringOn
                   ? 'border-emerald-500/40 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60'
                   : 'border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800'
@@ -170,12 +202,14 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
 
           <div className="flex items-center gap-2">
             <span className="font-mono text-[10px] text-slate-400">
-              Tokens: {brainLearningManager.getDailyTokensUsed().toLocaleString()} / {brainLearningManager.getDailyTokenCap().toLocaleString()}
+              Tokens:{' '}
+              {brainLearningManager.getDailyTokensUsed().toLocaleString()} /{' '}
+              {brainLearningManager.getDailyTokenCap().toLocaleString()}
             </span>
             <button
               type="button"
               onClick={handleDownloadCSV}
-              className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-[11px] font-bold text-slate-300 hover:bg-slate-800 transition-colors whitespace-nowrap"
+              className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-[11px] font-bold whitespace-nowrap text-slate-300 transition-colors hover:bg-slate-800"
             >
               Export CSV ⬇
             </button>
@@ -185,20 +219,28 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
         {/* Recent Runs Horizontal Carousel */}
         {runs.length > 0 && (
           <div className="border-b border-slate-800/70 bg-slate-950/60 px-4 py-2">
-            <span className="block font-mono text-[9px] font-bold text-slate-400 uppercase tracking-wider pb-1.5">
+            <span className="block pb-1.5 font-mono text-[9px] font-bold tracking-wider text-slate-400 uppercase">
               RECENT GATHER RUNS ({runs.length})
             </span>
             <div className="flex items-center gap-2 overflow-x-auto pb-1">
               {runs.slice(0, 5).map((r) => (
                 <div
                   key={r.id}
-                  className="rounded-lg border border-slate-800 bg-slate-900/60 px-2.5 py-1 font-mono text-[10px] text-slate-300 shrink-0 flex items-center gap-2"
+                  className="flex shrink-0 items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-2.5 py-1 font-mono text-[10px] text-slate-300"
                 >
-                  <span className="font-bold text-cyan-400">{r.id.replace('run_', 'RUN #')}</span>
+                  <span className="font-bold text-cyan-400">
+                    {r.id.replace('run_', 'RUN #')}
+                  </span>
                   <span className="text-slate-400">({r.trigger})</span>
-                  <span className="text-emerald-400">+{r.insightsCreated} learned</span>
-                  <span className="text-slate-500">{r.duplicatesSkipped} dupes</span>
-                  <span className="text-slate-400">{r.tokensIn + r.tokensOut} tok</span>
+                  <span className="text-emerald-400">
+                    +{r.insightsCreated} learned
+                  </span>
+                  <span className="text-slate-500">
+                    {r.duplicatesSkipped} dupes
+                  </span>
+                  <span className="text-slate-400">
+                    {r.tokensIn + r.tokensOut} tok
+                  </span>
                 </div>
               ))}
             </div>
@@ -212,7 +254,7 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
             placeholder="Search learning entries..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 min-w-[140px] rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+            className="min-w-[140px] flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-xs text-slate-200 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
           />
 
           <select
@@ -244,10 +286,10 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
         </div>
 
         {/* Entries Stream */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
+        <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
           {filteredLogs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 rounded-xl border border-dashed border-slate-800 p-6 text-center">
-              <span className="text-2xl mb-1.5">🧠</span>
+            <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-slate-800 p-6 text-center">
+              <span className="mb-1.5 text-2xl">🧠</span>
               <span className="font-mono text-xs text-slate-400">
                 No learning log entries matching filter criteria.
               </span>
@@ -260,26 +302,28 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
               return (
                 <div
                   key={entry.id}
-                  className="rounded-xl border border-slate-800/80 bg-slate-900/40 p-3 space-y-1.5 hover:border-slate-700 transition-colors"
+                  className="space-y-1.5 rounded-xl border border-slate-800/80 bg-slate-900/40 p-3 transition-colors hover:border-slate-700"
                 >
-                  <div className="flex items-center justify-between text-[10px] font-mono">
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center justify-between font-mono text-[10px]">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-slate-400">{entry.tsPht}</span>
-                      <span className={`rounded border px-1.5 py-0.2 font-bold ${badge.bg}`}>
+                      <span
+                        className={`py-0.2 rounded border px-1.5 font-bold ${badge.bg}`}
+                      >
                         {badge.label}
                       </span>
                       {entry.agentId && (
-                        <span className="rounded bg-indigo-950/60 border border-indigo-500/30 px-1.5 py-0.2 text-indigo-300 font-bold uppercase">
+                        <span className="py-0.2 rounded border border-indigo-500/30 bg-indigo-950/60 px-1.5 font-bold text-indigo-300 uppercase">
                           {entry.agentId}
                         </span>
                       )}
-                      <span className="rounded bg-slate-800 px-1.5 py-0.2 text-slate-400">
+                      <span className="py-0.2 rounded bg-slate-800 px-1.5 text-slate-400">
                         {entry.category}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      <span className="text-slate-400 font-bold">
+                      <span className="font-bold text-slate-400">
                         {Math.round(entry.confidence * 100)}% conf
                       </span>
                       {linkedInsight && (
@@ -287,7 +331,9 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
                           {linkedInsight.pinned ? (
                             <button
                               type="button"
-                              onClick={() => handleUnpinInsight(linkedInsight.id)}
+                              onClick={() =>
+                                handleUnpinInsight(linkedInsight.id)
+                              }
                               className="cursor-pointer text-amber-400 hover:text-amber-300"
                               title="Unpin insight"
                             >
@@ -305,7 +351,9 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
                           )}
                           <button
                             type="button"
-                            onClick={() => handleForgetInsight(linkedInsight.id)}
+                            onClick={() =>
+                              handleForgetInsight(linkedInsight.id)
+                            }
                             className="cursor-pointer text-[10px] text-amber-500 hover:underline"
                             title="Forget insight"
                           >
@@ -313,7 +361,9 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDeleteInsight(linkedInsight.id)}
+                            onClick={() =>
+                              handleDeleteInsight(linkedInsight.id)
+                            }
                             className="cursor-pointer text-slate-500 hover:text-rose-400"
                             title="Delete insight"
                           >
@@ -325,16 +375,19 @@ export function BrainLogDrawer({ isOpen, onClose, onGatherTriggered }: BrainLogD
                   </div>
 
                   {/* Insight Text */}
-                  <p className="font-sans text-xs text-slate-200 leading-relaxed">
+                  <p className="font-sans text-xs leading-relaxed text-slate-200">
                     {entry.text}
                   </p>
 
                   {/* Source IDs */}
                   {entry.sourceIds && entry.sourceIds.length > 0 && (
-                    <div className="flex items-center gap-1 overflow-x-auto pt-0.5 text-[9px] font-mono text-slate-500">
+                    <div className="flex items-center gap-1 overflow-x-auto pt-0.5 font-mono text-[9px] text-slate-500">
                       <span>Sources:</span>
                       {entry.sourceIds.map((src) => (
-                        <span key={src} className="rounded bg-slate-800/80 px-1 py-0.2 text-slate-400">
+                        <span
+                          key={src}
+                          className="py-0.2 rounded bg-slate-800/80 px-1 text-slate-400"
+                        >
                           {src}
                         </span>
                       ))}

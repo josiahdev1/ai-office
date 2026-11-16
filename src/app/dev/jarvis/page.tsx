@@ -13,7 +13,8 @@ import {
 export default function JarvisDevLabPage() {
   const [selectedState, setSelectedState] = useState<JarvisCoreState>('idle')
   const [renderMode, setRenderMode] = useState<'3d' | '2d'>('3d')
-  const [matrixSize, setMatrixSize] = useState<ArcReactorSizeVariant>('interior')
+  const [matrixSize, setMatrixSize] =
+    useState<ArcReactorSizeVariant>('interior')
   const [progress, setProgress] = useState(65)
   const [audioLevel, setAudioLevel] = useState(0.55)
   const [forceHoverLabel, setForceHoverLabel] = useState(true)
@@ -47,27 +48,27 @@ export default function JarvisDevLabPage() {
   const activeConfig = ARC_REACTOR_STATE_CONFIG[selectedState]
 
   return (
-    <div className="min-h-screen bg-[#040812] text-slate-100 font-sans selection:bg-cyan-500/30">
+    <div className="min-h-screen bg-[#040812] font-sans text-slate-100 selection:bg-cyan-500/30">
       {/* Top Dev Header HUD */}
       <header className="relative z-30 border-b border-cyan-500/20 bg-[#050b16]/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-3.5">
           <div className="flex items-center gap-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_#00e5ff] animate-pulse" />
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_10px_#00e5ff]" />
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-mono text-sm font-bold tracking-widest text-cyan-300 uppercase">
                   JARVIS // ARC REACTOR HOLOGRAPHIC LAB (PHASE J1)
                 </h1>
-                <span className="rounded border border-cyan-500/40 bg-cyan-950/60 px-2 py-0.5 font-mono text-[10px] font-semibold text-cyan-300 whitespace-nowrap">
+                <span className="rounded border border-cyan-500/40 bg-cyan-950/60 px-2 py-0.5 font-mono text-[10px] font-semibold whitespace-nowrap text-cyan-300">
                   SHARED 3D + 2D ENGINE
                 </span>
               </div>
               <p className="font-mono text-[11px] text-slate-400">
                 Single shared component powering both the Office Brain Core (
-                <code className="text-cyan-300">size=&quot;office&quot;</code>) and the
-                Jarvis Chamber Interior (
-                <code className="text-cyan-300">size=&quot;interior&quot;</code>) across
-                all 6 states.
+                <code className="text-cyan-300">size=&quot;office&quot;</code>)
+                and the Jarvis Chamber Interior (
+                <code className="text-cyan-300">size=&quot;interior&quot;</code>
+                ) across all 6 states.
               </p>
             </div>
           </div>
@@ -82,7 +83,7 @@ export default function JarvisDevLabPage() {
               <button
                 type="button"
                 onClick={() => setRenderMode('3d')}
-                className={`cursor-pointer rounded-md px-3 py-1 font-mono text-xs font-bold transition-all whitespace-nowrap ${
+                className={`cursor-pointer rounded-md px-3 py-1 font-mono text-xs font-bold whitespace-nowrap transition-all ${
                   renderMode === '3d'
                     ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(0,229,255,0.5)]'
                     : 'text-slate-400 hover:text-slate-200'
@@ -93,7 +94,7 @@ export default function JarvisDevLabPage() {
               <button
                 type="button"
                 onClick={() => setRenderMode('2d')}
-                className={`cursor-pointer rounded-md px-3 py-1 font-mono text-xs font-bold transition-all whitespace-nowrap ${
+                className={`cursor-pointer rounded-md px-3 py-1 font-mono text-xs font-bold whitespace-nowrap transition-all ${
                   renderMode === '2d'
                     ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(0,229,255,0.5)]'
                     : 'text-slate-400 hover:text-slate-200'
@@ -105,13 +106,13 @@ export default function JarvisDevLabPage() {
 
             <Link
               href="/"
-              className="rounded-lg border border-slate-700/80 bg-slate-900/90 px-3 py-1.5 font-mono text-xs font-semibold text-slate-200 transition hover:border-cyan-500/50 hover:text-cyan-300 whitespace-nowrap"
+              className="rounded-lg border border-slate-700/80 bg-slate-900/90 px-3 py-1.5 font-mono text-xs font-semibold whitespace-nowrap text-slate-200 transition hover:border-cyan-500/50 hover:text-cyan-300"
             >
               ← Back to HQ (3D)
             </Link>
             <Link
               href="/?v=2"
-              className="rounded-lg border border-slate-700/80 bg-slate-900/90 px-3 py-1.5 font-mono text-xs font-semibold text-slate-200 transition hover:border-cyan-500/50 hover:text-cyan-300 whitespace-nowrap"
+              className="rounded-lg border border-slate-700/80 bg-slate-900/90 px-3 py-1.5 font-mono text-xs font-semibold whitespace-nowrap text-slate-200 transition hover:border-cyan-500/50 hover:text-cyan-300"
             >
               HQ (2D ?v=2)
             </Link>
@@ -128,8 +129,8 @@ export default function JarvisDevLabPage() {
                 ACTIVE CORE STATE SELECTOR
               </div>
               <p className="mt-0.5 font-mono text-[11px] text-slate-400">
-                Select any of the 6 states to inspect live breathing, ring counter-rotation,
-                particle vortex, and waveform response.
+                Select any of the 6 states to inspect live breathing, ring
+                counter-rotation, particle vortex, and waveform response.
               </p>
             </div>
 
@@ -143,7 +144,7 @@ export default function JarvisDevLabPage() {
                     type="button"
                     data-testid={`state-btn-${st}`}
                     onClick={() => setSelectedState(st)}
-                    className={`cursor-pointer flex items-center gap-2 rounded-lg border px-3 py-1.5 font-mono text-xs font-bold transition-all whitespace-nowrap ${
+                    className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap transition-all ${
                       isSelected
                         ? 'border-cyan-400 bg-cyan-950/80 text-white shadow-[0_0_15px_rgba(0,229,255,0.28)]'
                         : 'border-slate-800 bg-slate-900/70 text-slate-400 hover:border-slate-700 hover:text-slate-200'
@@ -215,7 +216,7 @@ export default function JarvisDevLabPage() {
               <button
                 type="button"
                 onClick={() => setForceHoverLabel((v) => !v)}
-                className={`cursor-pointer rounded-md border px-2.5 py-1 font-mono text-xs font-bold transition whitespace-nowrap ${
+                className={`cursor-pointer rounded-md border px-2.5 py-1 font-mono text-xs font-bold whitespace-nowrap transition ${
                   forceHoverLabel
                     ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
                     : 'border-slate-700 bg-slate-800 text-slate-400'
@@ -237,7 +238,7 @@ export default function JarvisDevLabPage() {
               <button
                 type="button"
                 onClick={() => setReducedMotion((v) => !v)}
-                className={`cursor-pointer rounded-md border px-2.5 py-1 font-mono text-xs font-bold transition whitespace-nowrap ${
+                className={`cursor-pointer rounded-md border px-2.5 py-1 font-mono text-xs font-bold whitespace-nowrap transition ${
                   reducedMotion
                     ? 'border-amber-400 bg-amber-500/20 text-amber-300'
                     : 'border-slate-700 bg-slate-800 text-slate-400'
@@ -253,26 +254,30 @@ export default function JarvisDevLabPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-orange-400 animate-ping" />
+                  <span className="h-2 w-2 animate-ping rounded-full bg-orange-400" />
                   <span className="font-mono text-xs font-bold tracking-wider text-orange-400 uppercase">
                     BEAT SYNCHRONIZATION SIMULATOR (PHASE J10)
                   </span>
                 </div>
                 <p className="mt-0.5 font-mono text-[11px] text-slate-400">
-                  Simulate real synchronous arrival events: word boundaries, sentence accents, streamed token chunks, and task progress pulses.
+                  Simulate real synchronous arrival events: word boundaries,
+                  sentence accents, streamed token chunks, and task progress
+                  pulses.
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[10px] text-slate-400">
                   PULSE INTENSITY:{' '}
-                  <strong className="text-orange-300">{(beatPulse * 100).toFixed(0)}%</strong>
+                  <strong className="text-orange-300">
+                    {(beatPulse * 100).toFixed(0)}%
+                  </strong>
                 </span>
                 <button
                   type="button"
                   data-testid="beat-sim-auto-btn"
                   onClick={() => setAutoBeatEnabled((v) => !v)}
-                  className={`cursor-pointer rounded-md border px-3 py-1 font-mono text-xs font-bold transition whitespace-nowrap ${
+                  className={`cursor-pointer rounded-md border px-3 py-1 font-mono text-xs font-bold whitespace-nowrap transition ${
                     autoBeatEnabled
                       ? 'border-orange-400 bg-orange-500/25 text-orange-200 shadow-[0_0_12px_rgba(249,115,22,0.4)]'
                       : 'border-slate-700 bg-slate-900 text-slate-400 hover:text-slate-200'
@@ -288,7 +293,7 @@ export default function JarvisDevLabPage() {
                 type="button"
                 data-testid="beat-sim-word-btn"
                 onClick={() => triggerBeat(0.65, 'speaking')}
-                className="cursor-pointer rounded-lg border border-cyan-500/40 bg-cyan-950/60 px-3 py-1.5 font-mono text-xs font-semibold text-cyan-200 transition hover:border-cyan-400 hover:bg-cyan-900/60 active:scale-95 whitespace-nowrap"
+                className="cursor-pointer rounded-lg border border-cyan-500/40 bg-cyan-950/60 px-3 py-1.5 font-mono text-xs font-semibold whitespace-nowrap text-cyan-200 transition hover:border-cyan-400 hover:bg-cyan-900/60 active:scale-95"
               >
                 🗣 Word Boundary (0.65)
               </button>
@@ -296,7 +301,7 @@ export default function JarvisDevLabPage() {
                 type="button"
                 data-testid="beat-sim-sentence-btn"
                 onClick={() => triggerBeat(1.0, 'speaking')}
-                className="cursor-pointer rounded-lg border border-cyan-400 bg-cyan-950/80 px-3 py-1.5 font-mono text-xs font-bold text-cyan-100 transition hover:bg-cyan-900 active:scale-95 whitespace-nowrap shadow-[0_0_10px_rgba(0,229,255,0.2)]"
+                className="cursor-pointer rounded-lg border border-cyan-400 bg-cyan-950/80 px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-cyan-100 shadow-[0_0_10px_rgba(0,229,255,0.2)] transition hover:bg-cyan-900 active:scale-95"
               >
                 💥 Sentence Boundary (1.00)
               </button>
@@ -304,7 +309,7 @@ export default function JarvisDevLabPage() {
                 type="button"
                 data-testid="beat-sim-token-btn"
                 onClick={() => triggerBeat(0.9, 'thinking')}
-                className="cursor-pointer rounded-lg border border-amber-500/50 bg-amber-950/60 px-3 py-1.5 font-mono text-xs font-bold text-amber-200 transition hover:border-amber-400 hover:bg-amber-900/60 active:scale-95 whitespace-nowrap"
+                className="cursor-pointer rounded-lg border border-amber-500/50 bg-amber-950/60 px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-amber-200 transition hover:border-amber-400 hover:bg-amber-900/60 active:scale-95"
               >
                 ⚡ Streamed Token Chunk (0.90)
               </button>
@@ -315,7 +320,7 @@ export default function JarvisDevLabPage() {
                   setProgress((p) => (p >= 95 ? 10 : p + 10))
                   triggerBeat(0.85, 'executing')
                 }}
-                className="cursor-pointer rounded-lg border border-indigo-500/50 bg-indigo-950/60 px-3 py-1.5 font-mono text-xs font-bold text-indigo-200 transition hover:border-indigo-400 hover:bg-indigo-900/60 active:scale-95 whitespace-nowrap"
+                className="cursor-pointer rounded-lg border border-indigo-500/50 bg-indigo-950/60 px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-indigo-200 transition hover:border-indigo-400 hover:bg-indigo-900/60 active:scale-95"
               >
                 📈 Task Progress Step (+10%)
               </button>
@@ -326,7 +331,7 @@ export default function JarvisDevLabPage() {
                   setAudioLevel(0.85)
                   triggerBeat(0.8, 'listening')
                 }}
-                className="cursor-pointer rounded-lg border border-emerald-500/50 bg-emerald-950/60 px-3 py-1.5 font-mono text-xs font-bold text-emerald-200 transition hover:border-emerald-400 hover:bg-emerald-900/60 active:scale-95 whitespace-nowrap"
+                className="cursor-pointer rounded-lg border border-emerald-500/50 bg-emerald-950/60 px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-emerald-200 transition hover:border-emerald-400 hover:bg-emerald-900/60 active:scale-95"
               >
                 🎙 Syllable Burst Ripple
               </button>
@@ -337,7 +342,7 @@ export default function JarvisDevLabPage() {
                   setSelectedState('listening')
                   triggerBeat(1.0, 'listening')
                 }}
-                className="cursor-pointer rounded-lg border border-rose-500/50 bg-rose-950/60 px-3 py-1.5 font-mono text-xs font-bold text-rose-200 transition hover:border-rose-400 hover:bg-rose-900/60 active:scale-95 whitespace-nowrap"
+                className="cursor-pointer rounded-lg border border-rose-500/50 bg-rose-950/60 px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-rose-200 transition hover:border-rose-400 hover:bg-rose-900/60 active:scale-95"
               >
                 🛑 Simulate Barge-In (Interrupt)
               </button>
@@ -349,12 +354,15 @@ export default function JarvisDevLabPage() {
         <section>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-mono text-xs font-bold tracking-widest text-cyan-400 uppercase">
-              1. DUAL SIZE COMPARISON STAGE — OFFICE BRAIN CORE vs INTERIOR CHAMBER
+              1. DUAL SIZE COMPARISON STAGE — OFFICE BRAIN CORE vs INTERIOR
+              CHAMBER
             </h2>
             <span className="font-mono text-[11px] text-slate-400">
               Active State:{' '}
-              <strong className="text-cyan-300 uppercase">{selectedState}</strong> (
-              {activeConfig.subtitle})
+              <strong className="text-cyan-300 uppercase">
+                {selectedState}
+              </strong>{' '}
+              ({activeConfig.subtitle})
             </span>
           </div>
 
@@ -370,10 +378,11 @@ export default function JarvisDevLabPage() {
                     OFFICE BRAIN CORE VARIANT (size=&quot;office&quot;)
                   </span>
                   <p className="font-mono text-[11px] text-slate-400">
-                    3 concentric segmented rings • 28 orbital particles • Compact footprint
+                    3 concentric segmented rings • 28 orbital particles •
+                    Compact footprint
                   </p>
                 </div>
-                <span className="rounded border border-cyan-500/30 bg-cyan-950/50 px-2 py-0.5 font-mono text-[10px] text-cyan-300 whitespace-nowrap">
+                <span className="rounded border border-cyan-500/30 bg-cyan-950/50 px-2 py-0.5 font-mono text-[10px] whitespace-nowrap text-cyan-300">
                   3 RINGS / LOW DETAIL
                 </span>
               </div>
@@ -403,10 +412,11 @@ export default function JarvisDevLabPage() {
                     JARVIS INTERIOR CHAMBER VARIANT (size=&quot;interior&quot;)
                   </span>
                   <p className="font-mono text-[11px] text-slate-400">
-                    7 concentric rings • Orange sweep • Micro-text strip • Parallax tilt
+                    7 concentric rings • Orange sweep • Micro-text strip •
+                    Parallax tilt
                   </p>
                 </div>
-                <span className="rounded border border-cyan-400/50 bg-cyan-950/70 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-200 whitespace-nowrap">
+                <span className="rounded border border-cyan-400/50 bg-cyan-950/70 px-2 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap text-cyan-200">
                   7 RINGS / HIGH DETAIL
                 </span>
               </div>
@@ -435,9 +445,9 @@ export default function JarvisDevLabPage() {
                 2. SIMULTANEOUS 6-STATE HOLOGRAPHIC MATRIX
               </h2>
               <p className="font-mono text-[11px] text-slate-400">
-                All 6 required states (idle, listening, thinking, executing, speaking,
-                error) rendered side-by-side. All pulse frequencies strictly &lt; 2.5 Hz for
-                WCAG seizure safety.
+                All 6 required states (idle, listening, thinking, executing,
+                speaking, error) rendered side-by-side. All pulse frequencies
+                strictly &lt; 2.5 Hz for WCAG seizure safety.
               </p>
             </div>
 
@@ -445,7 +455,7 @@ export default function JarvisDevLabPage() {
               <button
                 type="button"
                 onClick={() => setMatrixSize('office')}
-                className={`cursor-pointer rounded px-2.5 py-1 font-mono text-[11px] font-bold transition whitespace-nowrap ${
+                className={`cursor-pointer rounded px-2.5 py-1 font-mono text-[11px] font-bold whitespace-nowrap transition ${
                   matrixSize === 'office'
                     ? 'bg-cyan-500 text-slate-950'
                     : 'text-slate-400 hover:text-white'
@@ -456,7 +466,7 @@ export default function JarvisDevLabPage() {
               <button
                 type="button"
                 onClick={() => setMatrixSize('interior')}
-                className={`cursor-pointer rounded px-2.5 py-1 font-mono text-[11px] font-bold transition whitespace-nowrap ${
+                className={`cursor-pointer rounded px-2.5 py-1 font-mono text-[11px] font-bold whitespace-nowrap transition ${
                   matrixSize === 'interior'
                     ? 'bg-cyan-500 text-slate-950'
                     : 'text-slate-400 hover:text-white'
@@ -490,12 +500,13 @@ export default function JarvisDevLabPage() {
                           boxShadow: `0 0 8px ${cfg.primaryColor}`,
                         }}
                       />
-                      <span className="font-mono text-xs font-bold uppercase text-white">
+                      <span className="font-mono text-xs font-bold text-white uppercase">
                         {st}
                       </span>
                     </div>
                     <span className="font-mono text-[10px] text-slate-400">
-                      {cfg.pulseHz.toFixed(2)} Hz • {cfg.ringSpeedMultiplier}x RPM
+                      {cfg.pulseHz.toFixed(2)} Hz • {cfg.ringSpeedMultiplier}x
+                      RPM
                     </span>
                   </div>
 
@@ -514,7 +525,9 @@ export default function JarvisDevLabPage() {
 
                   <div className="flex items-center justify-between border-t border-slate-800/80 bg-slate-950/70 px-4 py-2 font-mono text-[10px] text-slate-400">
                     <span>{cfg.subtitle}</span>
-                    <span style={{ color: cfg.primaryColor }}>{cfg.primaryColor}</span>
+                    <span style={{ color: cfg.primaryColor }}>
+                      {cfg.primaryColor}
+                    </span>
                   </div>
                 </div>
               )

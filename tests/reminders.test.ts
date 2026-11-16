@@ -3,9 +3,7 @@ import {
   parseReminderNaturalLanguage,
   phtToUtcDate,
 } from '@/lib/reminders/parse'
-import {
-  ReminderManager,
-} from '@/lib/reminders/reminderEngine'
+import { ReminderManager } from '@/lib/reminders/reminderEngine'
 import { executeJarvisTool } from '@/lib/jarvis/orchestrator'
 
 describe('JARVIS Reminders & Natural Language Parser (Phase K8)', () => {
@@ -23,14 +21,18 @@ describe('JARVIS Reminders & Natural Language Parser (Phase K8)', () => {
       expect(res2pm.triggerKind).toBe('time')
       expect(res2pm.dueAt).toBeDefined()
       // 2:00 PM PHT = 14:00 PHT = 06:00 UTC
-      expect(new Date(res2pm.dueAt!).toISOString()).toBe('2026-11-12T06:00:00.000Z')
+      expect(new Date(res2pm.dueAt!).toISOString()).toBe(
+        '2026-11-12T06:00:00.000Z'
+      )
       expect(res2pm.readBack).toContain('2:00 PM Philippine time')
 
       const res230 = parseReminderNaturalLanguage('remind me at 2:30 pm', {
         referenceDate: refMorningPHT,
       })
       expect(res230.ok).toBe(true)
-      expect(new Date(res230.dueAt!).toISOString()).toBe('2026-11-12T06:30:00.000Z')
+      expect(new Date(res230.dueAt!).toISOString()).toBe(
+        '2026-11-12T06:30:00.000Z'
+      )
       expect(res230.readBack).toContain('2:30 PM Philippine time')
     })
 
@@ -39,16 +41,23 @@ describe('JARVIS Reminders & Natural Language Parser (Phase K8)', () => {
         referenceDate: refMorningPHT,
       })
       expect(res.ok).toBe(true)
-      expect(new Date(res.dueAt!).toISOString()).toBe('2026-11-12T06:00:00.000Z')
+      expect(new Date(res.dueAt!).toISOString()).toBe(
+        '2026-11-12T06:00:00.000Z'
+      )
     })
 
     it('parses relative offsets "in 10 minutes" and "in 2 hours"', () => {
-      const res10m = parseReminderNaturalLanguage('remind me in 10 minutes to review PR', {
-        referenceDate: refMorningPHT,
-      })
+      const res10m = parseReminderNaturalLanguage(
+        'remind me in 10 minutes to review PR',
+        {
+          referenceDate: refMorningPHT,
+        }
+      )
       expect(res10m.ok).toBe(true)
       // 10:00 AM + 10 mins = 10:10 AM PHT (02:10 UTC)
-      expect(new Date(res10m.dueAt!).toISOString()).toBe('2026-11-12T02:10:00.000Z')
+      expect(new Date(res10m.dueAt!).toISOString()).toBe(
+        '2026-11-12T02:10:00.000Z'
+      )
       expect(res10m.title).toBe('review PR')
 
       const res2h = parseReminderNaturalLanguage('call me in 2 hours', {
@@ -56,7 +65,9 @@ describe('JARVIS Reminders & Natural Language Parser (Phase K8)', () => {
       })
       expect(res2h.ok).toBe(true)
       // 10:00 AM + 2 hours = 12:00 PM PHT (04:00 UTC)
-      expect(new Date(res2h.dueAt!).toISOString()).toBe('2026-11-12T04:00:00.000Z')
+      expect(new Date(res2h.dueAt!).toISOString()).toBe(
+        '2026-11-12T04:00:00.000Z'
+      )
     })
 
     it('parses "tomorrow at 9" and "tomorrow at 9am"', () => {
@@ -65,8 +76,12 @@ describe('JARVIS Reminders & Natural Language Parser (Phase K8)', () => {
       })
       expect(res.ok).toBe(true)
       // Tomorrow Nov 13 at 9:00 AM PHT = 01:00 UTC Nov 13
-      expect(new Date(res.dueAt!).toISOString()).toBe('2026-11-13T01:00:00.000Z')
-      expect(res.readBack).toContain('tomorrow, Friday 13 November, at 9:00 AM Philippine time')
+      expect(new Date(res.dueAt!).toISOString()).toBe(
+        '2026-11-13T01:00:00.000Z'
+      )
+      expect(res.readBack).toContain(
+        'tomorrow, Friday 13 November, at 9:00 AM Philippine time'
+      )
     })
 
     it('parses "next Monday at 3pm"', () => {
@@ -75,14 +90,21 @@ describe('JARVIS Reminders & Natural Language Parser (Phase K8)', () => {
       })
       expect(res.ok).toBe(true)
       // Thursday Nov 12 -> next Monday is Nov 16 at 3:00 PM PHT (07:00 UTC)
-      expect(new Date(res.dueAt!).toISOString()).toBe('2026-11-16T07:00:00.000Z')
-      expect(res.readBack).toContain('Monday 16 November, at 3:00 PM Philippine time')
+      expect(new Date(res.dueAt!).toISOString()).toBe(
+        '2026-11-16T07:00:00.000Z'
+      )
+      expect(res.readBack).toContain(
+        'Monday 16 November, at 3:00 PM Philippine time'
+      )
     })
 
     it('parses "every weekday at 8:30" (recurring)', () => {
-      const res = parseReminderNaturalLanguage('every weekday at 8:30 call me about the standup', {
-        referenceDate: refMorningPHT,
-      })
+      const res = parseReminderNaturalLanguage(
+        'every weekday at 8:30 call me about the standup',
+        {
+          referenceDate: refMorningPHT,
+        }
+      )
       expect(res.ok).toBe(true)
       expect(res.triggerKind).toBe('recurring')
       expect(res.recurrence?.pattern).toBe('weekdays')
@@ -97,14 +119,21 @@ describe('JARVIS Reminders & Natural Language Parser (Phase K8)', () => {
       })
       expect(resNoon.ok).toBe(true)
       // 12:00 PM PHT = 04:00 UTC
-      expect(new Date(resNoon.dueAt!).toISOString()).toBe('2026-11-12T04:00:00.000Z')
+      expect(new Date(resNoon.dueAt!).toISOString()).toBe(
+        '2026-11-12T04:00:00.000Z'
+      )
 
-      const resMidnight = parseReminderNaturalLanguage('call me tomorrow at midnight', {
-        referenceDate: refMorningPHT,
-      })
+      const resMidnight = parseReminderNaturalLanguage(
+        'call me tomorrow at midnight',
+        {
+          referenceDate: refMorningPHT,
+        }
+      )
       expect(resMidnight.ok).toBe(true)
       // Tomorrow Nov 13 midnight PHT = Nov 12 16:00 UTC
-      expect(new Date(resMidnight.dueAt!).toISOString()).toBe('2026-11-12T16:00:00.000Z')
+      expect(new Date(resMidnight.dueAt!).toISOString()).toBe(
+        '2026-11-12T16:00:00.000Z'
+      )
     })
 
     it('rolls over a time already past today to tomorrow with explicit read-back', () => {
@@ -116,9 +145,13 @@ describe('JARVIS Reminders & Natural Language Parser (Phase K8)', () => {
       expect(res.ok).toBe(true)
       expect(res.isRolledOver).toBe(true)
       // Rolls over to tomorrow Nov 13 at 2:00 PM PHT (06:00 UTC Nov 13)
-      expect(new Date(res.dueAt!).toISOString()).toBe('2026-11-13T06:00:00.000Z')
+      expect(new Date(res.dueAt!).toISOString()).toBe(
+        '2026-11-13T06:00:00.000Z'
+      )
       expect(res.readBack).toContain('already passed today')
-      expect(res.readBack).toContain('tomorrow, Friday 13 November, at 2:00 PM Philippine time')
+      expect(res.readBack).toContain(
+        'tomorrow, Friday 13 November, at 2:00 PM Philippine time'
+      )
     })
 
     it('handles month and year boundaries correctly', () => {
@@ -146,9 +179,12 @@ describe('JARVIS Reminders & Natural Language Parser (Phase K8)', () => {
       expect(resPast.ok).toBe(false)
       expect(resPast.error).toBe('past_time_rejected')
 
-      const resAmbiguous = parseReminderNaturalLanguage('call me sometime soon', {
-        referenceDate: refMorningPHT,
-      })
+      const resAmbiguous = parseReminderNaturalLanguage(
+        'call me sometime soon',
+        {
+          referenceDate: refMorningPHT,
+        }
+      )
       expect(resAmbiguous.ok).toBe(false)
       expect(resAmbiguous.clarificationNeeded).toBe(true)
       expect(resAmbiguous.clarifyingQuestion).toBeDefined()
@@ -241,7 +277,9 @@ describe('JARVIS Reminders & Natural Language Parser (Phase K8)', () => {
       expect(rem.status).toBe('missed')
 
       const events = rm.getReminderEvents()
-      const missedEvent = events.find((e) => e.reminder_id === rem.id && e.kind === 'missed')
+      const missedEvent = events.find(
+        (e) => e.reminder_id === rem.id && e.kind === 'missed'
+      )
       expect(missedEvent).toBeDefined()
       expect(missedEvent?.detail).toContain('You missed a call from JARVIS')
     })
@@ -255,7 +293,9 @@ describe('JARVIS Reminders & Natural Language Parser (Phase K8)', () => {
       })
 
       // Real task completion event arrives
-      const triggered = rm.onTaskCompleted('Run full QA report regression verification')
+      const triggered = rm.onTaskCompleted(
+        'Run full QA report regression verification'
+      )
       expect(triggered.length).toBe(1)
       expect(triggered[0].id).toBe(rem.id)
       expect(triggered[0].status).toBe('ringing')
@@ -278,7 +318,8 @@ describe('JARVIS Reminders & Natural Language Parser (Phase K8)', () => {
     it('sanitizes secrets and credentials from reminder text', () => {
       const rem = rm.createReminder({
         title: 'Secret Token Alert',
-        message: 'Here is your api_key=sk-123456789012345678901234 and ghp_abcdefghijklmnopqrstu.',
+        message:
+          'Here is your api_key=sk-123456789012345678901234 and ghp_abcdefghijklmnopqrstu.',
         triggerKind: 'time',
       })
       expect(rem.message).not.toContain('sk-123456789012345678901234')
@@ -292,7 +333,9 @@ describe('JARVIS Reminders & Natural Language Parser (Phase K8)', () => {
         keys: { p256dh: 'p256dh_key_data', auth: 'auth_key_data' },
         userAgent: 'Mozilla/5.0 Vitest Test Agent',
       })
-      expect(sub.endpoint).toBe('https://fcm.googleapis.com/fcm/send/test_sub_endpoint_1')
+      expect(sub.endpoint).toBe(
+        'https://fcm.googleapis.com/fcm/send/test_sub_endpoint_1'
+      )
       expect(rm.getSubscriptions().length).toBe(1)
 
       rm.removePushSubscription(sub.endpoint)

@@ -21,7 +21,8 @@ async function generateDynamicLearningForAgent(agent: Agent): Promise<{
 }> {
   const geminiKey = process.env.GEMINI_API_KEY?.trim()
   const model = getConfiguredGeminiModel()
-  const taskDesc = agent.current_task || 'Autonomous System Architecture & Telemetry'
+  const taskDesc =
+    agent.current_task || 'Autonomous System Architecture & Telemetry'
   const dept = agent.department || 'ENGINEERING'
 
   const prompt = `You are ${agent.name}, the ${agent.role} in ${dept} at EasyUp Software Solution HQ, currently executing the task: "${taskDesc}" with assigned AI model "${agent.model || 'Gemini'}". Formulate a concise 2-sentence technical breakthrough, best practice, or key takeaway discovered while working on this task. Provide concrete implementation insight for the team. Output ONLY a clean JSON object with "title" (max 8 words), "content" (2 sentences), and "tags" (array of 3-4 lowercase tags). No markdown wrappers.`
@@ -152,7 +153,10 @@ export async function handleAutonomousCycle() {
 
     // 4. Update agent progress in Supabase office_agents
     try {
-      const currentProg = typeof targetAgent.progress_pct === 'number' ? targetAgent.progress_pct : 40
+      const currentProg =
+        typeof targetAgent.progress_pct === 'number'
+          ? targetAgent.progress_pct
+          : 40
       const nextProg = currentProg >= 85 ? 15 : Math.min(100, currentProg + 25)
 
       await supabase
@@ -185,7 +189,10 @@ export async function GET(req: NextRequest) {
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
       const vercelCronHeader = req.headers.get('x-vercel-cron')
       if (!vercelCronHeader) {
-        return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
+        return NextResponse.json(
+          { ok: false, error: 'Unauthorized' },
+          { status: 401 }
+        )
       }
     }
 
@@ -193,7 +200,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(result)
   } catch (err: unknown) {
     return NextResponse.json(
-      { ok: false, error: (err as Error).message || 'Failed background learning cycle' },
+      {
+        ok: false,
+        error: (err as Error).message || 'Failed background learning cycle',
+      },
       { status: 500 }
     )
   }
@@ -205,14 +215,20 @@ export async function POST(req: NextRequest) {
     const cronSecret = process.env.CRON_SECRET
 
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
     const result = await handleAutonomousCycle()
     return NextResponse.json(result)
   } catch (err: unknown) {
     return NextResponse.json(
-      { ok: false, error: (err as Error).message || 'Failed background learning cycle' },
+      {
+        ok: false,
+        error: (err as Error).message || 'Failed background learning cycle',
+      },
       { status: 500 }
     )
   }

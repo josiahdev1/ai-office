@@ -27,10 +27,7 @@ import {
   getCharacterStyle,
   getAgentStatusBadge,
 } from '@/config/characterStyles'
-import {
-  AgentNavState,
-  stepAgentNavigation,
-} from '@/config/walkwayGrid'
+import { AgentNavState, stepAgentNavigation } from '@/config/walkwayGrid'
 import {
   drawArcReactor2D,
   JarvisCoreState,
@@ -98,7 +95,8 @@ export default function OfficeCanvas2D({
   // Live refs for 60fps animation loop without re-binding listeners
   const agentsRef = useRef<Agent[]>(agents)
   const modeRef = useRef<DepartmentMode>(mode)
-  const overridesRef = useRef<Record<string, DepartmentMode>>(agentRouteOverrides)
+  const overridesRef =
+    useRef<Record<string, DepartmentMode>>(agentRouteOverrides)
   const selectedIdRef = useRef<string | null | undefined>(selectedAgentId)
   const onSelectRef = useRef(onSelectAgent)
   const onArriveRef = useRef(onArriveAgent)
@@ -169,7 +167,10 @@ export default function OfficeCanvas2D({
     if (!zoomStep || zoomStep.nonce === 0) return
     camStateRef.current.zoomMultiplier = Math.max(
       0.55,
-      Math.min(3.5, camStateRef.current.zoomMultiplier + (zoomStep.delta > 0 ? 0.18 : -0.18))
+      Math.min(
+        3.5,
+        camStateRef.current.zoomMultiplier + (zoomStep.delta > 0 ? 0.18 : -0.18)
+      )
     )
   }, [zoomStep])
   const savedCamBeforeDiveRef = useRef<{
@@ -185,7 +186,9 @@ export default function OfficeCanvas2D({
   // Persistent A* navigation state per agent
   const agentNavMapRef = useRef<Record<string, AgentNavState>>({})
   // Autonomous patrol state per agent (Boss, Cleaners, Server Admin)
-  const agentRoamMapRef = useRef<Record<string, { index: number; elapsed: number }>>({})
+  const agentRoamMapRef = useRef<
+    Record<string, { index: number; elapsed: number }>
+  >({})
 
   // Screen hitboxes for canvas click detection (body + canvas nameplate)
   const agentScreenBoxesRef = useRef<
@@ -217,7 +220,8 @@ export default function OfficeCanvas2D({
       const coreBox = coreScreenBoxRef.current
       const [rx, ry, rw, rh] = coreBox.pillRect
       const inPill = x >= rx && x <= rx + rw && y >= ry && y <= ry + rh
-      const inCircle = Math.hypot(x - coreBox.px, y - coreBox.py) <= coreBox.radius
+      const inCircle =
+        Math.hypot(x - coreBox.px, y - coreBox.py) <= coreBox.radius
       return inPill || inCircle
     }
 
@@ -271,7 +275,10 @@ export default function OfficeCanvas2D({
           const b = boxes[i]
           const [rx, ry, rw, rh] = b.tagRect
           const inTag =
-            clickX >= rx && clickX <= rx + rw && clickY >= ry && clickY <= ry + rh
+            clickX >= rx &&
+            clickX <= rx + rw &&
+            clickY >= ry &&
+            clickY <= ry + rh
           const inBody = Math.hypot(clickX - b.px, clickY - b.py) <= b.radius
           if (inTag || inBody) {
             onSelectRef.current(b.agent)
@@ -352,7 +359,10 @@ export default function OfficeCanvas2D({
       const preset = CAMERA_PRESETS[currentMode] || CAMERA_PRESETS.OVERVIEW
       let targetPresetZoom = preset.zoom
       if (currentMode === 'OVERVIEW') {
-        targetPresetZoom = Math.min(12.5, Math.max(8.0, Math.min(width / 140, height / 72)))
+        targetPresetZoom = Math.min(
+          12.5,
+          Math.max(8.0, Math.min(width / 140, height / 72))
+        )
       }
       const lerpFactor = 1 - Math.exp(-(diving ? 6.5 : 5.0) * dt)
       if (diving) {
@@ -360,9 +370,12 @@ export default function OfficeCanvas2D({
         cam.targetZ += (0 - cam.targetZ) * lerpFactor
         cam.zoom += (68 - cam.zoom) * lerpFactor
       } else {
-        cam.targetX += (preset.target[0] + cam.panOffsetX - cam.targetX) * lerpFactor
-        cam.targetZ += (preset.target[2] + cam.panOffsetZ - cam.targetZ) * lerpFactor
-        cam.zoom += (targetPresetZoom * cam.zoomMultiplier - cam.zoom) * lerpFactor
+        cam.targetX +=
+          (preset.target[0] + cam.panOffsetX - cam.targetX) * lerpFactor
+        cam.targetZ +=
+          (preset.target[2] + cam.panOffsetZ - cam.targetZ) * lerpFactor
+        cam.zoom +=
+          (targetPresetZoom * cam.zoomMultiplier - cam.zoom) * lerpFactor
       }
 
       const targetX = cam.targetX
@@ -475,7 +488,9 @@ export default function OfficeCanvas2D({
           const ang = (i / segments) * Math.PI * 2
           const cos = Math.cos(ang)
           const sin = Math.sin(ang)
-          topPts.push(project(cx + cos * radiusTop, cy + hh, cz + sin * radiusTop))
+          topPts.push(
+            project(cx + cos * radiusTop, cy + hh, cz + sin * radiusTop)
+          )
           botPts.push(
             project(cx + cos * radiusBottom, cy - hh, cz + sin * radiusBottom)
           )
@@ -561,7 +576,11 @@ export default function OfficeCanvas2D({
       ) => {
         const cosV = Math.cos(rotY)
         const sinV = Math.sin(rotY)
-        const toV = (lx: number, ly: number, lz: number): [number, number, number] => [
+        const toV = (
+          lx: number,
+          ly: number,
+          lz: number
+        ): [number, number, number] => [
           vx + lx * cosV + lz * sinV,
           vy + ly,
           vz - lx * sinV + lz * cosV,
@@ -662,7 +681,18 @@ export default function OfficeCanvas2D({
       for (const room of Object.values(ROOMS_3D)) {
         const [rx, ry, rz] = room.center
         if (room.id === 'COMMAND') {
-          drawCylinder(rx, ry + 0.04, rz, 6.8, 6.8, 0.08, '#090d16', 36, 1, '#00e5ff')
+          drawCylinder(
+            rx,
+            ry + 0.04,
+            rz,
+            6.8,
+            6.8,
+            0.08,
+            '#090d16',
+            36,
+            1,
+            '#00e5ff'
+          )
           drawGroundRing(rx, ry + 0.09, rz, 6.65, 6.9, '#00e5ff', 0.9)
           drawGroundRing(rx, ry + 0.09, rz, 4.15, 4.3, '#00e5ff', 0.45)
         } else {
@@ -733,20 +763,47 @@ export default function OfficeCanvas2D({
       // LAYER 4: Depth-Sorted 3D Scene Queue (Interior + Vehicles + Streetlights)
       // =========================================================================
       const renderQueue: { depth: number; draw: () => void }[] = []
-      const enqueue = (x: number, z: number, yBias: number, draw: () => void) => {
+      const enqueue = (
+        x: number,
+        z: number,
+        yBias: number,
+        draw: () => void
+      ) => {
         renderQueue.push({ depth: x + z + yBias * 0.05, draw })
       }
 
       // Main Building West Wall (Divided into 3 segments with 2.4m doorway openings at z = -8 and z = 8)
       const westWallSegments: [number, number, number][] = [
         [-16.3, 14.2, -16], // North segment (-23.4 to -9.2)
-        [0, 13.6, 0],       // Middle segment (-6.8 to +6.8)
-        [16.3, 14.2, 16],   // South segment (+9.2 to +23.4)
+        [0, 13.6, 0], // Middle segment (-6.8 to +6.8)
+        [16.3, 14.2, 16], // South segment (+9.2 to +23.4)
       ]
       for (const [segZ, segLen, winZ] of westWallSegments) {
         enqueue(-23.2, segZ, 1.4, () => {
-          drawBox(-23.2, 1.4, segZ, 0.4, 2.8, segLen, '#1e293b', 0, 1, '#334155')
-          drawBox(-22.98, 1.6, winZ, 0.06, 1.6, 8, '#38bdf8', 0, 0.55, '#7dd3fc')
+          drawBox(
+            -23.2,
+            1.4,
+            segZ,
+            0.4,
+            2.8,
+            segLen,
+            '#1e293b',
+            0,
+            1,
+            '#334155'
+          )
+          drawBox(
+            -22.98,
+            1.6,
+            winZ,
+            0.06,
+            1.6,
+            8,
+            '#38bdf8',
+            0,
+            0.55,
+            '#7dd3fc'
+          )
         })
       }
 
@@ -759,7 +816,8 @@ export default function OfficeCanvas2D({
 
       HIGHWAY_CARS.forEach((cfg, idx) => {
         const span = cfg.range[1] - cfg.range[0]
-        const raw = cfg.initialOffset + elapsed * cfg.speed * cfg.dir - cfg.range[0]
+        const raw =
+          cfg.initialOffset + elapsed * cfg.speed * cfg.dir - cfg.range[0]
         const wrapped = (((raw % span) + span) % span) + cfg.range[0]
         const carX = cfg.axis === 'x' ? wrapped : cfg.laneCoord
         const carZ = cfg.axis === 'x' ? cfg.laneCoord : wrapped
@@ -769,8 +827,8 @@ export default function OfficeCanvas2D({
               ? Math.PI / 2
               : -Math.PI / 2
             : cfg.dir > 0
-            ? 0
-            : Math.PI
+              ? 0
+              : Math.PI
         enqueue(carX, carZ, 0.5, () => {
           drawVehicle2D(
             carX,
@@ -786,7 +844,18 @@ export default function OfficeCanvas2D({
       for (const [lx, ly, lz] of STREETLIGHT_POSITIONS) {
         enqueue(lx, lz, 1.4, () => {
           drawCylinder(lx, ly + 1.3, lz, 0.06, 0.09, 2.6, '#475569', 8)
-          drawBox(lx, ly + 2.65, lz, 0.38, 0.12, 0.38, '#fef08a', 0, 1, '#facc15')
+          drawBox(
+            lx,
+            ly + 2.65,
+            lz,
+            0.38,
+            0.12,
+            0.38,
+            '#fef08a',
+            0,
+            1,
+            '#facc15'
+          )
         })
       }
 
@@ -909,7 +978,8 @@ export default function OfficeCanvas2D({
         const sz = -16 - 6.2
         enqueue(sx, sz, 1.2, () => {
           drawBox(sx, 1.2, sz, 1.4, 2.4, 0.7, '#090d16', 0, 1, '#334155')
-          const ledColor = Math.sin(elapsed * 8 + offset) > 0 ? '#22c55e' : '#38bdf8'
+          const ledColor =
+            Math.sin(elapsed * 8 + offset) > 0 ? '#22c55e' : '#38bdf8'
           drawBox(sx - 0.35, 1.9, sz + 0.36, 0.25, 0.08, 0.04, ledColor)
         })
       }
@@ -1024,14 +1094,39 @@ export default function OfficeCanvas2D({
         const rz = rack.position[2]
         enqueue(rx, rz, 1.25, () => {
           drawBox(rx, 1.25, rz, 1.2, 2.5, 0.8, '#162033', 0, 1, '#38bdf8')
-          drawBox(rx, 1.25, rz + 0.41, 1.05, 2.3, 0.04, '#1e293b', 0, 0.92, '#38bdf8')
+          drawBox(
+            rx,
+            1.25,
+            rz + 0.41,
+            1.05,
+            2.3,
+            0.04,
+            '#1e293b',
+            0,
+            0.92,
+            '#38bdf8'
+          )
           for (let sidx = 0; sidx < 5; sidx++) {
             const slotY = 0.45 + sidx * 0.4
             drawBox(rx, slotY, rz + 0.42, 0.95, 0.16, 0.02, '#334155')
             const blink1 = Math.sin(elapsed * 12 + rz * 2 + sidx) > 0
             const blink2 = Math.cos(elapsed * 10 + rx * 2 + sidx) > 0
-            const led1 = sidx % 3 === 0 ? (blink1 ? '#22c55e' : '#14532d') : (blink2 ? '#0ea5e9' : '#0369a1')
-            const led2 = sidx % 2 === 0 ? (blink2 ? '#0ea5e9' : '#082f49') : (blink1 ? '#22c55e' : '#14532d')
+            const led1 =
+              sidx % 3 === 0
+                ? blink1
+                  ? '#22c55e'
+                  : '#14532d'
+                : blink2
+                  ? '#0ea5e9'
+                  : '#0369a1'
+            const led2 =
+              sidx % 2 === 0
+                ? blink2
+                  ? '#0ea5e9'
+                  : '#082f49'
+                : blink1
+                  ? '#22c55e'
+                  : '#14532d'
             drawBox(rx - 0.35, slotY, rz + 0.43, 0.08, 0.04, 0.02, led1)
             drawBox(rx - 0.2, slotY, rz + 0.43, 0.08, 0.04, 0.02, led2)
           }
@@ -1071,9 +1166,31 @@ export default function OfficeCanvas2D({
       // Server Admin Terminal Workstation (Rex's Permanent NOC Station at [-32.5, 0, 3.8])
       enqueue(-32.5, 3.8, 0.75, () => {
         drawBox(-32.5, 0.38, 3.8, 1.6, 0.76, 0.85, '#1e293b', 0, 1, '#334155')
-        drawBox(-32.6, 0.95, 3.55, 0.7, 0.42, 0.04, '#090d16', 0.15, 1, '#10b981')
+        drawBox(
+          -32.6,
+          0.95,
+          3.55,
+          0.7,
+          0.42,
+          0.04,
+          '#090d16',
+          0.15,
+          1,
+          '#10b981'
+        )
         drawBox(-32.6, 0.95, 3.57, 0.66, 0.38, 0.02, '#052e16')
-        drawBox(-32.6, 0.95, 4.05, 0.7, 0.42, 0.04, '#090d16', -0.15, 1, '#0ea5e9')
+        drawBox(
+          -32.6,
+          0.95,
+          4.05,
+          0.7,
+          0.42,
+          0.04,
+          '#090d16',
+          -0.15,
+          1,
+          '#0ea5e9'
+        )
         drawBox(-32.6, 0.95, 4.03, 0.66, 0.38, 0.02, '#082f49')
         drawBox(-32.3, 0.77, 3.8, 0.18, 0.02, 0.45, '#0f172a')
         drawBox(-32.3, 0.77, 4.1, 0.1, 0.02, 0.06, '#38bdf8')
@@ -1094,7 +1211,15 @@ export default function OfficeCanvas2D({
         enqueue(sx, sz, 1.0, () => {
           drawBox(sx, 1.0, sz, 1.3, 2.0, 1.2, '#0369a1', 0, 1, '#0284c7')
           drawBox(sx + 0.66, 0.95, sz, 0.04, 1.9, 0.9, '#0284c7')
-          drawBox(sx + 0.69, 1.25, sz, 0.04, 0.08, 0.16, stall.isOccupied ? '#ef4444' : '#22c55e')
+          drawBox(
+            sx + 0.69,
+            1.25,
+            sz,
+            0.04,
+            0.08,
+            0.16,
+            stall.isOccupied ? '#ef4444' : '#22c55e'
+          )
         })
       }
       // Vanity counter, mirror, hand dryer
@@ -1117,7 +1242,15 @@ export default function OfficeCanvas2D({
         enqueue(sx, sz, 1.0, () => {
           drawBox(sx, 1.0, sz, 1.3, 2.0, 1.2, '#be185d', 0, 1, '#9d174d')
           drawBox(sx + 0.66, 0.95, sz, 0.04, 1.9, 0.9, '#9d174d')
-          drawBox(sx + 0.69, 1.25, sz, 0.04, 0.08, 0.16, stall.isOccupied ? '#ef4444' : '#22c55e')
+          drawBox(
+            sx + 0.69,
+            1.25,
+            sz,
+            0.04,
+            0.08,
+            0.16,
+            stall.isOccupied ? '#ef4444' : '#22c55e'
+          )
         })
       }
       // Vanity counter, mirror, hand dryer
@@ -1138,7 +1271,15 @@ export default function OfficeCanvas2D({
           drawBox(bx, 0.44, bz - 0.65, 0.7, 0.12, 0.38, '#f1f5f9')
           drawBox(bx + 0.75, 0.22, bz - 0.65, 0.35, 0.45, 0.35, '#1e293b')
           drawBox(bx + 0.75, 0.52, bz - 0.65, 0.14, 0.18, 0.14, '#fef08a')
-          drawBox(bx - 0.6, 0.5, bz - 0.65, 0.06, 0.06, 0.12, bed.occupiedBy ? '#ef4444' : '#22c55e')
+          drawBox(
+            bx - 0.6,
+            0.5,
+            bz - 0.65,
+            0.06,
+            0.06,
+            0.12,
+            bed.occupiedBy ? '#ef4444' : '#22c55e'
+          )
         })
       }
 
@@ -1174,7 +1315,13 @@ export default function OfficeCanvas2D({
         drawBox(-35, 0.5, 12, 8.4, 0.92, 1.2, '#94a3b8', 0, 1, '#cbd5e1')
         drawBox(-35, 0.95, 12.4, 8.2, 0.45, 0.04, '#38bdf8', 0, 0.4, '#7dd3fc')
         // 5 Steam Trays (Rice, Adobo, Sinigang, Veggies, Fruits)
-        const trayColors = ['#f8fafc', '#78350f', '#ca8a04', '#15803d', '#f59e0b']
+        const trayColors = [
+          '#f8fafc',
+          '#78350f',
+          '#ca8a04',
+          '#15803d',
+          '#f59e0b',
+        ]
         const trayOffsets = [-3.0, -1.5, 0, 1.5, 3.0]
         trayOffsets.forEach((tx, tidx) => {
           drawBox(-35 + tx, 0.98, 12, 1.1, 0.06, 0.65, '#cbd5e1')
@@ -1183,8 +1330,14 @@ export default function OfficeCanvas2D({
       })
       // 8 Dining Tables with 32 Molded Dining Chairs (Matching 3D CAFETERIA_SEATS)
       const cafeTableCoords: [number, number][] = [
-        [-39.5, 14.2], [-36.5, 14.2], [-33.5, 14.2], [-30.5, 14.2],
-        [-39.5, 18.6], [-36.5, 18.6], [-33.5, 18.6], [-30.5, 18.6],
+        [-39.5, 14.2],
+        [-36.5, 14.2],
+        [-33.5, 14.2],
+        [-30.5, 14.2],
+        [-39.5, 18.6],
+        [-36.5, 18.6],
+        [-33.5, 18.6],
+        [-30.5, 18.6],
       ]
       for (const [tx, tz] of cafeTableCoords) {
         enqueue(tx, tz, 0.72, () => {
@@ -1192,13 +1345,57 @@ export default function OfficeCanvas2D({
           drawBox(tx, 0.72, tz, 1.8, 0.06, 1.8, '#f8fafc', 0, 1, '#e2e8f0')
           drawCylinder(tx, 0.36, tz, 0.1, 0.12, 0.72, '#1e293b', 8)
           // 4 Chairs around table
-          drawBox(tx - 1.1, 0.42, tz, 0.45, 0.06, 0.45, '#ea580c', 0, 1, '#c2410c')
+          drawBox(
+            tx - 1.1,
+            0.42,
+            tz,
+            0.45,
+            0.06,
+            0.45,
+            '#ea580c',
+            0,
+            1,
+            '#c2410c'
+          )
           drawBox(tx - 1.3, 0.75, tz, 0.06, 0.6, 0.45, '#c2410c')
-          drawBox(tx + 1.1, 0.42, tz, 0.45, 0.06, 0.45, '#ea580c', 0, 1, '#c2410c')
+          drawBox(
+            tx + 1.1,
+            0.42,
+            tz,
+            0.45,
+            0.06,
+            0.45,
+            '#ea580c',
+            0,
+            1,
+            '#c2410c'
+          )
           drawBox(tx + 1.3, 0.75, tz, 0.06, 0.6, 0.45, '#c2410c')
-          drawBox(tx, 0.42, tz - 1.1, 0.45, 0.06, 0.45, '#ea580c', 0, 1, '#c2410c')
+          drawBox(
+            tx,
+            0.42,
+            tz - 1.1,
+            0.45,
+            0.06,
+            0.45,
+            '#ea580c',
+            0,
+            1,
+            '#c2410c'
+          )
           drawBox(tx, 0.75, tz - 1.3, 0.45, 0.6, 0.06, '#c2410c')
-          drawBox(tx, 0.42, tz + 1.1, 0.45, 0.06, 0.45, '#ea580c', 0, 1, '#c2410c')
+          drawBox(
+            tx,
+            0.42,
+            tz + 1.1,
+            0.45,
+            0.06,
+            0.45,
+            '#ea580c',
+            0,
+            1,
+            '#c2410c'
+          )
           drawBox(tx, 0.75, tz + 1.3, 0.45, 0.6, 0.06, '#c2410c')
         })
       }
@@ -1292,7 +1489,18 @@ export default function OfficeCanvas2D({
             const [kx, ky, kz] = toDeskWorld(0, 0.75, 0.7)
             drawBox(kx, ky, kz, 0.6, 0.02, 0.22, '#334155', deskRot)
             const [m1x, m1y, m1z] = toDeskWorld(0, 1.05, 1.05)
-            drawBox(m1x, m1y, m1z, 1.1, 0.6, 0.05, '#0f172a', deskRot, 1, '#00e5ff')
+            drawBox(
+              m1x,
+              m1y,
+              m1z,
+              1.1,
+              0.6,
+              0.05,
+              '#0f172a',
+              deskRot,
+              1,
+              '#00e5ff'
+            )
             const [m1sx, m1sy, m1sz] = toDeskWorld(0, 1.05, 1.02)
             drawBox(m1sx, m1sy, m1sz, 1.02, 0.52, 0.02, '#00e5ff', deskRot)
             const [m2x, m2y, m2z] = toDeskWorld(0.7, 1.05, 1.0)
@@ -1321,7 +1529,8 @@ export default function OfficeCanvas2D({
         if (agent.id === 'boss') roamRoute = BOSS_PATROL_ROUTE
         else if (agent.id === 'cleaner_1') roamRoute = CLEANER_1_PATROL_ROUTE
         else if (agent.id === 'cleaner_2') roamRoute = CLEANER_2_PATROL_ROUTE
-        else if (agent.id === 'server_admin') roamRoute = SERVER_ADMIN_PATROL_ROUTE
+        else if (agent.id === 'server_admin')
+          roamRoute = SERVER_ADMIN_PATROL_ROUTE
 
         if (roamRoute && isDeskMode) {
           if (!agentRoamMapRef.current[agent.id]) {
@@ -1331,7 +1540,9 @@ export default function OfficeCanvas2D({
           rState.elapsed += dt
           const intervalSec =
             agent.id === 'server_admin'
-              ? (rState.index === 0 ? 25 : 12)
+              ? rState.index === 0
+                ? 25
+                : 12
               : agent.id === 'boss'
                 ? 18
                 : 15
@@ -1342,7 +1553,11 @@ export default function OfficeCanvas2D({
         }
 
         // A* Waypoint Navigation Update
-        const desiredTarget = getAgentTargetPosition(ws, currentMode, routeOverride)
+        const desiredTarget = getAgentTargetPosition(
+          ws,
+          currentMode,
+          routeOverride
+        )
         const currentRoamTarget =
           roamRoute && isDeskMode
             ? roamRoute[agentRoamMapRef.current[agent.id]?.index || 0]
@@ -1350,13 +1565,19 @@ export default function OfficeCanvas2D({
 
         const effectiveTarget = currentRoamTarget || desiredTarget
         const effectiveIsDeskMode =
-          isDeskMode && (!roamRoute || (agent.id === 'server_admin' && (agentRoamMapRef.current[agent.id]?.index || 0) === 0))
+          isDeskMode &&
+          (!roamRoute ||
+            (agent.id === 'server_admin' &&
+              (agentRoamMapRef.current[agent.id]?.index || 0) === 0))
 
         let finalRot = deskRot
         if (effectiveMode === 'ALL_HANDS') {
           finalRot = Math.atan2(0 - effectiveTarget[0], 0 - effectiveTarget[2])
         } else if (effectiveMode === 'PANTRY') {
-          finalRot = Math.atan2(-16 - effectiveTarget[0], 16 - effectiveTarget[2])
+          finalRot = Math.atan2(
+            -16 - effectiveTarget[0],
+            16 - effectiveTarget[2]
+          )
         } else if (effectiveMode === 'GYM') {
           finalRot = Math.atan2(0 - effectiveTarget[0], 16 - effectiveTarget[2])
         }
@@ -1396,7 +1617,8 @@ export default function OfficeCanvas2D({
           3.6,
           idx,
           onArriveRef.current
-            ? (finalPos) => onArriveRef.current?.(agent.id, finalPos, effectiveMode)
+            ? (finalPos) =>
+                onArriveRef.current?.(agent.id, finalPos, effectiveMode)
             : undefined,
           staggerIdx
         )
@@ -1448,8 +1670,26 @@ export default function OfficeCanvas2D({
             0.35,
             (isSeated ? 0.18 : 0.02) - legStride
           )
-          drawBox(lg1x, lg1y, lg1z, 0.16, 0.36, 0.2, style.bottomColor, agentRot)
-          drawBox(lg2x, lg2y, lg2z, 0.16, 0.36, 0.2, style.bottomColor, agentRot)
+          drawBox(
+            lg1x,
+            lg1y,
+            lg1z,
+            0.16,
+            0.36,
+            0.2,
+            style.bottomColor,
+            agentRot
+          )
+          drawBox(
+            lg2x,
+            lg2y,
+            lg2z,
+            0.16,
+            0.36,
+            0.2,
+            style.bottomColor,
+            agentRot
+          )
 
           if (style.isSkirt) {
             const [skx, sky, skz] = toAgentWorld(0, 0.5, 0.04)
@@ -1472,7 +1712,9 @@ export default function OfficeCanvas2D({
           // Arms & Animated Typing Hands
           const isTyping =
             isSeated &&
-            (agent.status === 'working' || agent.status === 'active' || !agent.status)
+            (agent.status === 'working' ||
+              agent.status === 'active' ||
+              !agent.status)
           const lHandBob = isTyping ? Math.sin(elapsed * 12 + idx) * 0.025 : 0
           const rHandBob = isTyping ? Math.cos(elapsed * 12 + idx) * 0.025 : 0
 
@@ -1486,8 +1728,26 @@ export default function OfficeCanvas2D({
             0.74,
             0.12 + legStride * 0.5
           )
-          drawBox(ar1x, ar1y, ar1z, 0.12, 0.32, 0.16, style.sleeveColor, agentRot)
-          drawBox(ar2x, ar2y, ar2z, 0.12, 0.32, 0.16, style.sleeveColor, agentRot)
+          drawBox(
+            ar1x,
+            ar1y,
+            ar1z,
+            0.12,
+            0.32,
+            0.16,
+            style.sleeveColor,
+            agentRot
+          )
+          drawBox(
+            ar2x,
+            ar2y,
+            ar2z,
+            0.12,
+            0.32,
+            0.16,
+            style.sleeveColor,
+            agentRot
+          )
 
           const [h1x, h1y, h1z] = toAgentWorld(
             -0.16,
@@ -1548,15 +1808,51 @@ export default function OfficeCanvas2D({
             )
           } else if (style.accessory === 'beanie') {
             const [bnX, bnY, bnZ] = toAgentWorld(0, 1.32, 0.01)
-            drawCylinder(bnX, bnY, bnZ, 0.18, 0.22, 0.15, style.accessoryColor, 12)
+            drawCylinder(
+              bnX,
+              bnY,
+              bnZ,
+              0.18,
+              0.22,
+              0.15,
+              style.accessoryColor,
+              12
+            )
           } else if (style.accessory === 'headphones') {
             const [hp1x, hp1y, hp1z] = toAgentWorld(-0.2, 1.16, 0.02)
             const [hp2x, hp2y, hp2z] = toAgentWorld(0.2, 1.16, 0.02)
-            drawBox(hp1x, hp1y, hp1z, 0.06, 0.16, 0.14, style.accessoryColor, agentRot)
-            drawBox(hp2x, hp2y, hp2z, 0.06, 0.16, 0.14, style.accessoryColor, agentRot)
+            drawBox(
+              hp1x,
+              hp1y,
+              hp1z,
+              0.06,
+              0.16,
+              0.14,
+              style.accessoryColor,
+              agentRot
+            )
+            drawBox(
+              hp2x,
+              hp2y,
+              hp2z,
+              0.06,
+              0.16,
+              0.14,
+              style.accessoryColor,
+              agentRot
+            )
           } else if (style.accessory === 'glasses') {
             const [glX, glY, glZ] = toAgentWorld(0, 1.16, 0.19)
-            drawBox(glX, glY, glZ, 0.26, 0.06, 0.03, style.accessoryColor, agentRot)
+            drawBox(
+              glX,
+              glY,
+              glZ,
+              0.26,
+              0.06,
+              0.03,
+              style.accessoryColor,
+              agentRot
+            )
           }
         })
 
@@ -1564,7 +1860,8 @@ export default function OfficeCanvas2D({
         const bodyProj = project(ax, ay + 0.9, az)
         const headTagProj = project(ax, ay + 1.9, az)
 
-        ctx.font = 'bold 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+        ctx.font =
+          'bold 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
         const textWidth = ctx.measureText(agent.name).width
         const pillW = Math.round(textWidth + 28)
         const pillH = 22
@@ -1654,7 +1951,9 @@ export default function OfficeCanvas2D({
   }, [])
 
   return (
-    <div className={`relative h-full w-full select-none overflow-hidden bg-[#080b12] ${className}`}>
+    <div
+      className={`relative h-full w-full overflow-hidden bg-[#080b12] select-none ${className}`}
+    >
       {/* 2D Isometric Canvas Twin (Nameplates rendered directly in Canvas = 0ms Lag) */}
       <canvas
         ref={canvasRef}
@@ -1664,14 +1963,21 @@ export default function OfficeCanvas2D({
       {/* Floating Bottom Viewport HUD Controls */}
       <div className="pointer-events-none absolute bottom-4 left-4 z-30 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[11px] text-slate-300 shadow-xl backdrop-blur-md">
-          <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="tracking-wide text-slate-400">VIEWPORT (2D ISO):</span>
-          <span className="font-bold text-cyan-300">{mode.replace('_', ' ')}</span>
+          <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
+          <span className="tracking-wide text-slate-400">
+            VIEWPORT (2D ISO):
+          </span>
+          <span className="font-bold text-cyan-300">
+            {mode.replace('_', ' ')}
+          </span>
         </div>
 
         <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-950/75 px-3 py-1.5 font-mono text-[11px] text-amber-200 shadow-xl backdrop-blur-md">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-          <span>⚡ 2D Canvas (Legacy Renderer) — 3D WebGL is primary. Live Supabase agents synchronized.</span>
+          <span>
+            ⚡ 2D Canvas (Legacy Renderer) — 3D WebGL is primary. Live Supabase
+            agents synchronized.
+          </span>
         </div>
 
         {onClickCore && (
@@ -1679,9 +1985,9 @@ export default function OfficeCanvas2D({
             type="button"
             data-testid="bottom-toolbar-jarvis-btn-2d"
             onClick={onClickCore}
-            className="pointer-events-auto cursor-pointer flex items-center gap-1.5 rounded-lg border border-cyan-400/70 bg-cyan-950/90 px-3 py-1.5 font-mono text-[11px] font-bold text-cyan-200 shadow-[0_0_16px_rgba(0,229,255,0.28)] backdrop-blur-md transition-all hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
+            className="pointer-events-auto flex cursor-pointer items-center gap-1.5 rounded-lg border border-cyan-400/70 bg-cyan-950/90 px-3 py-1.5 font-mono text-[11px] font-bold whitespace-nowrap text-cyan-200 shadow-[0_0_16px_rgba(0,229,255,0.28)] backdrop-blur-md transition-all hover:bg-cyan-500 hover:text-slate-950"
           >
-            <span className="h-2 w-2 rounded-full bg-cyan-300 animate-ping" />
+            <span className="h-2 w-2 animate-ping rounded-full bg-cyan-300" />
             <span>JARVIS CORE [J]</span>
           </button>
         )}
@@ -1695,7 +2001,7 @@ export default function OfficeCanvas2D({
               camStateRef.current.zoomMultiplier = 1
               onResetCamera()
             }}
-            className="pointer-events-auto cursor-pointer rounded-lg border border-slate-800/80 bg-slate-900/90 px-3 py-1.5 font-mono text-[11px] font-medium text-slate-300 shadow-xl backdrop-blur-md transition-all hover:bg-slate-800 hover:text-white whitespace-nowrap"
+            className="pointer-events-auto cursor-pointer rounded-lg border border-slate-800/80 bg-slate-900/90 px-3 py-1.5 font-mono text-[11px] font-medium whitespace-nowrap text-slate-300 shadow-xl backdrop-blur-md transition-all hover:bg-slate-800 hover:text-white"
           >
             Reset Camera ⟲
           </button>
@@ -1703,7 +2009,7 @@ export default function OfficeCanvas2D({
       </div>
 
       {/* Help tooltip */}
-      <div className="pointer-events-none absolute bottom-4 right-4 z-30 hidden sm:flex items-center gap-1.5 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[10px] text-slate-400 shadow-xl backdrop-blur-md">
+      <div className="pointer-events-none absolute right-4 bottom-4 z-30 hidden items-center gap-1.5 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[10px] text-slate-400 shadow-xl backdrop-blur-md sm:flex">
         <span>Click Brain Core or Press J for JARVIS</span>
         <span>•</span>
         <span>Click Agent to Route</span>
