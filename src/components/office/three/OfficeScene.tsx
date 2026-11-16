@@ -9,6 +9,7 @@ import {
 import { BuildingArchitecture } from './BuildingArchitecture'
 import { BrainCore } from './BrainCore'
 import { OfficeFurniture } from './OfficeFurniture'
+import { PickleballCourt3D } from './PickleballCourt3D'
 import { ProceduralAgent3D } from './ProceduralAgent3D'
 import { CameraController, CameraViewMode } from './CameraController'
 import { JarvisCoreState } from '@/components/jarvis/ArcReactor'
@@ -121,12 +122,12 @@ export function OfficeScene({
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-near={0.5}
-        shadow-camera-far={160}
-        shadow-camera-left={-48}
-        shadow-camera-right={48}
-        shadow-camera-top={48}
-        shadow-camera-bottom={-48}
-        shadow-bias={-0.0005}
+        shadow-camera-far={180}
+        shadow-camera-left={-58}
+        shadow-camera-right={58}
+        shadow-camera-top={58}
+        shadow-camera-bottom={-58}
+        shadow-bias={-0.0004}
       />
       <hemisphereLight
         color={lightingTheme === 'day' ? '#f0f9ff' : '#38bdf8'}
@@ -165,8 +166,9 @@ export function OfficeScene({
       {/* 4. Central Command Center ("The Brain") Holographic Core */}
       <BrainCore state={coreState} onClickCore={onClickCore} />
 
-      {/* 5. Departmental Props & Furniture */}
+      {/* 5. Departmental Props & Furniture + Outdoor Pickleball Court */}
       <OfficeFurniture />
+      <PickleballCourt3D />
 
       {/* 6. All Registered Database Agents with A* Walking & Distinct Styles */}
       <group name="AgentFleet">

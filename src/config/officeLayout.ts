@@ -195,7 +195,36 @@ export const ROOMS_3D: Record<string, Room3DConfig> = {
     accentColor: '#f97316',
     description: 'Full-service cafeteria, hot meal trays, microwaves, 24 dining seats, and recycling hub',
   },
+  PICKLEBALL: {
+    id: 'PICKLEBALL',
+    name: 'Pickleball Court',
+    center: [-16, 0, -33],
+    size: [16, 12],
+    floorColor: '#0d9488', // Teal outer apron
+    wallColor: '#0f172a',
+    accentColor: '#38bdf8',
+    description: 'Outdoor 2v2 pickleball court with net, kitchen lines, perimeter glass rail, and spectator benches',
+  },
 }
+
+export const PICKLEBALL_COURT_CENTER: [number, number, number] = [-16, 0, -33]
+
+/** 2v2 active player slots: [0,1] = West Team (facing East), [2,3] = East Team (facing West) */
+export const PICKLEBALL_COURT_SLOTS: [number, number, number][] = [
+  [-20.5, 0, -34.8], // West-North
+  [-20.5, 0, -31.2], // West-South
+  [-11.5, 0, -34.8], // East-North
+  [-11.5, 0, -31.2], // East-South
+]
+
+export const PICKLEBALL_BENCH_SLOTS: [number, number, number][] = [
+  [-18.5, 0, -27.8],
+  [-16.0, 0, -27.8],
+  [-13.5, 0, -27.8],
+  [-18.5, 0, -38.2],
+  [-16.0, 0, -38.2],
+  [-13.5, 0, -38.2],
+]
 
 // Generate circular all-hands coordinates around The Brain at (0, 0, 0)
 function computeCirclePositions(
@@ -795,6 +824,7 @@ export type DepartmentMode =
   | 'MENS_CR'
   | 'WOMENS_CR'
   | 'SERVER_ROOM'
+  | 'PICKLEBALL'
 
 export interface CameraPreset {
   target: [number, number, number]
@@ -849,6 +879,10 @@ export const CAMERA_PRESETS: Record<DepartmentMode, CameraPreset> = {
   SERVER_ROOM: {
     target: [-38, 0, 4.2],
     zoom: 25,
+  },
+  PICKLEBALL: {
+    target: [-16, 0, -33],
+    zoom: 28,
   },
 }
 
@@ -1002,6 +1036,15 @@ export function getAgentTargetPosition(
     }
     case 'SERVER_ROOM':
       return [-35, 0, 3.5]
+    case 'PICKLEBALL': {
+      const agentKeys = Object.keys(AGENT_WORKSTATIONS_3D)
+      const idx = agentKeys.indexOf(ws.agentId)
+      const safeIdx = idx >= 0 ? idx : 0
+      if (safeIdx < PICKLEBALL_COURT_SLOTS.length) {
+        return PICKLEBALL_COURT_SLOTS[safeIdx]
+      }
+      return PICKLEBALL_BENCH_SLOTS[(safeIdx - PICKLEBALL_COURT_SLOTS.length) % PICKLEBALL_BENCH_SLOTS.length]
+    }
     case 'WELLNESS':
       return [-34, 0, 0]
     case 'FOCUS_WORK':

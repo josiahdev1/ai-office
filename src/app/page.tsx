@@ -1724,6 +1724,7 @@ function HQCommandPage() {
                   { mode: 'SERVER_ROOM' as DepartmentMode, label: 'Server Room', sub: 'NOC' },
                   { mode: 'CAFETERIA' as DepartmentMode, label: 'Cafeteria & CR', sub: 'West Wing' },
                   { mode: 'GYM' as DepartmentMode, label: 'Gym & Pantry', sub: 'Wellness' },
+                  { mode: 'PICKLEBALL' as DepartmentMode, label: 'Pickleball Court', sub: 'Outdoor 2v2' },
                 ].map((wing) => {
                   const isActive = currentMode === wing.mode
                   return (

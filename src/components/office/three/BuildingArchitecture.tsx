@@ -330,8 +330,8 @@ export function BuildingArchitecture({
       {/* 1. EXTERIOR CAMPUS LAWN, SIDEWALK, HIGHWAY & PARKING LOT              */}
       {/* ===================================================================== */}
       {/* Exterior Green Lawn Campus */}
-      <mesh position={[-8, -0.7, 0]} receiveShadow>
-        <boxGeometry args={[102, 0.8, 86]} />
+      <mesh position={[-8, -0.7, -5]} receiveShadow>
+        <boxGeometry args={[104, 0.8, 98]} />
         <meshStandardMaterial color="#14532d" roughness={0.95} />
       </mesh>
 
@@ -965,7 +965,7 @@ export function BuildingArchitecture({
       <group name="ExteriorDecor">
         {[
           [-48, -26], // Safely outside NW perimeter (Zero Bedroom clipping)
-          [-14, -28],
+          [-28, -28], // Safely beside Pickleball Court
           [14, -28],
           [28, -28],
           [-51, 0],   // Safely outside expanded Server Room West Bay

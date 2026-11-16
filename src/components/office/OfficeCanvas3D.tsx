@@ -70,7 +70,7 @@ export default function OfficeCanvas3D({
     >
       {/* Three.js 3D Viewport (Isometric Orthographic or Eye-Level Walk-Inside Perspective) */}
       <Canvas
-        shadows
+        shadows="soft"
         dpr={[1, 2]}
         gl={{
           antialias: true,

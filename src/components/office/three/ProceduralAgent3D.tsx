@@ -26,6 +26,7 @@ import {
   getMonitorTexture,
   MonitorRoleTheme,
 } from '@/components/office/three/MonitorTextures'
+import { VoxelAgentMesh } from './VoxelAgentMesh'
 
 export interface ProceduralAgent3DProps {
   agent: Agent
@@ -415,6 +416,10 @@ export function ProceduralAgent3D({
         // Dining at Cafeteria Table: holding fork/spoon to eat
         leftArmRef.current.rotation.x = 0.5
         rightArmRef.current.rotation.x = 0.65 + Math.sin(t * 3) * 0.2
+      } else if (effectiveMode === 'PICKLEBALL' && !isWalking) {
+        // Pickleball rally forehand/backhand swing & ready stance
+        leftArmRef.current.rotation.x = 0.35 + Math.sin(t * 2.5 + agentIndex) * 0.12
+        rightArmRef.current.rotation.x = 0.75 + Math.sin(t * 4.8 + agentIndex * 1.3) * 0.55
       } else if (effectiveMode === 'PANTRY' && !isWalking) {
         // Drinking coffee at Pantry: lifting cup to mouth
         leftArmRef.current.rotation.x = 0.2
@@ -605,208 +610,17 @@ export function ProceduralAgent3D({
           </sprite>
         )}
 
-        <group position={[0, 0.42, 0]}>
-          {/* Optional Female Skirt / Lower Tunic */}
-          {style.isSkirt && (
-            <mesh position={[0, 0.08, 0.06]} castShadow>
-              <cylinderGeometry args={[0.23, 0.29, 0.22, 12]} />
-              <meshStandardMaterial color={style.bottomColor} roughness={0.7} />
-            </mesh>
-          )}
-
-          {/* Left Leg Assembly (Animated during A* Walking) */}
-          <group ref={leftLegRef} position={[-0.14, 0.06, 0.08]}>
-            <mesh position={[0, -0.14, 0.06]} castShadow>
-              <boxGeometry args={[0.15, 0.36, 0.18]} />
-              <meshStandardMaterial
-                color={style.isSkirt ? style.skinColor : style.bottomColor}
-              />
-            </mesh>
-            <mesh position={[0, -0.36, 0.12]} castShadow>
-              <boxGeometry args={[0.15, 0.08, 0.22]} />
-              <meshStandardMaterial color="#090d16" />
-            </mesh>
-          </group>
-
-          {/* Right Leg Assembly (Animated during A* Walking) */}
-          <group ref={rightLegRef} position={[0.14, 0.06, 0.08]}>
-            <mesh position={[0, -0.14, 0.06]} castShadow>
-              <boxGeometry args={[0.15, 0.36, 0.18]} />
-              <meshStandardMaterial
-                color={style.isSkirt ? style.skinColor : style.bottomColor}
-              />
-            </mesh>
-            <mesh position={[0, -0.36, 0.12]} castShadow>
-              <boxGeometry args={[0.15, 0.08, 0.22]} />
-              <meshStandardMaterial color="#090d16" />
-            </mesh>
-          </group>
-
-          {/* Distinct Styled Torso / Outfit */}
-          <mesh position={[0, 0.34, 0.02]} castShadow receiveShadow>
-            <boxGeometry
-              args={[style.gender === 'female' ? 0.44 : 0.48, 0.48, 0.27]}
-            />
-            <meshStandardMaterial color={style.outfitColor} roughness={0.6} />
-          </mesh>
-
-          {/* Left & Right Arms */}
-          <mesh
-            ref={leftArmRef}
-            position={[-0.27, 0.32, 0.12]}
-            rotation={[0.5, 0.1, -0.1]}
-            castShadow
-          >
-            <boxGeometry args={[0.12, 0.35, 0.12]} />
-            <meshStandardMaterial color={style.sleeveColor} />
-          </mesh>
-          <mesh
-            ref={rightArmRef}
-            position={[0.27, 0.32, 0.12]}
-            rotation={[0.5, -0.1, 0.1]}
-            castShadow
-          >
-            <boxGeometry args={[0.12, 0.35, 0.12]} />
-            <meshStandardMaterial color={style.sleeveColor} />
-          </mesh>
-
-          {/* Typing Hands */}
-          <mesh ref={leftHandRef} position={[-0.16, 0.32, 0.38]} castShadow>
-            <boxGeometry args={[0.1, 0.06, 0.12]} />
-            <meshStandardMaterial color={style.skinColor} />
-          </mesh>
-          <mesh ref={rightHandRef} position={[0.16, 0.32, 0.38]} castShadow>
-            <boxGeometry args={[0.1, 0.06, 0.12]} />
-            <meshStandardMaterial color={style.skinColor} />
-          </mesh>
-
-          {/* Head */}
-          <mesh position={[0, 0.72, 0.02]} castShadow>
-            <boxGeometry args={[0.34, 0.34, 0.32]} />
-            <meshStandardMaterial color={style.skinColor} roughness={0.7} />
-          </mesh>
-
-          {/* Base Hair Crown */}
-          <mesh position={[0, 0.78, -0.04]} castShadow>
-            <boxGeometry args={[0.36, 0.26, 0.28]} />
-            <meshStandardMaterial color={style.hairColor} />
-          </mesh>
-
-          {/* Distinct Feminine / Masculine Hair Silhouettes */}
-          {style.hairStyle === 'ponytail' && (
-            <group position={[0, 0.76, -0.22]}>
-              <mesh rotation={[-0.35, 0, 0]} castShadow>
-                <cylinderGeometry args={[0.06, 0.1, 0.28, 10]} />
-                <meshStandardMaterial color={style.hairColor} />
-              </mesh>
-              {/* Hair Tie */}
-              <mesh position={[0, 0.08, 0.03]}>
-                <torusGeometry args={[0.06, 0.02, 8, 12]} />
-                <meshBasicMaterial color={style.outfitColor} />
-              </mesh>
-            </group>
-          )}
-
-          {style.hairStyle === 'long' && (
-            <group>
-              {/* Flowing Back Hair */}
-              <mesh position={[0, 0.62, -0.14]} castShadow>
-                <boxGeometry args={[0.36, 0.38, 0.12]} />
-                <meshStandardMaterial color={style.hairColor} />
-              </mesh>
-              {/* Side Locks */}
-              <mesh position={[-0.17, 0.66, 0.02]} castShadow>
-                <boxGeometry args={[0.06, 0.28, 0.24]} />
-                <meshStandardMaterial color={style.hairColor} />
-              </mesh>
-              <mesh position={[0.17, 0.66, 0.02]} castShadow>
-                <boxGeometry args={[0.06, 0.28, 0.24]} />
-                <meshStandardMaterial color={style.hairColor} />
-              </mesh>
-            </group>
-          )}
-
-          {style.hairStyle === 'bob' && (
-            <group>
-              <mesh position={[-0.18, 0.72, 0.02]} castShadow>
-                <boxGeometry args={[0.06, 0.26, 0.28]} />
-                <meshStandardMaterial color={style.hairColor} />
-              </mesh>
-              <mesh position={[0.18, 0.72, 0.02]} castShadow>
-                <boxGeometry args={[0.06, 0.26, 0.28]} />
-                <meshStandardMaterial color={style.hairColor} />
-              </mesh>
-            </group>
-          )}
-
-          {style.hairStyle === 'spiky' && (
-            <mesh position={[0, 0.91, 0.02]} rotation={[0.15, 0.4, 0]} castShadow>
-              <boxGeometry args={[0.28, 0.12, 0.28]} />
-              <meshStandardMaterial color={style.hairColor} />
-            </mesh>
-          )}
-
-          {/* Distinct Character Accessories (Cap, Beanie, Headphones, Glasses) */}
-          {style.accessory === 'cap' && (
-            <group>
-              <mesh position={[0, 0.9, 0.02]} castShadow>
-                <cylinderGeometry args={[0.2, 0.22, 0.12, 16]} />
-                <meshStandardMaterial color={style.accessoryColor} roughness={0.5} />
-              </mesh>
-              <mesh position={[0, 0.86, 0.2]} rotation={[0.1, 0, 0]} castShadow>
-                <boxGeometry args={[0.3, 0.03, 0.18]} />
-                <meshStandardMaterial color={style.accessoryColor} roughness={0.5} />
-              </mesh>
-            </group>
-          )}
-
-          {style.accessory === 'beanie' && (
-            <mesh position={[0, 0.9, 0.01]} castShadow>
-              <sphereGeometry args={[0.21, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.65]} />
-              <meshStandardMaterial color={style.accessoryColor} roughness={0.85} />
-            </mesh>
-          )}
-
-          {style.accessory === 'headphones' && (
-            <group position={[0, 0.74, 0.02]}>
-              {/* Left & Right Earcups */}
-              <mesh position={[-0.2, 0, 0]}>
-                <boxGeometry args={[0.06, 0.16, 0.14]} />
-                <meshStandardMaterial
-                  color={style.accessoryColor}
-                  emissive={style.accessoryColor}
-                  emissiveIntensity={0.4}
-                />
-              </mesh>
-              <mesh position={[0.2, 0, 0]}>
-                <boxGeometry args={[0.06, 0.16, 0.14]} />
-                <meshStandardMaterial
-                  color={style.accessoryColor}
-                  emissive={style.accessoryColor}
-                  emissiveIntensity={0.4}
-                />
-              </mesh>
-              {/* Headband */}
-              <mesh position={[0, 0.19, 0]}>
-                <boxGeometry args={[0.42, 0.04, 0.06]} />
-                <meshStandardMaterial color="#0f172a" />
-              </mesh>
-            </group>
-          )}
-
-          {style.accessory === 'glasses' && (
-            <group position={[0, 0.74, 0.19]}>
-              <mesh position={[-0.08, 0, 0]}>
-                <boxGeometry args={[0.1, 0.06, 0.02]} />
-                <meshStandardMaterial color={style.accessoryColor} metalness={0.8} />
-              </mesh>
-              <mesh position={[0.08, 0, 0]}>
-                <boxGeometry args={[0.1, 0.06, 0.02]} />
-                <meshStandardMaterial color={style.accessoryColor} metalness={0.8} />
-              </mesh>
-            </group>
-          )}
-        </group>
+        <VoxelAgentMesh
+          style={style}
+          effectiveMode={effectiveMode}
+          agentId={agent.id}
+          leftLegRef={leftLegRef}
+          rightLegRef={rightLegRef}
+          leftArmRef={leftArmRef}
+          rightArmRef={rightArmRef}
+          leftHandRef={leftHandRef}
+          rightHandRef={rightHandRef}
+        />
 
         {/* Selection Highlight Ring */}
         {isSelected && (

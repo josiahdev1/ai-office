@@ -13,12 +13,12 @@
 
 export const GRID_MIN_X = -44
 export const GRID_MAX_X = 23
-export const GRID_MIN_Z = -23
+export const GRID_MIN_Z = -40
 export const GRID_MAX_Z = 23
 export const GRID_MIN = GRID_MIN_X
 export const GRID_MAX = GRID_MAX_X
 export const GRID_SIZE_X = GRID_MAX_X - GRID_MIN_X + 1 // 68
-export const GRID_SIZE_Z = GRID_MAX_Z - GRID_MIN_Z + 1 // 47
+export const GRID_SIZE_Z = GRID_MAX_Z - GRID_MIN_Z + 1 // 64
 export const GRID_SIZE = Math.max(GRID_SIZE_X, GRID_SIZE_Z)
 
 export type NavigationSubState =
@@ -64,6 +64,18 @@ function isDoorwayCoord(c: number): boolean {
 export function isWorldTileWalkable(gx: number, gz: number): boolean {
   if (gx < GRID_MIN_X || gx > GRID_MAX_X || gz < GRID_MIN_Z || gz > GRID_MAX_Z) {
     return false
+  }
+
+  // 0. North Outdoor Campus & Pickleball Court (gz < -23)
+  if (gz < -23) {
+    // North walkway connecting North Garden Gate (x in [-2, 2], z = -23..-27) to Pickleball Court (x in [-24, -8], z in [-39, -27])
+    const onNorthWalkway = gx >= -24 && gx <= 2 && gz >= -27 && gz <= -24
+    const onCourt = gx >= -24 && gx <= -8 && gz >= -39 && gz <= -27
+    // Center net line at gx = -16 inside the playing area (gz in [-36, -30])
+    if (onCourt && gx === -16 && gz >= -36 && gz <= -30) {
+      return false
+    }
+    return onNorthWalkway || onCourt
   }
 
   // 1. Central Brain holographic pedestal at (0, 0) with radius ~2.0m
