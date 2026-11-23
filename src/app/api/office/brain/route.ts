@@ -15,7 +15,10 @@ export async function GET(req: NextRequest) {
     })
   } catch (err: unknown) {
     return NextResponse.json(
-      { ok: false, error: (err as Error).message || 'Failed to fetch knowledge' },
+      {
+        ok: false,
+        error: (err as Error).message || 'Failed to fetch knowledge',
+      },
       { status: 500 }
     )
   }
@@ -24,7 +27,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    if (!body || typeof body.title !== 'string' || typeof body.content !== 'string') {
+    if (
+      !body ||
+      typeof body.title !== 'string' ||
+      typeof body.content !== 'string'
+    ) {
       return NextResponse.json(
         { ok: false, error: 'title and content strings are required' },
         { status: 400 }
@@ -38,7 +45,8 @@ export async function POST(req: NextRequest) {
       agent_id: body.agent_id || 'jarvis',
       agent_name: body.agent_name || 'J.A.R.V.I.S.',
       tags: Array.isArray(body.tags) ? body.tags : [],
-      metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : {},
+      metadata:
+        body.metadata && typeof body.metadata === 'object' ? body.metadata : {},
     })
 
     return NextResponse.json({
@@ -48,7 +56,10 @@ export async function POST(req: NextRequest) {
     })
   } catch (err: unknown) {
     return NextResponse.json(
-      { ok: false, error: (err as Error).message || 'Failed to save knowledge' },
+      {
+        ok: false,
+        error: (err as Error).message || 'Failed to save knowledge',
+      },
       { status: 500 }
     )
   }

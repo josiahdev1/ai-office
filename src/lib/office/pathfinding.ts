@@ -28,11 +28,7 @@ export interface WaypointRoute {
 }
 
 export type OfficeMode =
-  | 'FOCUS_WORK'
-  | 'ALL_HANDS'
-  | 'COFFEE_BREAK'
-  | 'RECREATION'
-  | 'RANDOM_WANDER'
+  'FOCUS_WORK' | 'ALL_HANDS' | 'COFFEE_BREAK' | 'RECREATION' | 'RANDOM_WANDER'
 
 // Major Architectural Waypoints & Doorways (Maintained for reference and fast routing)
 export const OFFICE_WAYPOINTS = {
@@ -147,7 +143,8 @@ export function findGridPath(start: GridCoord, target: GridCoord): GridCoord[] {
       { gx: targetGx, gy: targetGy - 1 },
     ]
     const valid = neighbors.find(
-      (n) => n.gx >= 1 && n.gx < cols && n.gy >= 1 && n.gy < rows && grid[n.gy][n.gx]
+      (n) =>
+        n.gx >= 1 && n.gx < cols && n.gy >= 1 && n.gy < rows && grid[n.gy][n.gx]
     )
     if (valid) {
       targetGx = valid.gx
@@ -341,7 +338,8 @@ export function getModeTargets(
 
     case 'COFFEE_BREAK': {
       // Pantry, Espresso bar, vending, and purple lounge: 32 dedicated spots
-      const spot = PANTRY_ACTIVITY_SPOTS[agentIndex % PANTRY_ACTIVITY_SPOTS.length]
+      const spot =
+        PANTRY_ACTIVITY_SPOTS[agentIndex % PANTRY_ACTIVITY_SPOTS.length]
       return gridToScreen(spot.gx, spot.gy)
     }
 
@@ -424,7 +422,10 @@ export function calculateMultiFloorRoute(
   const pathToElevator = calculateCorridorPath(startPos, elevatorDoorScreen)
 
   // Leg 2: Path from elevator door on target floor to final target
-  const pathFromElevator = calculateCorridorPath(elevatorDoorScreen, finalTarget)
+  const pathFromElevator = calculateCorridorPath(
+    elevatorDoorScreen,
+    finalTarget
+  )
 
   return {
     startFloor,

@@ -24,7 +24,8 @@ export type FacilityKind =
   | 'sweat_dirt'
   | 'cr_hygiene'
 
-export type FacilityStatus = 'clean' | 'normal' | 'needs_attention' | 'dirty' | 'critical'
+export type FacilityStatus =
+  'clean' | 'normal' | 'needs_attention' | 'dirty' | 'critical'
 
 export interface FacilityRecord {
   id: string
@@ -93,26 +94,224 @@ export const ROOM_DISPLAY_NAMES: Record<string, string> = {
 }
 
 export const INITIAL_FACILITY_RECORDS: FacilityRecord[] = [
-  { id: 'fac_cafeteria', targetId: 'CAFETERIA', roomId: 'CAFETERIA', kind: 'room_cleanliness', dirtLevel: 12.0, fillLevel: 15.0, suppliesLevel: 95.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_comfort_room', targetId: 'COMFORT_ROOM', roomId: 'COMFORT_ROOM', kind: 'cr_hygiene', dirtLevel: 8.0, fillLevel: 10.0, suppliesLevel: 90.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_gym', targetId: 'GYM', roomId: 'GYM', kind: 'sweat_dirt', dirtLevel: 6.0, fillLevel: 8.0, suppliesLevel: 98.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_pantry', targetId: 'PANTRY', roomId: 'PANTRY', kind: 'supplies', dirtLevel: 5.0, fillLevel: 12.0, suppliesLevel: 92.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_engineering', targetId: 'ENGINEERING', roomId: 'ENGINEERING', kind: 'room_cleanliness', dirtLevel: 4.0, fillLevel: 18.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_qa', targetId: 'QA', roomId: 'QA', kind: 'room_cleanliness', dirtLevel: 3.0, fillLevel: 10.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_growth', targetId: 'GROWTH', roomId: 'GROWTH', kind: 'room_cleanliness', dirtLevel: 5.0, fillLevel: 14.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_intelligence', targetId: 'INTELLIGENCE', roomId: 'INTELLIGENCE', kind: 'room_cleanliness', dirtLevel: 2.0, fillLevel: 8.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_operations', targetId: 'OPERATIONS', roomId: 'OPERATIONS', kind: 'room_cleanliness', dirtLevel: 6.0, fillLevel: 20.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_the_brain', targetId: 'THE_BRAIN', roomId: 'THE_BRAIN', kind: 'room_cleanliness', dirtLevel: 1.0, fillLevel: 2.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_corridors', targetId: 'CORRIDORS', roomId: 'CORRIDORS', kind: 'room_cleanliness', dirtLevel: 7.0, fillLevel: 5.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_nap_room', targetId: 'NAP_ROOM', roomId: 'NAP_ROOM', kind: 'room_cleanliness', dirtLevel: 3.0, fillLevel: 4.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  {
+    id: 'fac_cafeteria',
+    targetId: 'CAFETERIA',
+    roomId: 'CAFETERIA',
+    kind: 'room_cleanliness',
+    dirtLevel: 12.0,
+    fillLevel: 15.0,
+    suppliesLevel: 95.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_comfort_room',
+    targetId: 'COMFORT_ROOM',
+    roomId: 'COMFORT_ROOM',
+    kind: 'cr_hygiene',
+    dirtLevel: 8.0,
+    fillLevel: 10.0,
+    suppliesLevel: 90.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_gym',
+    targetId: 'GYM',
+    roomId: 'GYM',
+    kind: 'sweat_dirt',
+    dirtLevel: 6.0,
+    fillLevel: 8.0,
+    suppliesLevel: 98.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_pantry',
+    targetId: 'PANTRY',
+    roomId: 'PANTRY',
+    kind: 'supplies',
+    dirtLevel: 5.0,
+    fillLevel: 12.0,
+    suppliesLevel: 92.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_engineering',
+    targetId: 'ENGINEERING',
+    roomId: 'ENGINEERING',
+    kind: 'room_cleanliness',
+    dirtLevel: 4.0,
+    fillLevel: 18.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_qa',
+    targetId: 'QA',
+    roomId: 'QA',
+    kind: 'room_cleanliness',
+    dirtLevel: 3.0,
+    fillLevel: 10.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_growth',
+    targetId: 'GROWTH',
+    roomId: 'GROWTH',
+    kind: 'room_cleanliness',
+    dirtLevel: 5.0,
+    fillLevel: 14.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_intelligence',
+    targetId: 'INTELLIGENCE',
+    roomId: 'INTELLIGENCE',
+    kind: 'room_cleanliness',
+    dirtLevel: 2.0,
+    fillLevel: 8.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_operations',
+    targetId: 'OPERATIONS',
+    roomId: 'OPERATIONS',
+    kind: 'room_cleanliness',
+    dirtLevel: 6.0,
+    fillLevel: 20.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_the_brain',
+    targetId: 'THE_BRAIN',
+    roomId: 'THE_BRAIN',
+    kind: 'room_cleanliness',
+    dirtLevel: 1.0,
+    fillLevel: 2.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_corridors',
+    targetId: 'CORRIDORS',
+    roomId: 'CORRIDORS',
+    kind: 'room_cleanliness',
+    dirtLevel: 7.0,
+    fillLevel: 5.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_nap_room',
+    targetId: 'NAP_ROOM',
+    roomId: 'NAP_ROOM',
+    kind: 'room_cleanliness',
+    dirtLevel: 3.0,
+    fillLevel: 4.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 
   // 6 Water Dispensers
-  { id: 'fac_dispenser_corridor_north_jug', targetId: 'dispenser_corridor_north', roomId: 'CORRIDORS', kind: 'water_jug', dirtLevel: 0.0, fillLevel: 0.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_dispenser_corridor_south_jug', targetId: 'dispenser_corridor_south', roomId: 'CORRIDORS', kind: 'water_jug', dirtLevel: 0.0, fillLevel: 0.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_dispenser_engineering_jug', targetId: 'dispenser_engineering', roomId: 'ENGINEERING', kind: 'water_jug', dirtLevel: 0.0, fillLevel: 0.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_dispenser_secops_jug', targetId: 'dispenser_secops', roomId: 'SECOPS', kind: 'water_jug', dirtLevel: 0.0, fillLevel: 0.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_dispenser_gym_jug', targetId: 'dispenser_gym', roomId: 'GYM', kind: 'water_jug', dirtLevel: 0.0, fillLevel: 0.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'fac_dispenser_cafeteria_jug', targetId: 'dispenser_cafeteria', roomId: 'CAFETERIA', kind: 'water_jug', dirtLevel: 0.0, fillLevel: 0.0, suppliesLevel: 100.0, status: 'clean', lastCleanedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  {
+    id: 'fac_dispenser_corridor_north_jug',
+    targetId: 'dispenser_corridor_north',
+    roomId: 'CORRIDORS',
+    kind: 'water_jug',
+    dirtLevel: 0.0,
+    fillLevel: 0.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_dispenser_corridor_south_jug',
+    targetId: 'dispenser_corridor_south',
+    roomId: 'CORRIDORS',
+    kind: 'water_jug',
+    dirtLevel: 0.0,
+    fillLevel: 0.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_dispenser_engineering_jug',
+    targetId: 'dispenser_engineering',
+    roomId: 'ENGINEERING',
+    kind: 'water_jug',
+    dirtLevel: 0.0,
+    fillLevel: 0.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_dispenser_secops_jug',
+    targetId: 'dispenser_secops',
+    roomId: 'SECOPS',
+    kind: 'water_jug',
+    dirtLevel: 0.0,
+    fillLevel: 0.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_dispenser_gym_jug',
+    targetId: 'dispenser_gym',
+    roomId: 'GYM',
+    kind: 'water_jug',
+    dirtLevel: 0.0,
+    fillLevel: 0.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fac_dispenser_cafeteria_jug',
+    targetId: 'dispenser_cafeteria',
+    roomId: 'CAFETERIA',
+    kind: 'water_jug',
+    dirtLevel: 0.0,
+    fillLevel: 0.0,
+    suppliesLevel: 100.0,
+    status: 'clean',
+    lastCleanedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ]
 
 export class FacilitiesManager {
@@ -139,7 +338,9 @@ export class FacilitiesManager {
    */
   public computeRoomCleanliness(roomId: string): RoomCleanlinessReport {
     const normRoom = roomId.toUpperCase()
-    const recs = Array.from(this.records.values()).filter((r) => r.roomId === normRoom)
+    const recs = Array.from(this.records.values()).filter(
+      (r) => r.roomId === normRoom
+    )
 
     let totalDirt = 0
     let totalBins = 0
@@ -157,7 +358,8 @@ export class FacilitiesManager {
 
     const avgDirt = count > 0 ? totalDirt / count : 5.0
     const avgBins = count > 0 ? totalBins / count : 10.0
-    const rawScore = 100 - (avgDirt * 0.6 + avgBins * 0.2 + (100 - totalSupplies) * 0.2)
+    const rawScore =
+      100 - (avgDirt * 0.6 + avgBins * 0.2 + (100 - totalSupplies) * 0.2)
     const score = Math.max(0, Math.min(100, Math.round(rawScore)))
 
     let status: FacilityStatus = 'clean'
@@ -167,7 +369,8 @@ export class FacilitiesManager {
     else if (score < 85) status = 'normal'
 
     let activeIssue: string | undefined
-    if (avgDirt > 50) activeIssue = 'Floors and surfaces require thorough mopping'
+    if (avgDirt > 50)
+      activeIssue = 'Floors and surfaces require thorough mopping'
     else if (avgBins > 70) activeIssue = 'Trash receptacles over capacity'
     else if (totalSupplies < 30) activeIssue = 'Critical supplies depleted'
 
@@ -235,7 +438,12 @@ export class FacilitiesManager {
           cafe.fillLevel = Math.min(100, cafe.fillLevel + 10.0)
           cafe.updatedAt = now
           if (cafe.dirtLevel >= 50 || cafe.fillLevel >= 65) {
-            this.ensureCleaningTask('CAFETERIA', 'wipe_tables', 'normal', 'Leftover trays & dining crumbs after cafeteria lunch wave')
+            this.ensureCleaningTask(
+              'CAFETERIA',
+              'wipe_tables',
+              'normal',
+              'Leftover trays & dining crumbs after cafeteria lunch wave'
+            )
           }
         }
         break
@@ -244,7 +452,9 @@ export class FacilitiesManager {
       case 'drink': {
         // Find matching dispenser jug or fallback to room dispenser
         let jug = Array.from(this.records.values()).find(
-          (r) => r.kind === 'water_jug' && (r.targetId === targetSlotId || r.roomId === normRoom)
+          (r) =>
+            r.kind === 'water_jug' &&
+            (r.targetId === targetSlotId || r.roomId === normRoom)
         )
         if (!jug) {
           jug = this.records.get('fac_dispenser_corridor_north_jug')
@@ -274,7 +484,12 @@ export class FacilitiesManager {
           cr.fillLevel = Math.min(100, cr.fillLevel + 8.0)
           cr.updatedAt = now
           if (cr.dirtLevel >= 45 || cr.suppliesLevel <= 30) {
-            this.ensureCleaningTask('COMFORT_ROOM', 'clean_cr', 'high', 'Comfort room hygiene servicing & tissue restock')
+            this.ensureCleaningTask(
+              'COMFORT_ROOM',
+              'clean_cr',
+              'high',
+              'Comfort room hygiene servicing & tissue restock'
+            )
           }
         }
         break
@@ -287,7 +502,12 @@ export class FacilitiesManager {
           gym.fillLevel = Math.min(100, gym.fillLevel + 6.0)
           gym.updatedAt = now
           if (gym.dirtLevel >= 50) {
-            this.ensureCleaningTask('GYM', 'mop', 'normal', 'Workout equipment wipe-down & floor sanitization')
+            this.ensureCleaningTask(
+              'GYM',
+              'mop',
+              'normal',
+              'Workout equipment wipe-down & floor sanitization'
+            )
           }
         }
         break
@@ -300,7 +520,12 @@ export class FacilitiesManager {
           pantry.fillLevel = Math.min(100, pantry.fillLevel + 7.0)
           pantry.updatedAt = now
           if (pantry.suppliesLevel <= 25) {
-            this.ensureCleaningTask('PANTRY', 'restock_pantry', 'normal', 'Espresso beans and coffee pods depletion')
+            this.ensureCleaningTask(
+              'PANTRY',
+              'restock_pantry',
+              'normal',
+              'Espresso beans and coffee pods depletion'
+            )
           }
         }
         break
@@ -313,7 +538,12 @@ export class FacilitiesManager {
           roomRec.fillLevel = Math.min(100, roomRec.fillLevel + 0.6)
           roomRec.updatedAt = now
           if (roomRec.fillLevel >= 75) {
-            this.ensureCleaningTask(normRoom, 'empty_bins', 'normal', `Trash bins in ${normRoom} near capacity`)
+            this.ensureCleaningTask(
+              normRoom,
+              'empty_bins',
+              'normal',
+              `Trash bins in ${normRoom} near capacity`
+            )
           }
         }
         break
@@ -335,7 +565,10 @@ export class FacilitiesManager {
     const normRoom = roomId.toUpperCase()
     // Look for existing pending/in_progress task of same kind & room
     const existing = Array.from(this.cleaningTasks.values()).find(
-      (t) => t.roomId === normRoom && t.kind === kind && (t.status === 'pending' || t.status === 'in_progress')
+      (t) =>
+        t.roomId === normRoom &&
+        t.kind === kind &&
+        (t.status === 'pending' || t.status === 'in_progress')
     )
     if (existing) {
       if (priority === 'urgent' && existing.priority !== 'urgent') {
@@ -421,7 +654,9 @@ export class FacilitiesManager {
     // Reset corresponding room / target facility record
     if (task.kind === 'replace_water_jug') {
       const jug = Array.from(this.records.values()).find(
-        (r) => r.kind === 'water_jug' && (r.targetId === task.targetId || r.roomId === task.roomId)
+        (r) =>
+          r.kind === 'water_jug' &&
+          (r.targetId === task.targetId || r.roomId === task.roomId)
       )
       if (jug) {
         jug.suppliesLevel = 100.0
@@ -430,7 +665,9 @@ export class FacilitiesManager {
         jug.updatedAt = nowIso
       }
     } else {
-      const roomRecs = Array.from(this.records.values()).filter((r) => r.roomId === task.roomId)
+      const roomRecs = Array.from(this.records.values()).filter(
+        (r) => r.roomId === task.roomId
+      )
       for (const rec of roomRecs) {
         if (task.kind === 'mop') {
           rec.dirtLevel = Math.max(0, rec.dirtLevel - 40.0)
@@ -499,7 +736,14 @@ export class FacilitiesManager {
     priority: CleaningPriority = 'high',
     reason = 'Manual operator cleaning directive'
   ): CleaningTask {
-    const task = this.ensureCleaningTask(roomId, kind, priority, reason, undefined, requestedBy)
+    const task = this.ensureCleaningTask(
+      roomId,
+      kind,
+      priority,
+      reason,
+      undefined,
+      requestedBy
+    )
     task.priority = priority
     return task
   }
@@ -508,7 +752,10 @@ export class FacilitiesManager {
     return this.activeWetFloors.has(roomId.toUpperCase())
   }
 
-  private async persistCleaningRequest(task: CleaningTask, requestedBy = 'operator'): Promise<void> {
+  private async persistCleaningRequest(
+    task: CleaningTask,
+    requestedBy = 'operator'
+  ): Promise<void> {
     try {
       const client = officeSupabase.getClient()
       await client.from('office_cleaning_requests').insert({
@@ -537,7 +784,11 @@ export const facilitiesManager = new FacilitiesManager()
 export function runCleanersMaintenanceTick(
   cleanerIds: string[] = ['cleaner_1', 'cleaner_2']
 ): Array<{ cleanerId: string; task: CleaningTask | null; action: string }> {
-  const results: Array<{ cleanerId: string; task: CleaningTask | null; action: string }> = []
+  const results: Array<{
+    cleanerId: string
+    task: CleaningTask | null
+    action: string
+  }> = []
 
   for (const cleanerId of cleanerIds) {
     const needs = needsManager.getAgentNeeds(cleanerId)

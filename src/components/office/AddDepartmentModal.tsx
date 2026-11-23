@@ -34,7 +34,9 @@ export function AddDepartmentModal({
   const [name, setName] = useState('')
   const [deptId, setDeptId] = useState('')
   const [color, setColor] = useState('#6366f1')
-  const [kind, setKind] = useState<'open_office' | 'lab' | 'studio' | 'meeting'>('open_office')
+  const [kind, setKind] = useState<
+    'open_office' | 'lab' | 'studio' | 'meeting'
+  >('open_office')
   const [deskCount, setDeskCount] = useState(4)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -45,7 +47,12 @@ export function AddDepartmentModal({
   const handleNameChange = (val: string) => {
     setName(val)
     if (!deptId || deptId === name.toUpperCase().replace(/[^A-Z0-9_]/g, '_')) {
-      setDeptId(val.toUpperCase().replace(/[^A-Z0-9_]/g, '_').slice(0, 16))
+      setDeptId(
+        val
+          .toUpperCase()
+          .replace(/[^A-Z0-9_]/g, '_')
+          .slice(0, 16)
+      )
     }
   }
 
@@ -88,16 +95,22 @@ export function AddDepartmentModal({
         )
 
       if (dbError) {
-        console.warn('Could not insert department into office_departments:', dbError.message)
+        console.warn(
+          'Could not insert department into office_departments:',
+          dbError.message
+        )
       }
 
       // 2. Persist audit log
-      await officeSupabase.getClient().from('office_logs').insert({
-        category: 'department',
-        message: `Department "${dept.name}" (${dept.id}) provisioned with ${deskCount} desks under kind ${dept.kind}.`,
-        level: 'info',
-        details: { department: dept, deskCount },
-      })
+      await officeSupabase
+        .getClient()
+        .from('office_logs')
+        .insert({
+          category: 'department',
+          message: `Department "${dept.name}" (${dept.id}) provisioned with ${deskCount} desks under kind ${dept.kind}.`,
+          level: 'info',
+          details: { department: dept, deskCount },
+        })
 
       setSuccessMsg(`Department "${dept.name}" created successfully!`)
       onDepartmentCreated?.(dept)
@@ -121,7 +134,7 @@ export function AddDepartmentModal({
       >
         <div className="flex items-center justify-between border-b border-slate-800 pb-4">
           <div className="flex items-center gap-2.5">
-            <span className="h-3 w-3 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00e5ff]" />
+            <span className="h-3 w-3 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_10px_#00e5ff]" />
             <h2 className="font-mono text-sm font-bold tracking-wider text-slate-100 uppercase">
               ADD NEW DEPARTMENT WIZARD
             </h2>
@@ -129,7 +142,7 @@ export function AddDepartmentModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-colors cursor-pointer"
+            className="cursor-pointer rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-100"
           >
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path
@@ -141,7 +154,10 @@ export function AddDepartmentModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4 font-mono text-xs">
+        <form
+          onSubmit={handleSubmit}
+          className="mt-4 space-y-4 font-mono text-xs"
+        >
           {errorMsg && (
             <div className="rounded-lg border border-rose-500/40 bg-rose-950/40 p-2.5 text-rose-300">
               {errorMsg}
@@ -154,7 +170,9 @@ export function AddDepartmentModal({
           )}
 
           <div>
-            <label className="block text-slate-400 mb-1 font-semibold">DEPARTMENT NAME</label>
+            <label className="mb-1 block font-semibold text-slate-400">
+              DEPARTMENT NAME
+            </label>
             <input
               type="text"
               required
@@ -166,41 +184,51 @@ export function AddDepartmentModal({
           </div>
 
           <div>
-            <label className="block text-slate-400 mb-1 font-semibold">DEPARTMENT ID (IDENTIFIER)</label>
+            <label className="mb-1 block font-semibold text-slate-400">
+              DEPARTMENT ID (IDENTIFIER)
+            </label>
             <input
               type="text"
               required
               placeholder="e.g. MOBILE_ENG"
               value={deptId}
-              onChange={(e) => setDeptId(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_'))}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-slate-100 font-mono focus:border-cyan-400 focus:outline-none"
+              onChange={(e) =>
+                setDeptId(
+                  e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_')
+                )
+              }
+              className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 font-mono text-slate-100 focus:border-cyan-400 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-slate-400 mb-1 font-semibold">DEPARTMENT ACCENT COLOR</label>
-            <div className="flex items-center gap-2 mb-2">
+            <label className="mb-1 block font-semibold text-slate-400">
+              DEPARTMENT ACCENT COLOR
+            </label>
+            <div className="mb-2 flex items-center gap-2">
               <input
                 type="color"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
-                className="h-8 w-12 rounded cursor-pointer border border-slate-700 bg-transparent p-0"
+                className="h-8 w-12 cursor-pointer rounded border border-slate-700 bg-transparent p-0"
               />
               <input
                 type="text"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
-                className="w-28 rounded-lg border border-slate-700 bg-slate-950/80 px-2.5 py-1.5 text-slate-100 font-mono text-center focus:border-cyan-400 focus:outline-none"
+                className="w-28 rounded-lg border border-slate-700 bg-slate-950/80 px-2.5 py-1.5 text-center font-mono text-slate-100 focus:border-cyan-400 focus:outline-none"
               />
             </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex flex-wrap items-center gap-1.5">
               {PRESET_COLORS.map((pc) => (
                 <button
                   key={pc}
                   type="button"
                   onClick={() => setColor(pc)}
-                  className={`h-6 w-6 rounded-full cursor-pointer transition-transform ${
-                    color === pc ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-slate-900' : 'hover:scale-110'
+                  className={`h-6 w-6 cursor-pointer rounded-full transition-transform ${
+                    color === pc
+                      ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-slate-900'
+                      : 'hover:scale-110'
                   }`}
                   style={{ backgroundColor: pc }}
                 />
@@ -210,10 +238,14 @@ export function AddDepartmentModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-slate-400 mb-1 font-semibold">ROOM TEMPLATE</label>
+              <label className="mb-1 block font-semibold text-slate-400">
+                ROOM TEMPLATE
+              </label>
               <select
                 value={kind}
-                onChange={(e) => setKind(e.target.value as AddDepartmentInput['kind'])}
+                onChange={(e) =>
+                  setKind(e.target.value as AddDepartmentInput['kind'])
+                }
                 className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-slate-100 focus:border-cyan-400 focus:outline-none"
               >
                 <option value="open_office">Open Office Space</option>
@@ -223,7 +255,9 @@ export function AddDepartmentModal({
               </select>
             </div>
             <div>
-              <label className="block text-slate-400 mb-1 font-semibold">DESK COUNT</label>
+              <label className="mb-1 block font-semibold text-slate-400">
+                DESK COUNT
+              </label>
               <input
                 type="number"
                 min={2}
@@ -236,38 +270,41 @@ export function AddDepartmentModal({
           </div>
 
           {/* Live Preview Card */}
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 flex items-center justify-between">
+          <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/60 p-3">
             <div className="flex items-center gap-3">
               <span
-                className="h-8 w-8 rounded-lg flex items-center justify-center font-bold text-white shadow-md text-xs"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold text-white shadow-md"
                 style={{ backgroundColor: color }}
               >
                 {deptId.slice(0, 2) || 'DP'}
               </span>
               <div>
-                <div className="font-bold text-slate-100">{name || 'New Department Preview'}</div>
+                <div className="font-bold text-slate-100">
+                  {name || 'New Department Preview'}
+                </div>
                 <div className="text-[10px] text-slate-400">
-                  {deptId || 'ID'} • {kind.replace('_', ' ').toUpperCase()} • {deskCount} DESKS
+                  {deptId || 'ID'} • {kind.replace('_', ' ').toUpperCase()} •{' '}
+                  {deskCount} DESKS
                 </div>
               </div>
             </div>
-            <span className="rounded-full px-2 py-0.5 text-[9px] font-bold border border-cyan-500/30 text-cyan-300">
+            <span className="rounded-full border border-cyan-500/30 px-2 py-0.5 text-[9px] font-bold text-cyan-300">
               NEW WING READY
             </span>
           </div>
 
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-2.5 border-t border-slate-800 pt-3">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg px-4 py-2 font-mono text-xs text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
+              className="cursor-pointer rounded-lg px-4 py-2 font-mono text-xs text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-100"
             >
               CANCEL
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-lg bg-cyan-500 px-5 py-2 font-mono text-xs font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-50 transition-colors shadow-lg shadow-cyan-500/20 cursor-pointer"
+              className="cursor-pointer rounded-lg bg-cyan-500 px-5 py-2 font-mono text-xs font-bold text-slate-950 shadow-lg shadow-cyan-500/20 transition-colors hover:bg-cyan-400 disabled:opacity-50"
             >
               {isSubmitting ? 'PROVISIONING...' : 'CREATE DEPARTMENT'}
             </button>

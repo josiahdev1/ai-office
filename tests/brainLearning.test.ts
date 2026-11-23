@@ -6,7 +6,10 @@ import {
   BrainInsightSchema,
   type RawEventItem,
 } from '@/lib/office/brainLearningEngine'
-import { mapTaskToBestAgent, DEFAULT_WELLNESS_POLICY } from '@/lib/office/jarvisWellness'
+import {
+  mapTaskToBestAgent,
+  DEFAULT_WELLNESS_POLICY,
+} from '@/lib/office/jarvisWellness'
 import { executeJarvisTool } from '@/lib/jarvis/orchestrator'
 import { Agent } from '@/components/office/types'
 import { needsManager } from '@/lib/office/needsEngine'
@@ -21,9 +24,15 @@ describe('Boss Gathering & Brain Learning Log Engine (Phase K7)', () => {
   describe('Secret Filter & Security Boundary', () => {
     it('detects sensitive API keys, tokens, and passwords', () => {
       expect(containsSecret('Normal office work note')).toBe(false)
-      expect(containsSecret('Found OpenAI key sk-1234567890abcdef1234567890 in log')).toBe(true)
-      expect(containsSecret('GitHub token ghp_1234567890abcdef1234567890')).toBe(true)
-      expect(containsSecret('Database password="SuperSecretPassword123!"')).toBe(true)
+      expect(
+        containsSecret('Found OpenAI key sk-1234567890abcdef1234567890 in log')
+      ).toBe(true)
+      expect(
+        containsSecret('GitHub token ghp_1234567890abcdef1234567890')
+      ).toBe(true)
+      expect(
+        containsSecret('Database password="SuperSecretPassword123!"')
+      ).toBe(true)
     })
 
     it('sanitizes secrets and replaces them with [REDACTED_SECRET]', () => {
@@ -39,7 +48,8 @@ describe('Boss Gathering & Brain Learning Log Engine (Phase K7)', () => {
           id: 'ev_secret_1',
           type: 'task_completed',
           agentId: 'christian',
-          content: 'Configured deployment with secret api_key="sk-1234567890abcdef1234567890"',
+          content:
+            'Configured deployment with secret api_key="sk-1234567890abcdef1234567890"',
           timestamp: new Date().toISOString(),
         },
       ]
@@ -51,17 +61,47 @@ describe('Boss Gathering & Brain Learning Log Engine (Phase K7)', () => {
       const logs = blm.getLearningLogs()
       const rejectionLog = logs.find((l) => l.kind === 'rejected')
       expect(rejectionLog).toBeDefined()
-      expect(rejectionLog?.text).toContain('rejected: contains sensitive API key')
+      expect(rejectionLog?.text).toContain(
+        'rejected: contains sensitive API key'
+      )
     })
   })
 
   describe('Deterministic Statistics & Zod Validation', () => {
     it('calculates deterministic agent success rates and categories', () => {
       const events: RawEventItem[] = [
-        { id: '1', type: 'task_completed', agentId: 'gian', category: 'test_automation', content: 'passed', timestamp: '2026-11-12' },
-        { id: '2', type: 'task_completed', agentId: 'gian', category: 'test_automation', content: 'passed', timestamp: '2026-11-12' },
-        { id: '3', type: 'task_failed', agentId: 'gian', category: 'test_automation', content: 'failed', timestamp: '2026-11-12' },
-        { id: '4', type: 'task_completed', agentId: 'christian', category: 'architecture', content: 'passed', timestamp: '2026-11-12' },
+        {
+          id: '1',
+          type: 'task_completed',
+          agentId: 'gian',
+          category: 'test_automation',
+          content: 'passed',
+          timestamp: '2026-11-12',
+        },
+        {
+          id: '2',
+          type: 'task_completed',
+          agentId: 'gian',
+          category: 'test_automation',
+          content: 'passed',
+          timestamp: '2026-11-12',
+        },
+        {
+          id: '3',
+          type: 'task_failed',
+          agentId: 'gian',
+          category: 'test_automation',
+          content: 'failed',
+          timestamp: '2026-11-12',
+        },
+        {
+          id: '4',
+          type: 'task_completed',
+          agentId: 'christian',
+          category: 'architecture',
+          content: 'passed',
+          timestamp: '2026-11-12',
+        },
       ]
 
       const stats = blm.computeDeterministicStats(events)
@@ -104,8 +144,24 @@ describe('Boss Gathering & Brain Learning Log Engine (Phase K7)', () => {
   describe('Incremental & Idempotent Runs (No Duplicates)', () => {
     it('creates insights on first run, and skips duplicates on subsequent runs', () => {
       const events: RawEventItem[] = [
-        { id: 't1', type: 'task_completed', agentId: 'gian', agentName: 'Gian', category: 'test_automation', content: 'passed', timestamp: '2026-11-12' },
-        { id: 't2', type: 'task_completed', agentId: 'gian', agentName: 'Gian', category: 'test_automation', content: 'passed', timestamp: '2026-11-12' },
+        {
+          id: 't1',
+          type: 'task_completed',
+          agentId: 'gian',
+          agentName: 'Gian',
+          category: 'test_automation',
+          content: 'passed',
+          timestamp: '2026-11-12',
+        },
+        {
+          id: 't2',
+          type: 'task_completed',
+          agentId: 'gian',
+          agentName: 'Gian',
+          category: 'test_automation',
+          content: 'passed',
+          timestamp: '2026-11-12',
+        },
       ]
 
       // First run: should create insight
@@ -128,7 +184,13 @@ describe('Boss Gathering & Brain Learning Log Engine (Phase K7)', () => {
     it('respects On/Off switch', () => {
       blm.setGatheringEnabled(false)
       const res = blm.runBossGather('manual', [
-        { id: 't1', type: 'task_completed', agentId: 'gian', content: 'passed', timestamp: '2026-11-12' },
+        {
+          id: 't1',
+          type: 'task_completed',
+          agentId: 'gian',
+          content: 'passed',
+          timestamp: '2026-11-12',
+        },
       ])
       expect(res.insightsCreated).toBe(0)
       expect(res.run.error).toContain('disabled')
@@ -140,7 +202,13 @@ describe('Boss Gathering & Brain Learning Log Engine (Phase K7)', () => {
       blm['dailyTokensUsed'] = 150
 
       const res = blm.runBossGather('manual', [
-        { id: 't1', type: 'task_completed', agentId: 'gian', content: 'passed', timestamp: '2026-11-12' },
+        {
+          id: 't1',
+          type: 'task_completed',
+          agentId: 'gian',
+          content: 'passed',
+          timestamp: '2026-11-12',
+        },
       ])
       expect(res.run.status).toBe('failed')
       expect(res.run.error).toContain('Daily token cap reached')
@@ -154,10 +222,14 @@ describe('Boss Gathering & Brain Learning Log Engine (Phase K7)', () => {
       expect(insight).toBeDefined()
 
       blm.pinInsight(insight.id)
-      expect(blm.getAllInsights().find((i) => i.id === insight.id)?.pinned).toBe(true)
+      expect(
+        blm.getAllInsights().find((i) => i.id === insight.id)?.pinned
+      ).toBe(true)
 
       blm.unpinInsight(insight.id)
-      expect(blm.getAllInsights().find((i) => i.id === insight.id)?.pinned).toBe(false)
+      expect(
+        blm.getAllInsights().find((i) => i.id === insight.id)?.pinned
+      ).toBe(false)
     })
 
     it('forgets an insight and records forgotten log entry', () => {
@@ -169,10 +241,14 @@ describe('Boss Gathering & Brain Learning Log Engine (Phase K7)', () => {
       expect(success).toBe(true)
 
       // Marked deleted
-      expect(blm.getAgentInsights().find((i) => i.id === insight.id)).toBeUndefined()
+      expect(
+        blm.getAgentInsights().find((i) => i.id === insight.id)
+      ).toBeUndefined()
 
       // Log entry recorded
-      const forgetLog = blm.getLearningLogs().find((l) => l.kind === 'forgotten')
+      const forgetLog = blm
+        .getLearningLogs()
+        .find((l) => l.kind === 'forgotten')
       expect(forgetLog).toBeDefined()
       expect(forgetLog?.by).toBe('me')
     })
@@ -226,15 +302,25 @@ describe('Boss Gathering & Brain Learning Log Engine (Phase K7)', () => {
 
       // Case A: Generic Task ("Refactor database indices")
       // Christian wins based on higher raw energy (95 vs 88)
-      const genericTask = { title: 'Refactor database indices', requiredDepartment: 'ENGINEERING' }
-      const resA = mapTaskToBestAgent(genericTask, agents, DEFAULT_WELLNESS_POLICY)
+      const genericTask = {
+        title: 'Refactor database indices',
+        requiredDepartment: 'ENGINEERING',
+      }
+      const resA = mapTaskToBestAgent(
+        genericTask,
+        agents,
+        DEFAULT_WELLNESS_POLICY
+      )
       expect(resA.chosenAgent?.id).toBe('christian')
       expect(resA.reason).toContain('Christian')
 
       // Case B: Test Automation Task ("Run test automation regression verification")
       // Gian has the learned strength insight: "Gian is fastest on test automation..."
       // Gian's score is boosted (+45), winning over Christian (88 + 45 = 133 vs 95)!
-      const testTask = { title: 'Run test automation regression verification', requiredDepartment: 'ENGINEERING' }
+      const testTask = {
+        title: 'Run test automation regression verification',
+        requiredDepartment: 'ENGINEERING',
+      }
       const resB = mapTaskToBestAgent(testTask, agents, DEFAULT_WELLNESS_POLICY)
       expect(resB.chosenAgent?.id).toBe('gian')
       expect(resB.reason).toContain('fastest on test automation')
@@ -243,7 +329,9 @@ describe('Boss Gathering & Brain Learning Log Engine (Phase K7)', () => {
 
   describe('JARVIS Function Calling Tools for Brain Learning Log', () => {
     it('executes trigger_boss_gather via JARVIS', () => {
-      const res = executeJarvisTool('trigger_boss_gather', { reason: 'Test gather' })
+      const res = executeJarvisTool('trigger_boss_gather', {
+        reason: 'Test gather',
+      })
       expect(res.output).toBeDefined()
       expect(res.output.ok).toBe(true)
       expect(res.output.runId).toBeDefined()
@@ -253,7 +341,10 @@ describe('Boss Gathering & Brain Learning Log Engine (Phase K7)', () => {
     it('executes get_brain_learning_log to answer "what did you learn today?"', () => {
       const res = executeJarvisTool('get_brain_learning_log', { limit: 5 })
       expect(res.output).toBeDefined()
-      const output = res.output as { totalLearnedInsights: number; insights: unknown[] }
+      const output = res.output as {
+        totalLearnedInsights: number
+        insights: unknown[]
+      }
       expect(output.totalLearnedInsights).toBeGreaterThanOrEqual(1)
       expect(output.insights).toBeDefined()
     })

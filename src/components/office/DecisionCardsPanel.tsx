@@ -14,7 +14,11 @@ export interface DecisionCardsPanelProps {
     action: 'approve' | 'reject' | 'hold' | 'send_back' | 'instruct',
     instruction?: string
   ) => Promise<void>
-  onCreateTask?: (task: { title: string; assignedTo: string; department: string }) => Promise<void>
+  onCreateTask?: (task: {
+    title: string
+    assignedTo: string
+    department: string
+  }) => Promise<void>
   onSelectAgent?: (agent: Agent) => void
   className?: string
 }
@@ -39,7 +43,9 @@ export function DecisionCardsPanel({
 
   // Give an Instruction form state
   const [newTaskTitle, setNewTaskTitle] = useState('')
-  const [selectedAgentId, setSelectedAgentId] = useState(agents[0]?.id || 'eng-1')
+  const [selectedAgentId, setSelectedAgentId] = useState(
+    agents[0]?.id || 'eng-1'
+  )
   const [isCreatingTask, setIsCreatingTask] = useState(false)
   const [taskSuccessToast, setTaskSuccessToast] = useState<string | null>(null)
 
@@ -48,7 +54,9 @@ export function DecisionCardsPanel({
 
   if (!isOpen) return null
 
-  const pendingApprovals = approvals.filter((a) => a.status === 'pending' || !a.status)
+  const pendingApprovals = approvals.filter(
+    (a) => a.status === 'pending' || !a.status
+  )
 
   const handleAction = async (
     approvalId: string,
@@ -107,7 +115,7 @@ export function DecisionCardsPanel({
       <div className="flex flex-col border-b border-[#1e293b] bg-[#0c1220]/80 p-3">
         <div className="flex items-center justify-between pb-2">
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+            <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
             <h2 className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
               Operations Cockpit
             </h2>
@@ -127,7 +135,7 @@ export function DecisionCardsPanel({
           <button
             type="button"
             onClick={() => setActiveTab('NEEDS_YOU')}
-            className={`cursor-pointer rounded-lg py-1.5 text-center font-bold transition-all whitespace-nowrap ${
+            className={`cursor-pointer rounded-lg py-1.5 text-center font-bold whitespace-nowrap transition-all ${
               activeTab === 'NEEDS_YOU'
                 ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/50'
                 : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
@@ -138,7 +146,7 @@ export function DecisionCardsPanel({
           <button
             type="button"
             onClick={() => setActiveTab('TEAM')}
-            className={`cursor-pointer rounded-lg py-1.5 text-center font-bold transition-all whitespace-nowrap ${
+            className={`cursor-pointer rounded-lg py-1.5 text-center font-bold whitespace-nowrap transition-all ${
               activeTab === 'TEAM'
                 ? 'bg-sky-500/20 text-sky-300 ring-1 ring-sky-500/50'
                 : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
@@ -149,7 +157,7 @@ export function DecisionCardsPanel({
           <button
             type="button"
             onClick={() => setActiveTab('BOARD')}
-            className={`cursor-pointer rounded-lg py-1.5 text-center font-bold transition-all whitespace-nowrap ${
+            className={`cursor-pointer rounded-lg py-1.5 text-center font-bold whitespace-nowrap transition-all ${
               activeTab === 'BOARD'
                 ? 'bg-purple-500/20 text-purple-300 ring-1 ring-purple-500/50'
                 : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
@@ -160,7 +168,7 @@ export function DecisionCardsPanel({
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded-lg py-1.5 text-center font-bold text-slate-400 hover:bg-slate-800 hover:text-emerald-400 transition-all whitespace-nowrap"
+            className="cursor-pointer rounded-lg py-1.5 text-center font-bold whitespace-nowrap text-slate-400 transition-all hover:bg-slate-800 hover:text-emerald-400"
           >
             OFFICE ⛶
           </button>
@@ -168,21 +176,21 @@ export function DecisionCardsPanel({
       </div>
 
       {/* 2. Main Tab Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 font-mono">
+      <div className="flex-1 space-y-4 overflow-y-auto p-4 font-mono">
         {/* ==================== TAB 1: NEEDS YOU ==================== */}
         {activeTab === 'NEEDS_YOU' && (
           <div className="space-y-4">
             {/* Give an Instruction Card */}
             <form
               onSubmit={handleDispatchNewTask}
-              className="rounded-xl border border-sky-500/30 bg-[#0d1627] p-3 shadow-lg space-y-2.5"
+              className="space-y-2.5 rounded-xl border border-sky-500/30 bg-[#0d1627] p-3 shadow-lg"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-sky-400 tracking-wider uppercase">
+                <span className="text-[11px] font-bold tracking-wider text-sky-400 uppercase">
                   ⚡ Give an Instruction
                 </span>
                 {taskSuccessToast && (
-                  <span className="text-[10px] text-emerald-400 font-semibold">
+                  <span className="text-[10px] font-semibold text-emerald-400">
                     {taskSuccessToast}
                   </span>
                 )}
@@ -191,7 +199,7 @@ export function DecisionCardsPanel({
                 <select
                   value={selectedAgentId}
                   onChange={(e) => setSelectedAgentId(e.target.value)}
-                  className="flex-1 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="flex-1 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200 focus:ring-1 focus:ring-sky-500 focus:outline-none"
                 >
                   {agents.map((ag) => (
                     <option key={ag.id} value={ag.id}>
@@ -205,12 +213,12 @@ export function DecisionCardsPanel({
                 onChange={(e) => setNewTaskTitle(e.target.value)}
                 placeholder="Give direct task instructions to the agent..."
                 rows={2}
-                className="w-full rounded border border-slate-700 bg-slate-900 p-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full rounded border border-slate-700 bg-slate-900 p-2 text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
               />
               <button
                 type="submit"
                 disabled={isCreatingTask || !newTaskTitle.trim()}
-                className="w-full cursor-pointer rounded-lg bg-sky-600 hover:bg-sky-500 py-1.5 text-xs font-bold text-white transition disabled:opacity-40"
+                className="w-full cursor-pointer rounded-lg bg-sky-600 py-1.5 text-xs font-bold text-white transition hover:bg-sky-500 disabled:opacity-40"
               >
                 {isCreatingTask ? 'Dispatching...' : 'Dispatch Instruction'}
               </button>
@@ -223,7 +231,7 @@ export function DecisionCardsPanel({
                 <p className="mt-2 text-xs font-semibold text-slate-300">
                   Inbox Zero — All Clear!
                 </p>
-                <p className="text-[10px] text-slate-500 mt-1">
+                <p className="mt-1 text-[10px] text-slate-500">
                   No agents are currently blocked on approvals.
                 </p>
               </div>
@@ -233,22 +241,26 @@ export function DecisionCardsPanel({
                 return (
                   <div
                     key={app.id}
-                    className="rounded-xl border border-amber-500/40 bg-[#141b2b] p-3.5 shadow-xl space-y-2.5 transition-all hover:border-amber-400/60"
+                    className="space-y-2.5 rounded-xl border border-amber-500/40 bg-[#141b2b] p-3.5 shadow-xl transition-all hover:border-amber-400/60"
                   >
                     {/* Header */}
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                          <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
                           <span className="text-xs font-bold text-slate-100">
                             {app.agent_name || 'Autonomous Agent'}
                           </span>
                         </div>
                         <span className="text-[10px] text-slate-400">
-                          {app.type?.toUpperCase() || 'GATE'} • {new Date(app.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {app.type?.toUpperCase() || 'GATE'} •{' '}
+                          {new Date(app.created_at).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </span>
                       </div>
-                      <span className="rounded bg-amber-950/80 px-1.5 py-0.5 text-[9px] font-bold text-amber-300 border border-amber-800/60">
+                      <span className="rounded border border-amber-800/60 bg-amber-950/80 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
                         WAITING
                       </span>
                     </div>
@@ -258,7 +270,7 @@ export function DecisionCardsPanel({
                       <h4 className="text-xs font-bold text-amber-200">
                         {app.title}
                       </h4>
-                      <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                      <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
                         {app.summary}
                       </p>
                     </div>
@@ -269,7 +281,7 @@ export function DecisionCardsPanel({
                         type="button"
                         disabled={isSubmitting}
                         onClick={() => handleAction(app.id, 'approve')}
-                        className="cursor-pointer rounded bg-emerald-600 hover:bg-emerald-500 py-1 text-[10px] font-bold text-white transition disabled:opacity-50"
+                        className="cursor-pointer rounded bg-emerald-600 py-1 text-[10px] font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
                         title="Approve and execute"
                       >
                         ✓ Approve
@@ -278,7 +290,7 @@ export function DecisionCardsPanel({
                         type="button"
                         disabled={isSubmitting}
                         onClick={() => handleAction(app.id, 'hold')}
-                        className="cursor-pointer rounded bg-slate-700 hover:bg-slate-600 py-1 text-[10px] font-bold text-slate-200 transition disabled:opacity-50"
+                        className="cursor-pointer rounded bg-slate-700 py-1 text-[10px] font-bold text-slate-200 transition hover:bg-slate-600 disabled:opacity-50"
                         title="Hold on gate"
                       >
                         ⏸ Hold
@@ -287,7 +299,7 @@ export function DecisionCardsPanel({
                         type="button"
                         disabled={isSubmitting}
                         onClick={() => handleAction(app.id, 'send_back')}
-                        className="cursor-pointer rounded bg-rose-900/60 hover:bg-rose-800/80 border border-rose-700/60 py-1 text-[10px] font-bold text-rose-200 transition disabled:opacity-50"
+                        className="cursor-pointer rounded border border-rose-700/60 bg-rose-900/60 py-1 text-[10px] font-bold text-rose-200 transition hover:bg-rose-800/80 disabled:opacity-50"
                         title="Send back for revision"
                       >
                         ↩ Send Back
@@ -302,7 +314,7 @@ export function DecisionCardsPanel({
                         className={`cursor-pointer rounded py-1 text-[10px] font-bold transition disabled:opacity-50 ${
                           isInstructing
                             ? 'bg-amber-600 text-white'
-                            : 'bg-amber-950/80 hover:bg-amber-900 border border-amber-700/60 text-amber-300'
+                            : 'border border-amber-700/60 bg-amber-950/80 text-amber-300 hover:bg-amber-900'
                         }`}
                         title="Provide specific instruction"
                       >
@@ -312,19 +324,25 @@ export function DecisionCardsPanel({
 
                     {/* Inline Instruct Form */}
                     {isInstructing && (
-                      <div className="pt-2 border-t border-slate-800 space-y-2">
+                      <div className="space-y-2 border-t border-slate-800 pt-2">
                         <textarea
                           value={instructionText}
                           onChange={(e) => setInstructionText(e.target.value)}
                           placeholder="Type instruction or guidance for this approval..."
                           rows={2}
-                          className="w-full rounded border border-amber-600/50 bg-slate-950 p-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                          className="w-full rounded border border-amber-600/50 bg-slate-950 p-2 text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-amber-500 focus:outline-none"
                         />
                         <button
                           type="button"
                           disabled={isSubmitting || !instructionText.trim()}
-                          onClick={() => handleAction(app.id, 'instruct', instructionText.trim())}
-                          className="w-full cursor-pointer rounded bg-amber-500 hover:bg-amber-400 py-1 text-xs font-bold text-slate-950 transition disabled:opacity-50"
+                          onClick={() =>
+                            handleAction(
+                              app.id,
+                              'instruct',
+                              instructionText.trim()
+                            )
+                          }
+                          className="w-full cursor-pointer rounded bg-amber-500 py-1 text-xs font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
                         >
                           Send Instruction to Agent
                         </button>
@@ -345,13 +363,13 @@ export function DecisionCardsPanel({
               value={teamSearch}
               onChange={(e) => setTeamSearch(e.target.value)}
               placeholder="Search agent, role, or department..."
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
             />
             <div className="space-y-2">
               {filteredTeam.map((agent) => (
                 <div
                   key={agent.id}
-                  className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/60 p-2.5 hover:border-slate-700 transition"
+                  className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/60 p-2.5 transition hover:border-slate-700"
                 >
                   <div className="flex items-center gap-2.5">
                     <span
@@ -366,14 +384,16 @@ export function DecisionCardsPanel({
                       }}
                     />
                     <div>
-                      <h4 className="text-xs font-bold text-slate-200">{agent.name}</h4>
+                      <h4 className="text-xs font-bold text-slate-200">
+                        {agent.name}
+                      </h4>
                       <p className="text-[10px] text-slate-400">{agent.role}</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => onSelectAgent?.(agent)}
-                    className="cursor-pointer rounded bg-slate-800 hover:bg-sky-600 px-2 py-1 text-[10px] font-bold text-slate-300 hover:text-white transition"
+                    className="cursor-pointer rounded bg-slate-800 px-2 py-1 text-[10px] font-bold text-slate-300 transition hover:bg-sky-600 hover:text-white"
                   >
                     Focus 👁
                   </button>
@@ -388,53 +408,81 @@ export function DecisionCardsPanel({
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 text-xs">
               {/* Queued Column */}
-              <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-2.5 space-y-2">
-                <span className="font-bold text-slate-400 text-[10px] uppercase">
+              <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2.5">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">
                   Queued ({queuedTasks.length})
                 </span>
                 {queuedTasks.map((t) => (
-                  <div key={t.id} className="rounded bg-slate-800/80 p-2 border border-white/5">
-                    <p className="font-semibold text-slate-200 text-[11px]">{t.title}</p>
-                    <span className="text-[9px] text-slate-400">{t.department}</span>
+                  <div
+                    key={t.id}
+                    className="rounded border border-white/5 bg-slate-800/80 p-2"
+                  >
+                    <p className="text-[11px] font-semibold text-slate-200">
+                      {t.title}
+                    </p>
+                    <span className="text-[9px] text-slate-400">
+                      {t.department}
+                    </span>
                   </div>
                 ))}
               </div>
 
               {/* Working Column */}
-              <div className="rounded-lg border border-sky-900/40 bg-sky-950/20 p-2.5 space-y-2">
-                <span className="font-bold text-sky-400 text-[10px] uppercase">
+              <div className="space-y-2 rounded-lg border border-sky-900/40 bg-sky-950/20 p-2.5">
+                <span className="text-[10px] font-bold text-sky-400 uppercase">
                   Working ({workingTasks.length})
                 </span>
                 {workingTasks.map((t) => (
-                  <div key={t.id} className="rounded bg-slate-800/80 p-2 border border-sky-500/20">
-                    <p className="font-semibold text-slate-200 text-[11px]">{t.title}</p>
-                    <span className="text-[9px] text-sky-400">{t.assigned_to || 'Assigned'}</span>
+                  <div
+                    key={t.id}
+                    className="rounded border border-sky-500/20 bg-slate-800/80 p-2"
+                  >
+                    <p className="text-[11px] font-semibold text-slate-200">
+                      {t.title}
+                    </p>
+                    <span className="text-[9px] text-sky-400">
+                      {t.assigned_to || 'Assigned'}
+                    </span>
                   </div>
                 ))}
               </div>
 
               {/* Needs Approval Column */}
-              <div className="rounded-lg border border-amber-900/40 bg-amber-950/20 p-2.5 space-y-2">
-                <span className="font-bold text-amber-400 text-[10px] uppercase">
+              <div className="space-y-2 rounded-lg border border-amber-900/40 bg-amber-950/20 p-2.5">
+                <span className="text-[10px] font-bold text-amber-400 uppercase">
                   Needs Approval ({approvalTasks.length})
                 </span>
                 {approvalTasks.map((t) => (
-                  <div key={t.id} className="rounded bg-slate-800/80 p-2 border border-amber-500/20">
-                    <p className="font-semibold text-amber-200 text-[11px]">{t.title}</p>
-                    <span className="text-[9px] text-amber-400">Gate Required</span>
+                  <div
+                    key={t.id}
+                    className="rounded border border-amber-500/20 bg-slate-800/80 p-2"
+                  >
+                    <p className="text-[11px] font-semibold text-amber-200">
+                      {t.title}
+                    </p>
+                    <span className="text-[9px] text-amber-400">
+                      Gate Required
+                    </span>
                   </div>
                 ))}
               </div>
 
               {/* Done Column */}
-              <div className="rounded-lg border border-emerald-900/40 bg-emerald-950/20 p-2.5 space-y-2">
-                <span className="font-bold text-emerald-400 text-[10px] uppercase">
+              <div className="space-y-2 rounded-lg border border-emerald-900/40 bg-emerald-950/20 p-2.5">
+                <span className="text-[10px] font-bold text-emerald-400 uppercase">
                   Done ({doneTasks.length})
                 </span>
                 {doneTasks.map((t) => (
-                  <div key={t.id} className="rounded bg-slate-800/80 p-2 border border-emerald-500/20">
-                    <p className="font-semibold text-slate-300 text-[11px] line-through">{t.title}</p>
-                    <span className="text-[9px] text-emerald-400">Completed</span>
+                  <div
+                    key={t.id}
+                    className="rounded border border-emerald-500/20 bg-slate-800/80 p-2"
+                  >
+                    <p className="text-[11px] font-semibold text-slate-300 line-through">
+                      {t.title}
+                    </p>
+                    <span className="text-[9px] text-emerald-400">
+                      Completed
+                    </span>
                   </div>
                 ))}
               </div>

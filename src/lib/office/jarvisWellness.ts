@@ -70,7 +70,8 @@ export function evaluateBreakRequest(
     return {
       allowedAutomatically: false,
       requiresApproval: false,
-      reason: 'Jarvis Autonomy is OFF. Breaks must be initiated manually by operator.',
+      reason:
+        'Jarvis Autonomy is OFF. Breaks must be initiated manually by operator.',
     }
   }
 
@@ -79,7 +80,8 @@ export function evaluateBreakRequest(
     return {
       allowedAutomatically: false,
       requiresApproval: true,
-      reason: 'Agent is pinned NEVER_REST. Break blocked unless health is critical.',
+      reason:
+        'Agent is pinned NEVER_REST. Break blocked unless health is critical.',
     }
   }
 
@@ -88,7 +90,8 @@ export function evaluateBreakRequest(
     return {
       allowedAutomatically: true,
       requiresApproval: false,
-      reason: 'Agent is pinned MUST_REST. Mandatory recovery permitted automatically.',
+      reason:
+        'Agent is pinned MUST_REST. Mandatory recovery permitted automatically.',
     }
   }
 
@@ -97,7 +100,8 @@ export function evaluateBreakRequest(
     return {
       allowedAutomatically: true,
       requiresApproval: false,
-      reason: 'Critical health override: Agent health is critical (<=20). Urgent recovery permitted.',
+      reason:
+        'Critical health override: Agent health is critical (<=20). Urgent recovery permitted.',
     }
   }
 
@@ -106,7 +110,8 @@ export function evaluateBreakRequest(
     return {
       allowedAutomatically: false,
       requiresApproval: true,
-      reason: 'Agent has an active urgent or critical task. Break blocked until task is paused or completed.',
+      reason:
+        'Agent has an active urgent or critical task. Break blocked until task is paused or completed.',
     }
   }
 
@@ -115,7 +120,8 @@ export function evaluateBreakRequest(
     return {
       allowedAutomatically: false,
       requiresApproval: true,
-      reason: 'Mode is set to "Ask me for everything". Staging Go-Signal approval.',
+      reason:
+        'Mode is set to "Ask me for everything". Staging Go-Signal approval.',
     }
   }
 
@@ -199,7 +205,9 @@ export function mapTaskToBestAgent(
       needs.state === 'sleep' ||
       needs.state === 'nap'
     const isCritical = needs.health <= 20 || needs.energy <= 20
-    const isBusy = ag.status === 'working' || (ag.current_task && ag.current_task.trim().length > 0)
+    const isBusy =
+      ag.status === 'working' ||
+      (ag.current_task && ag.current_task.trim().length > 0)
     return { agent: ag, needs, isSleeping, isCritical, isBusy }
   })
 
@@ -215,7 +223,9 @@ export function mapTaskToBestAgent(
       const matchingInsight = insights.find(
         (ins) =>
           ins.kind === 'strength' &&
-          taskKeywords.some((kw) => kw.length >= 4 && ins.text.toLowerCase().includes(kw))
+          taskKeywords.some(
+            (kw) => kw.length >= 4 && ins.text.toLowerCase().includes(kw)
+          )
       )
       return {
         ...c,
@@ -256,7 +266,9 @@ export function mapTaskToBestAgent(
   }
 
   // Fallback: Pick candidate with highest energy even if working, or report bottleneck
-  const fallback = candidatesWithNeeds.sort((a, b) => b.needs.energy - a.needs.energy)[0]
+  const fallback = candidatesWithNeeds.sort(
+    (a, b) => b.needs.energy - a.needs.energy
+  )[0]
   return {
     chosenAgent: fallback.agent,
     reason: `All agents currently assigned or resting. Queued behind ${fallback.agent.name} (Energy: ${Math.round(fallback.needs.energy)}%).`,
@@ -301,7 +313,9 @@ export function generateDailyWellnessPlan(
       activity: 'Grand Cafeteria Lunch (Wave 2)',
       agentsCount: agents.filter(
         (a) =>
-          a.department === 'QA' || a.department === 'GROWTH' || a.department === 'OPERATIONS'
+          a.department === 'QA' ||
+          a.department === 'GROWTH' ||
+          a.department === 'OPERATIONS'
       ).length,
     },
     {
@@ -469,7 +483,9 @@ export class JarvisWellnessManager {
       const client = officeSupabase.getClient()
       const { data } = await client
         .from('office_settings')
-        .select('jarvis_autonomy_mode, department_break_cap_pct, max_personal_break_minutes')
+        .select(
+          'jarvis_autonomy_mode, department_break_cap_pct, max_personal_break_minutes'
+        )
         .eq('id', 'default')
         .single()
 

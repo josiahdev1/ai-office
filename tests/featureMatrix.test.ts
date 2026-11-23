@@ -1,6 +1,6 @@
 /**
  * tests/featureMatrix.test.ts
- * 
+ *
  * Automated Feature Write-Test Matrix for Phase K9
  * Covers all 18 office features and their backing office_* tables:
  * - Roster & + Agent (office_agents)
@@ -44,7 +44,10 @@ function loadEnv() {
         const eqIdx = trimmed.indexOf('=')
         if (eqIdx > 0) {
           const key = trimmed.slice(0, eqIdx).trim()
-          const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '')
+          const val = trimmed
+            .slice(eqIdx + 1)
+            .trim()
+            .replace(/^["']|["']$/g, '')
           if (!process.env[key]) {
             process.env[key] = val
           }
@@ -83,8 +86,19 @@ describe('Feature Write-Test Matrix (18 Features vs Supabase Tables)', () => {
     tableName: string,
     insertPayload: Record<string, unknown>,
     idField: string
-  ): Promise<{ written: boolean; read: boolean; cleaned: boolean; error?: string }> {
-    if (!supabase) return { written: true, read: true, cleaned: true, error: 'Skipped: No client in CI' }
+  ): Promise<{
+    written: boolean
+    read: boolean
+    cleaned: boolean
+    error?: string
+  }> {
+    if (!supabase)
+      return {
+        written: true,
+        read: true,
+        cleaned: true,
+        error: 'Skipped: No client in CI',
+      }
     try {
       const { data: inserted, error: insertErr } = await supabase
         .from(tableName)
@@ -100,12 +114,24 @@ describe('Feature Write-Test Matrix (18 Features vs Supabase Tables)', () => {
           insertErr.message?.toLowerCase().includes('jwt') ||
           insertErr.message?.toLowerCase().includes('unauthorized')
         ) {
-          return { written: true, read: true, cleaned: true, error: 'Skipped: Unauthorized in CI' }
+          return {
+            written: true,
+            read: true,
+            cleaned: true,
+            error: 'Skipped: Unauthorized in CI',
+          }
         }
-        return { written: false, read: false, cleaned: false, error: insertErr.message }
+        return {
+          written: false,
+          read: false,
+          cleaned: false,
+          error: insertErr.message,
+        }
       }
 
-      const idVal = inserted ? (inserted as Record<string, unknown>)[idField] : insertPayload[idField]
+      const idVal = inserted
+        ? (inserted as Record<string, unknown>)[idField]
+        : insertPayload[idField]
 
       const { data: readBack, error: readErr } = await supabase
         .from(tableName)
@@ -114,13 +140,23 @@ describe('Feature Write-Test Matrix (18 Features vs Supabase Tables)', () => {
         .single()
 
       if (readErr || !readBack) {
-        return { written: true, read: false, cleaned: false, error: readErr?.message }
+        return {
+          written: true,
+          read: false,
+          cleaned: false,
+          error: readErr?.message,
+        }
       }
 
       await supabase.from(tableName).delete().eq(idField, idVal)
       return { written: true, read: true, cleaned: true }
     } catch (e: unknown) {
-      return { written: false, read: false, cleaned: false, error: e instanceof Error ? e.message : 'Exception' }
+      return {
+        written: false,
+        read: false,
+        cleaned: false,
+        error: e instanceof Error ? e.message : 'Exception',
+      }
     }
   }
 
@@ -377,13 +413,20 @@ describe('Feature Write-Test Matrix (18 Features vs Supabase Tables)', () => {
 
   it('12. Settings (office_settings)', async () => {
     if (!supabase) return
-    const { data, error } = await supabase.from('office_settings').select('*').eq('id', 'default').single()
+    const { data, error } = await supabase
+      .from('office_settings')
+      .select('*')
+      .eq('id', 'default')
+      .single()
     expect(error).toBeNull()
     expect(data?.id).toBe('default')
   })
 
   it('13-18. Validates migration 0016 covers all remaining tables (reminders, map_versions, llm_usage, system_metrics)', () => {
-    const migrationPath = path.resolve(process.cwd(), 'supabase/migrations/0016_consolidated_missing_tables.sql')
+    const migrationPath = path.resolve(
+      process.cwd(),
+      'supabase/migrations/0016_consolidated_missing_tables.sql'
+    )
     expect(fs.existsSync(migrationPath)).toBe(true)
     const sql = fs.readFileSync(migrationPath, 'utf8')
 

@@ -263,7 +263,9 @@ export function validateCampusMap(): string[] {
   // 1. Car paths never traverse building interior
   Object.values(ROAD_NODES).forEach((node) => {
     if (isPointInsideBuilding(node)) {
-      errors.push(`Road node "${node.id}" at (${node.x}, ${node.y}) intersects building interior footprint`)
+      errors.push(
+        `Road node "${node.id}" at (${node.x}, ${node.y}) intersects building interior footprint`
+      )
     }
   })
 
@@ -271,30 +273,44 @@ export function validateCampusMap(): string[] {
     const from = ROAD_NODES[edge.from]
     const to = ROAD_NODES[edge.to]
     if (from && to && doesEdgeIntersectBuilding(from, to)) {
-      errors.push(`Road edge from "${edge.from}" to "${edge.to}" intersects building interior footprint`)
+      errors.push(
+        `Road edge from "${edge.from}" to "${edge.to}" intersects building interior footprint`
+      )
     }
   })
 
   // 2. Parking lot capacity & reserved spots
   if (PARKING_BAYS.length < 20) {
-    errors.push(`Campus parking lot must have at least 20 bays (found ${PARKING_BAYS.length})`)
+    errors.push(
+      `Campus parking lot must have at least 20 bays (found ${PARKING_BAYS.length})`
+    )
   }
   const accessibleBays = PARKING_BAYS.filter((b) => b.type === 'accessible')
   if (accessibleBays.length < 2) {
-    errors.push(`Campus parking lot must have at least 2 accessible bays (found ${accessibleBays.length})`)
+    errors.push(
+      `Campus parking lot must have at least 2 accessible bays (found ${accessibleBays.length})`
+    )
   }
-  const founderBay = PARKING_BAYS.find((b) => b.type === 'founder' || b.label.includes('FOUNDER'))
+  const founderBay = PARKING_BAYS.find(
+    (b) => b.type === 'founder' || b.label.includes('FOUNDER')
+  )
   if (!founderBay) {
-    errors.push('Campus parking lot must have a reserved spot for "JOSIAH (FOUNDER)"')
+    errors.push(
+      'Campus parking lot must have a reserved spot for "JOSIAH (FOUNDER)"'
+    )
   }
 
   // 3. Parking bay placement & aisle connectivity
   PARKING_BAYS.forEach((bay) => {
     if (isPointInsideBuilding(bay)) {
-      errors.push(`Parking bay "${bay.id}" at (${bay.x}, ${bay.y}) is inside building footprint`)
+      errors.push(
+        `Parking bay "${bay.id}" at (${bay.x}, ${bay.y}) is inside building footprint`
+      )
     }
     if (bay.y < 900 || bay.y > 1100 || bay.x < 300 || bay.x > 1100) {
-      errors.push(`Parking bay "${bay.id}" is outside reachable lot aisle boundary`)
+      errors.push(
+        `Parking bay "${bay.id}" is outside reachable lot aisle boundary`
+      )
     }
   })
 
@@ -302,9 +318,14 @@ export function validateCampusMap(): string[] {
   const crosswalk = CAMPUS_CONFIG.crosswalk
   const walkway = CAMPUS_CONFIG.walkwayPath
   const lastWalkwayPoint = walkway[walkway.length - 1]
-  const dist = Math.hypot(lastWalkwayPoint.x - crosswalk.northEdge.x, lastWalkwayPoint.y - crosswalk.northEdge.y)
+  const dist = Math.hypot(
+    lastWalkwayPoint.x - crosswalk.northEdge.x,
+    lastWalkwayPoint.y - crosswalk.northEdge.y
+  )
   if (dist > 10) {
-    errors.push(`Entrance walkway is not connected to crosswalk (gap: ${dist}px)`)
+    errors.push(
+      `Entrance walkway is not connected to crosswalk (gap: ${dist}px)`
+    )
   }
 
   // 5. Overlapping outdoor solid objects
@@ -316,7 +337,9 @@ export function validateCampusMap(): string[] {
       const dx = Math.abs(p1.x - p2.x)
       const dy = Math.abs(p1.y - p2.y)
       if (dx < (p1.w + p2.w) / 4 && dy < (p1.h + p2.h) / 4) {
-        errors.push(`Overlapping outdoor solid props: "${p1.id}" and "${p2.id}"`)
+        errors.push(
+          `Overlapping outdoor solid props: "${p1.id}" and "${p2.id}"`
+        )
       }
     }
   }
@@ -413,7 +436,9 @@ export function validatePickleballAccess(): {
     (gx) => isWorldTileWalkable(gx, -25) && isWorldTileWalkable(gx, -26)
   )
   if (walkablePassageCols.length < 2) {
-    errors.push(`Pickleball passage width < 2 tiles (found ${walkablePassageCols.length})`)
+    errors.push(
+      `Pickleball passage width < 2 tiles (found ${walkablePassageCols.length})`
+    )
   }
   for (const [px, pz] of passageTiles) {
     if (!isWorldTileWalkable(px, pz)) {
@@ -423,14 +448,28 @@ export function validatePickleballAccess(): {
 
   // Check reachability from Engineering (-16, -16) via North Gate to all court slots, bench seats & basket
   const targets: { label: string; x: number; z: number }[] = [
-    ...PICKLEBALL_COURT_SLOTS.map((s, i) => ({ label: `court_slot_${i}`, x: s[0], z: s[2] })),
-    ...PICKLEBALL_8_BENCH_SEATS.map((s, i) => ({ label: `bench_seat_${i}`, x: s[0], z: s[2] })),
-    { label: 'ball_basket', x: PICKLEBALL_BASKET_POS[0], z: PICKLEBALL_BASKET_POS[2] },
+    ...PICKLEBALL_COURT_SLOTS.map((s, i) => ({
+      label: `court_slot_${i}`,
+      x: s[0],
+      z: s[2],
+    })),
+    ...PICKLEBALL_8_BENCH_SEATS.map((s, i) => ({
+      label: `bench_seat_${i}`,
+      x: s[0],
+      z: s[2],
+    })),
+    {
+      label: 'ball_basket',
+      x: PICKLEBALL_BASKET_POS[0],
+      z: PICKLEBALL_BASKET_POS[2],
+    },
   ]
   for (const t of targets) {
     const path = findPath(-16, -16, t.x, t.z)
     if (path.length === 0) {
-      errors.push(`Pickleball ${t.label} (${t.x}, ${t.z}) is unreachable via A*`)
+      errors.push(
+        `Pickleball ${t.label} (${t.x}, ${t.z}) is unreachable via A*`
+      )
     }
   }
 

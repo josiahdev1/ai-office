@@ -1,13 +1,10 @@
-import { PICKLEBALL_COURT_CENTER, PICKLEBALL_COURT_SLOTS } from '@/config/officeLayout'
+import {
+  PICKLEBALL_COURT_CENTER,
+  PICKLEBALL_COURT_SLOTS,
+} from '@/config/officeLayout'
 
 export type PickleballMatchStatus =
-  | 'idle'
-  | 'warmup'
-  | 'serve'
-  | 'rally'
-  | 'point'
-  | 'rotate'
-  | 'ended'
+  'idle' | 'warmup' | 'serve' | 'rally' | 'point' | 'rotate' | 'ended'
 
 export interface PickleballRallyState {
   matchId: string
@@ -27,7 +24,12 @@ export interface PickleballRallyState {
   arcHeight: number
   ballPos: [number, number, number]
   ballVisible: boolean
-  playerOffsets: [[number, number], [number, number], [number, number], [number, number]]
+  playerOffsets: [
+    [number, number],
+    [number, number],
+    [number, number],
+    [number, number],
+  ]
   swingTimers: [number, number, number, number]
   rallyHits: number
   pointPauseTimer: number
@@ -37,7 +39,9 @@ export interface PickleballRallyState {
 
 export const PICKLEBALL_MAX_COURT_PLAYERS = 4
 export const PICKLEBALL_MAX_QUEUE_CAPACITY = 8
-export const PICKLEBALL_BASKET_POS: [number, number, number] = [-21.5, 0.35, -27.6]
+export const PICKLEBALL_BASKET_POS: [number, number, number] = [
+  -21.5, 0.35, -27.6,
+]
 
 export const PICKLEBALL_DEFAULT_PLAYERS: [string, string, string, string] = [
   'boss',
@@ -75,14 +79,28 @@ export function getPickleballSlotForAgent(
   agentId: string,
   activePlayers: readonly string[] = PICKLEBALL_DEFAULT_PLAYERS,
   benchPlayers: readonly string[] = PICKLEBALL_DEFAULT_BENCH
-): { role: 'court'; index: number } | { role: 'bench'; index: number; badge: string } | null {
-  const courtIdx = activePlayers.slice(0, PICKLEBALL_MAX_COURT_PLAYERS).indexOf(agentId)
+):
+  | { role: 'court'; index: number }
+  | { role: 'bench'; index: number; badge: string }
+  | null {
+  const courtIdx = activePlayers
+    .slice(0, PICKLEBALL_MAX_COURT_PLAYERS)
+    .indexOf(agentId)
   if (courtIdx >= 0) {
     return { role: 'court', index: courtIdx }
   }
-  const benchIdx = benchPlayers.slice(0, PICKLEBALL_MAX_QUEUE_CAPACITY).indexOf(agentId)
+  const benchIdx = benchPlayers
+    .slice(0, PICKLEBALL_MAX_QUEUE_CAPACITY)
+    .indexOf(agentId)
   if (benchIdx >= 0) {
-    const badge = benchIdx === 0 ? 'Next' : benchIdx === 1 ? '2nd' : benchIdx === 2 ? '3rd' : `${benchIdx + 1}th`
+    const badge =
+      benchIdx === 0
+        ? 'Next'
+        : benchIdx === 1
+          ? '2nd'
+          : benchIdx === 2
+            ? '3rd'
+            : `${benchIdx + 1}th`
     return { role: 'bench', index: benchIdx, badge }
   }
   return null
@@ -111,7 +129,8 @@ export function selectMatchAndQueue(
   )
   const declinedCount = Math.max(
     0,
-    ordered.length - (PICKLEBALL_MAX_COURT_PLAYERS + PICKLEBALL_MAX_QUEUE_CAPACITY)
+    ordered.length -
+      (PICKLEBALL_MAX_COURT_PLAYERS + PICKLEBALL_MAX_QUEUE_CAPACITY)
   )
   return { activePlayers, benchQueue, declinedCount }
 }
@@ -120,12 +139,18 @@ export function enqueueBenchPlayer(
   state: PickleballRallyState,
   agentId: string
 ): { ok: boolean; message?: string } {
-  if (state.activePlayers.includes(agentId) || state.benchQueue.includes(agentId)) {
+  if (
+    state.activePlayers.includes(agentId) ||
+    state.benchQueue.includes(agentId)
+  ) {
     return { ok: true }
   }
   if (state.activePlayers.length < PICKLEBALL_MAX_COURT_PLAYERS) {
     state.activePlayers.push(agentId)
-    if (state.activePlayers.length === PICKLEBALL_MAX_COURT_PLAYERS && state.status === 'idle') {
+    if (
+      state.activePlayers.length === PICKLEBALL_MAX_COURT_PLAYERS &&
+      state.status === 'idle'
+    ) {
       state.status = 'serve'
     }
     return { ok: true }
@@ -143,8 +168,12 @@ export function createInitialRallyState(
   seed = 35001,
   matchId = 'match-default'
 ): PickleballRallyState {
-  const cappedPlayers = players.filter(Boolean).slice(0, PICKLEBALL_MAX_COURT_PLAYERS)
-  const cappedBench = bench.filter(Boolean).slice(0, PICKLEBALL_MAX_QUEUE_CAPACITY)
+  const cappedPlayers = players
+    .filter(Boolean)
+    .slice(0, PICKLEBALL_MAX_COURT_PLAYERS)
+  const cappedBench = bench
+    .filter(Boolean)
+    .slice(0, PICKLEBALL_MAX_QUEUE_CAPACITY)
   const start = PICKLEBALL_COURT_SLOTS[0]
   const end = PICKLEBALL_COURT_SLOTS[3] // Diagonal underhand serve
   const hasFullTeams = cappedPlayers.length === PICKLEBALL_MAX_COURT_PLAYERS
@@ -164,7 +193,9 @@ export function createInitialRallyState(
     flightProgress: 0,
     flightDuration: 1.05,
     arcHeight: 1.35,
-    ballPos: hasFullTeams ? [start[0] + 0.45, 0.9, start[2]] : [...PICKLEBALL_BASKET_POS],
+    ballPos: hasFullTeams
+      ? [start[0] + 0.45, 0.9, start[2]]
+      : [...PICKLEBALL_BASKET_POS],
     ballVisible: hasFullTeams,
     playerOffsets: [
       [0, 0],
@@ -238,8 +269,14 @@ export function stepPickleballRally(
       state.receiverIndex = state.serverIndex < 2 ? 3 : 0
       const sSlot = PICKLEBALL_COURT_SLOTS[state.hitterIndex]
       const rSlot = PICKLEBALL_COURT_SLOTS[state.receiverIndex]
-      state.fromPos = [sSlot[0] + (state.hitterIndex < 2 ? 0.45 : -0.45), sSlot[2]]
-      state.toPos = [rSlot[0] + (state.receiverIndex < 2 ? 0.45 : -0.45), rSlot[2]]
+      state.fromPos = [
+        sSlot[0] + (state.hitterIndex < 2 ? 0.45 : -0.45),
+        sSlot[2],
+      ]
+      state.toPos = [
+        rSlot[0] + (state.receiverIndex < 2 ? 0.45 : -0.45),
+        rSlot[2],
+      ]
       state.flightProgress = 0
       state.ballVisible = true
     }
@@ -250,13 +287,19 @@ export function stepPickleballRally(
   state.flightProgress += safeDt / state.flightDuration
 
   // Synchronize paddle swing so contact aligns with flightProgress === 1.0
-  if (state.flightProgress >= 0.82 && state.swingTimers[state.receiverIndex] <= 0.1) {
+  if (
+    state.flightProgress >= 0.82 &&
+    state.swingTimers[state.receiverIndex] <= 0.1
+  ) {
     state.swingTimers[state.receiverIndex] = 1.0
   }
 
   // Lateral & forward/back footwork toward intercept tile
   const baseSlot = PICKLEBALL_COURT_SLOTS[state.receiverIndex]
-  const targetOffsetZ = Math.max(-1.45, Math.min(1.45, state.toPos[1] - baseSlot[2]))
+  const targetOffsetZ = Math.max(
+    -1.45,
+    Math.min(1.45, state.toPos[1] - baseSlot[2])
+  )
   const footLerp = 1 - Math.exp(-6 * safeDt)
   state.playerOffsets[state.receiverIndex][1] +=
     (targetOffsetZ - state.playerOffsets[state.receiverIndex][1]) * footLerp

@@ -2,7 +2,7 @@
 
 /**
  * DataHealthPanel.tsx
- * 
+ *
  * Real-time Supabase Data Health Telemetry Panel
  * Directly reads Supabase only to display:
  * - Live DB ping & roundtrip latency (ms)
@@ -98,14 +98,25 @@ const REALTIME_PUBLISHED_TABLES = new Set([
   'office_reminders',
 ])
 
-const TIME_COLUMNS = ['created_at', 'updated_at', 'ts', 'recorded_at', 'last_seen_at', 'last_tick_at', 'last_ping']
+const TIME_COLUMNS = [
+  'created_at',
+  'updated_at',
+  'ts',
+  'recorded_at',
+  'last_seen_at',
+  'last_tick_at',
+  'last_ping',
+]
 
 interface DataHealthPanelProps {
   compact?: boolean
   onClose?: () => void
 }
 
-export function DataHealthPanel({ compact = false, onClose }: DataHealthPanelProps) {
+export function DataHealthPanel({
+  compact = false,
+  onClose,
+}: DataHealthPanelProps) {
   const [records, setRecords] = useState<TableHealthRecord[]>([])
   const [latencyMs, setLatencyMs] = useState<number | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
@@ -132,7 +143,10 @@ export function DataHealthPanel({ compact = false, onClose }: DataHealthPanelPro
     for (const table of ALL_OFFICE_TABLES) {
       const isRealtime = REALTIME_PUBLISHED_TABLES.has(table)
       try {
-        const { data, count, error } = await supabase.from(table).select('*', { count: 'exact' }).limit(1)
+        const { data, count, error } = await supabase
+          .from(table)
+          .select('*', { count: 'exact' })
+          .limit(1)
 
         if (error) {
           healthList.push({
@@ -161,14 +175,15 @@ export function DataHealthPanel({ compact = false, onClose }: DataHealthPanelPro
             const rowObj = timeRow as unknown as Record<string, unknown>
             if (rowObj && rowObj[col]) {
               const rawDate = rowObj[col] as string
-              newestPht = new Date(rawDate).toLocaleString('en-US', {
-                timeZone: 'Asia/Manila',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-              }) + ' PHT'
+              newestPht =
+                new Date(rawDate).toLocaleString('en-US', {
+                  timeZone: 'Asia/Manila',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                }) + ' PHT'
               break
             }
           }
@@ -214,33 +229,36 @@ export function DataHealthPanel({ compact = false, onClose }: DataHealthPanelPro
   const total = records.length
   const liveCount = records.filter((r) => r.status === 'OK').length
   const missingCount = records.filter((r) => r.status === 'MISSING').length
-  const emptyCount = records.filter((r) => r.status === 'OK' && !r.hasWrites).length
+  const emptyCount = records.filter(
+    (r) => r.status === 'OK' && !r.hasWrites
+  ).length
 
   const filteredRecords = records.filter((r) => {
     if (filter === 'empty') return r.status === 'OK' && !r.hasWrites
-    if (filter === 'missing') return r.status === 'MISSING' || r.status === 'ERROR'
+    if (filter === 'missing')
+      return r.status === 'MISSING' || r.status === 'ERROR'
     return true
   })
 
   return (
     <div
       data-testid="data-health-panel"
-      className="flex flex-col rounded-xl border border-cyan-500/30 bg-[#060c18] font-mono text-xs text-slate-200 shadow-2xl overflow-hidden"
+      className="flex flex-col overflow-hidden rounded-xl border border-cyan-500/30 bg-[#060c18] font-mono text-xs text-slate-200 shadow-2xl"
     >
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cyan-500/20 bg-cyan-950/40 px-4 py-3">
         <div className="flex items-center gap-2.5">
           <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
           </span>
           <div>
-            <h3 className="font-bold text-white text-sm tracking-wide">
+            <h3 className="text-sm font-bold tracking-wide text-white">
               SUPABASE DATA HEALTH AUDIT
             </h3>
             <p className="text-[10px] text-cyan-400">
               Live Source of Truth Telemetry • Latency:{' '}
-              <span className="text-emerald-400 font-bold">
+              <span className="font-bold text-emerald-400">
                 {latencyMs !== null ? `${latencyMs}ms` : 'Connecting...'}
               </span>
             </p>
@@ -252,7 +270,7 @@ export function DataHealthPanel({ compact = false, onClose }: DataHealthPanelPro
             type="button"
             onClick={fetchHealth}
             disabled={loading}
-            className="cursor-pointer rounded border border-cyan-500/40 bg-cyan-950/80 px-2.5 py-1 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500 hover:text-black transition"
+            className="cursor-pointer rounded border border-cyan-500/40 bg-cyan-950/80 px-2.5 py-1 text-[11px] font-bold text-cyan-300 transition hover:bg-cyan-500 hover:text-black"
           >
             {loading ? 'AUDITING...' : '↻ REFRESH'}
           </button>
@@ -269,32 +287,47 @@ export function DataHealthPanel({ compact = false, onClose }: DataHealthPanelPro
       </div>
 
       {/* Summary KPI Badges */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 border-b border-cyan-950/60 bg-black/40 p-3 text-[11px]">
+      <div className="grid grid-cols-2 gap-2 border-b border-cyan-950/60 bg-black/40 p-3 text-[11px] sm:grid-cols-4">
         <div className="rounded border border-slate-800 bg-slate-900/60 p-2 text-center">
-          <span className="block text-slate-400 text-[10px]">TOTAL TABLES</span>
-          <span className="text-base font-bold text-cyan-300">{total || 39}</span>
+          <span className="block text-[10px] text-slate-400">TOTAL TABLES</span>
+          <span className="text-base font-bold text-cyan-300">
+            {total || 39}
+          </span>
         </div>
         <div className="rounded border border-emerald-900/60 bg-emerald-950/30 p-2 text-center">
-          <span className="block text-emerald-400 text-[10px]">LIVE &amp; QUERYABLE</span>
-          <span className="text-base font-bold text-emerald-300">{liveCount}</span>
+          <span className="block text-[10px] text-emerald-400">
+            LIVE &amp; QUERYABLE
+          </span>
+          <span className="text-base font-bold text-emerald-300">
+            {liveCount}
+          </span>
         </div>
         <div className="rounded border border-amber-900/60 bg-amber-950/30 p-2 text-center">
-          <span className="block text-amber-400 text-[10px]">NEVER WRITTEN (0 ROWS)</span>
-          <span className="text-base font-bold text-amber-300">{emptyCount}</span>
+          <span className="block text-[10px] text-amber-400">
+            NEVER WRITTEN (0 ROWS)
+          </span>
+          <span className="text-base font-bold text-amber-300">
+            {emptyCount}
+          </span>
         </div>
         <div className="rounded border border-rose-900/60 bg-rose-950/30 p-2 text-center">
-          <span className="block text-rose-400 text-[10px]">PENDING MIGRATION</span>
-          <span className="text-base font-bold text-rose-300">{missingCount}</span>
+          <span className="block text-[10px] text-rose-400">
+            PENDING MIGRATION
+          </span>
+          <span className="text-base font-bold text-rose-300">
+            {missingCount}
+          </span>
         </div>
       </div>
 
       {/* Missing Tables Notice */}
       {missingCount > 0 && (
-        <div className="border-b border-amber-500/30 bg-amber-950/20 px-4 py-2.5 text-[11px] text-amber-300 flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-950/20 px-4 py-2.5 text-[11px] text-amber-300">
           <div className="flex items-center gap-2">
             <span>⚠️</span>
             <span>
-              {missingCount} tables need SQL migration. Execute in Supabase SQL Editor:
+              {missingCount} tables need SQL migration. Execute in Supabase SQL
+              Editor:
             </span>
             <code className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-amber-200">
               0016_consolidated_missing_tables.sql
@@ -311,7 +344,9 @@ export function DataHealthPanel({ compact = false, onClose }: DataHealthPanelPro
             type="button"
             onClick={() => setFilter('all')}
             className={`cursor-pointer rounded px-2 py-0.5 font-bold transition ${
-              filter === 'all' ? 'bg-cyan-500 text-black' : 'text-slate-400 hover:text-white'
+              filter === 'all'
+                ? 'bg-cyan-500 text-black'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             All ({records.length})
@@ -320,7 +355,9 @@ export function DataHealthPanel({ compact = false, onClose }: DataHealthPanelPro
             type="button"
             onClick={() => setFilter('empty')}
             className={`cursor-pointer rounded px-2 py-0.5 font-bold transition ${
-              filter === 'empty' ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-amber-300'
+              filter === 'empty'
+                ? 'bg-amber-500 text-black'
+                : 'text-slate-400 hover:text-amber-300'
             }`}
           >
             Empty (0 rows)
@@ -329,21 +366,25 @@ export function DataHealthPanel({ compact = false, onClose }: DataHealthPanelPro
             type="button"
             onClick={() => setFilter('missing')}
             className={`cursor-pointer rounded px-2 py-0.5 font-bold transition ${
-              filter === 'missing' ? 'bg-rose-500 text-black' : 'text-slate-400 hover:text-rose-300'
+              filter === 'missing'
+                ? 'bg-rose-500 text-black'
+                : 'text-slate-400 hover:text-rose-300'
             }`}
           >
             Pending Migration
           </button>
         </div>
         {lastAuditPht && (
-          <span className="text-[10px] text-slate-500">Audited: {lastAuditPht}</span>
+          <span className="text-[10px] text-slate-500">
+            Audited: {lastAuditPht}
+          </span>
         )}
       </div>
 
       {/* Scrollable Table List */}
       <div className={`overflow-y-auto ${compact ? 'max-h-60' : 'max-h-96'}`}>
         <table className="w-full text-left text-[11px]">
-          <thead className="sticky top-0 bg-[#0a1222] border-b border-slate-800 text-slate-400 text-[10px] uppercase">
+          <thead className="sticky top-0 border-b border-slate-800 bg-[#0a1222] text-[10px] text-slate-400 uppercase">
             <tr>
               <th className="px-3 py-2">Table</th>
               <th className="px-3 py-2">Status</th>
@@ -354,20 +395,20 @@ export function DataHealthPanel({ compact = false, onClose }: DataHealthPanelPro
           </thead>
           <tbody className="divide-y divide-slate-800/60">
             {filteredRecords.map((r) => (
-              <tr key={r.table} className="hover:bg-slate-900/50 transition">
+              <tr key={r.table} className="transition hover:bg-slate-900/50">
                 <td className="px-3 py-1.5 font-bold text-slate-200">
                   {r.table}
                   {r.status === 'OK' && !r.hasWrites && (
-                    <span className="ml-2 inline-block rounded bg-amber-950/80 border border-amber-600/50 px-1 py-0.2 text-[9px] font-bold text-amber-300">
+                    <span className="py-0.2 ml-2 inline-block rounded border border-amber-600/50 bg-amber-950/80 px-1 text-[9px] font-bold text-amber-300">
                       NO WRITES YET
                     </span>
                   )}
                 </td>
                 <td className="px-3 py-1.5">
                   {r.status === 'OK' ? (
-                    <span className="text-emerald-400 font-bold">✓ LIVE</span>
+                    <span className="font-bold text-emerald-400">✓ LIVE</span>
                   ) : (
-                    <span className="text-rose-400 font-bold" title={r.error}>
+                    <span className="font-bold text-rose-400" title={r.error}>
                       ✗ PENDING
                     </span>
                   )}
@@ -379,14 +420,14 @@ export function DataHealthPanel({ compact = false, onClose }: DataHealthPanelPro
                   <span
                     className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-bold ${
                       r.realtime === 'PUBLISHED'
-                        ? 'bg-cyan-950 border border-cyan-500/40 text-cyan-300'
+                        ? 'border border-cyan-500/40 bg-cyan-950 text-cyan-300'
                         : 'text-slate-600'
                     }`}
                   >
                     {r.realtime}
                   </span>
                 </td>
-                <td className="px-3 py-1.5 text-slate-400 truncate max-w-xs">
+                <td className="max-w-xs truncate px-3 py-1.5 text-slate-400">
                   {r.newestWritePht}
                 </td>
               </tr>

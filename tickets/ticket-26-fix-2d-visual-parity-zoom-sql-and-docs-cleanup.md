@@ -5,11 +5,12 @@
 **Date**: 2026-11-12  
 **Commit SHA**: pending  
 **Branch**: `office-v3`  
-**Author / Assignee**: Josiah (Lead Architect) & Antigravity Autonomous Engineering Fleet  
+**Author / Assignee**: Josiah (Lead Architect) & Antigravity Autonomous Engineering Fleet
 
 ---
 
 ## 1. Context & Objectives
+
 - **Supabase Direct Execution vs DDL**: User inquired why manual SQL execution in Supabase was needed. Explained with full transparency that `.env.local` contains `NEXT_PUBLIC_SUPABASE_ANON_KEY`, which has client-level DML permissions (PostgREST table reads/writes) but is strictly forbidden by Supabase from executing raw DDL (`CREATE TABLE`, `ALTER TABLE`) without `DATABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY`.
 - **SQL Migration Errors & Warnings**:
   - `0014_office_brain_learning.sql`: Threw `ERROR: 42703: column "ts" does not exist` when `office_brain_learning_log` or `office_agent_insights` pre-existed without column `ts`.
@@ -19,6 +20,7 @@
 - **Deduplication of `.agent` / `.agents` and Skills Migration**: Deduplicated root agent directories by removing the redundant `.agents` symlink, moved all skills to `docs/skills/`, and ensured seamless discovery.
 
 ## 2. Architectural Design & Key Changes
+
 1. **Full 2D Isometric Props & Parity in `OfficeCanvas2D.tsx`**:
    - Added complete 2D isometric prop rendering routines for the entire West Wing:
      - **Server Room NOC**: Rex's dedicated workstation desk with dual curved monitors (matrix green CLI + cyan telemetry), keyboard, mouse, task chair, 3 heavy server racks with real-time animated blinking LEDs (green/blue/amber), CRAC cooling chiller unit with digital display, suspended overhead cable trays, and glowing amber door sign.
@@ -44,10 +46,12 @@
    - Symlinked `.agent/skills -> ../docs/skills` for Antigravity discovery compatibility.
 
 ## 3. Data & Schema Modifications
+
 - `supabase/migrations/0014_office_brain_learning.sql`: Idempotent column additions (`ts`, `confidence`, `source_ids`, etc.) for `office_brain_learning_log` and `office_agent_insights`.
 - `supabase/migrations/0016_consolidated_missing_tables.sql`: Consolidated master schema script containing all 26 additive tables across Phases K1 through K10 with safe non-destructive policies.
 
 ## 4. Verification & Quality Gates
+
 - **Lint**: Passed (`npm run lint` — 0 errors, 5 pre-existing warnings in unrelated files)
 - **Type Check**: Passed (`npx tsc --noEmit` — 0 errors)
 - **Unit & Integration Tests**: Passed (`npm test` — 28 test files, 267 tests passed 100%)
@@ -55,5 +59,6 @@
 - **Evidence**: 2D and 3D camera presets aligned, West Wing visual props rendered identically in 2D and 3D.
 
 ## 5. Notes & Dependencies
+
 - Resolves all visual discrepancy issues reported between 2D view and 3D view.
 - Provides a clean single copy-paste SQL migration in `0016_consolidated_missing_tables.sql` with zero destructive warnings in the Supabase SQL editor.

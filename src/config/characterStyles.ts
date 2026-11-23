@@ -9,8 +9,10 @@
 import { DepartmentMode } from './officeLayout'
 
 export type CharacterGender = 'male' | 'female'
-export type HairStyle = 'short' | 'spiky' | 'parted' | 'ponytail' | 'long' | 'bob'
-export type CharacterAccessory = 'cap' | 'glasses' | 'headphones' | 'beanie' | 'none'
+export type HairStyle =
+  'short' | 'spiky' | 'parted' | 'ponytail' | 'long' | 'bob'
+export type CharacterAccessory =
+  'cap' | 'glasses' | 'headphones' | 'beanie' | 'none'
 
 export interface CharacterStyleConfig {
   agentId: string
@@ -565,7 +567,10 @@ const FALLBACK_PALETTES: Omit<CharacterStyleConfig, 'agentId'>[] = [
   },
 ]
 
-export function getCharacterStyle(agentId: string, agentName?: string): CharacterStyleConfig {
+export function getCharacterStyle(
+  agentId: string,
+  agentName?: string
+): CharacterStyleConfig {
   const normalizedId = (agentId || '').toLowerCase().replace(/\s+/g, '_')
   if (CHARACTER_STYLES[normalizedId]) {
     return CHARACTER_STYLES[normalizedId]
@@ -597,7 +602,8 @@ export function isAgentActivelyWorking(agent: {
   status?: string
   current_task?: string | null
 }): boolean {
-  if (!agent.current_task || agent.current_task.trim().length === 0) return false
+  if (!agent.current_task || agent.current_task.trim().length === 0)
+    return false
   const s = (agent.status || '').toLowerCase()
   return s === 'working' || s === 'coding' || s === 'busy'
 }
@@ -634,7 +640,12 @@ export function getAgentStatusBadge(
       label: 'In Standup / Scrum',
     }
   }
-  if (effectiveMode === 'GYM' || st === 'gym' || st === 'rec' || st === 'at_gym') {
+  if (
+    effectiveMode === 'GYM' ||
+    st === 'gym' ||
+    st === 'rec' ||
+    st === 'at_gym'
+  ) {
     return {
       dotHex: '#ec4899',
       dotTailwind: 'bg-pink-500',
@@ -648,7 +659,12 @@ export function getAgentStatusBadge(
       label: 'Eating / Cafeteria',
     }
   }
-  if (effectiveMode === 'PANTRY' || st === 'on_break' || st === 'pantry' || st === 'coffee') {
+  if (
+    effectiveMode === 'PANTRY' ||
+    st === 'on_break' ||
+    st === 'pantry' ||
+    st === 'coffee'
+  ) {
     return {
       dotHex: '#eab308',
       dotTailwind: 'bg-yellow-500',
@@ -693,7 +709,10 @@ export function getAgentStatusBadge(
 
   // Working is REAL: if currentTask is specified, it must have a non-empty task description
   if (st === 'working' || st === 'coding' || st === 'busy' || !status) {
-    if (currentTask !== undefined && (!currentTask || currentTask.trim().length === 0)) {
+    if (
+      currentTask !== undefined &&
+      (!currentTask || currentTask.trim().length === 0)
+    ) {
       return {
         dotHex: '#06b6d4',
         dotTailwind: 'bg-cyan-500',

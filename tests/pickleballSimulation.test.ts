@@ -48,7 +48,10 @@ describe('Pickleball 2v2 Rally Simulation & Pathfinding', () => {
   })
 
   it('rotates sideline bench player in and losing-side player out while winners stay', () => {
-    const state = createInitialRallyState(['boss', 'josiah', 'khent', 'blaze'], ['ferwin'])
+    const state = createInitialRallyState(
+      ['boss', 'josiah', 'khent', 'blaze'],
+      ['ferwin']
+    )
     rotateSidelinePlayer(state)
     expect(state.activePlayers[0]).toBe('boss') // Winners stay
     expect(state.activePlayers[2]).toBe('ferwin')

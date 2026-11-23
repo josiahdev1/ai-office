@@ -177,4 +177,3 @@ describe('Phase J1: Shared ArcReactor (3D + 2D) State & Geometry Spec', () => {
     expect(fillTextCalls).toHaveLength(0)
   })
 })
-

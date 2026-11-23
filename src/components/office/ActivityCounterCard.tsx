@@ -85,7 +85,7 @@ export function ActivityCounterCard({
 
   return (
     <div
-      className={`pointer-events-auto select-none rounded-xl border border-slate-200/90 bg-white/95 p-3 shadow-2xl backdrop-blur-md transition-all sm:min-w-56 ${className}`}
+      className={`pointer-events-auto rounded-xl border border-slate-200/90 bg-white/95 p-3 shadow-2xl backdrop-blur-md transition-all select-none sm:min-w-56 ${className}`}
     >
       <div className="mb-2 flex items-center justify-between border-b border-slate-100 pb-1.5">
         <span className="font-mono text-[10px] font-bold tracking-wider text-slate-500 uppercase">
@@ -112,12 +112,14 @@ export function ActivityCounterCard({
               type="button"
               onClick={() => {
                 if (it.isClickable) {
-                  onSelectFilter(isSelected ? null : (it.key as AgentDirectedActivity))
+                  onSelectFilter(
+                    isSelected ? null : (it.key as AgentDirectedActivity)
+                  )
                 }
               }}
               className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-1 text-left font-mono transition-all ${
                 isSelected
-                  ? 'bg-sky-100 ring-1 ring-sky-400 font-bold'
+                  ? 'bg-sky-100 font-bold ring-1 ring-sky-400'
                   : 'hover:bg-slate-100/80'
               }`}
             >
@@ -146,7 +148,9 @@ export function ActivityCounterCard({
         </div>
         <div className="flex items-center justify-between px-2 py-0.5 text-slate-600">
           <span className="tracking-tight text-slate-500">ACCESSORIES</span>
-          <span className="font-bold text-emerald-700">{stats.accessories}</span>
+          <span className="font-bold text-emerald-700">
+            {stats.accessories}
+          </span>
         </div>
       </div>
     </div>

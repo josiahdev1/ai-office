@@ -61,7 +61,11 @@ function LowPolyVehicle({
       {/* Tinted Windshield & Windows */}
       <mesh position={[0, 0.68, isSuv ? -0.1 : -0.15]}>
         <boxGeometry args={[1.3, 0.28, isSuv ? 1.65 : 1.35]} />
-        <meshStandardMaterial color="#0f172a" roughness={0.15} metalness={0.85} />
+        <meshStandardMaterial
+          color="#0f172a"
+          roughness={0.15}
+          metalness={0.85}
+        />
       </mesh>
       {/* 4 Wheels */}
       {[
@@ -70,7 +74,11 @@ function LowPolyVehicle({
         [-0.72, 0.18, -0.88],
         [0.72, 0.18, -0.88],
       ].map(([wx, wy, wz], idx) => (
-        <mesh key={`whl-${idx}`} position={[wx, wy, wz]} rotation={[0, 0, Math.PI / 2]}>
+        <mesh
+          key={`whl-${idx}`}
+          position={[wx, wy, wz]}
+          rotation={[0, 0, Math.PI / 2]}
+        >
           <cylinderGeometry args={[0.2, 0.2, 0.14, 12]} />
           <meshStandardMaterial color="#090d16" roughness={0.9} />
         </mesh>
@@ -112,7 +120,8 @@ function InteractiveDoorMesh({
   useFrame((_, delta) => {
     if (!pivotRef.current) return
     const step = 1 - Math.exp(-10 * Math.min(delta, 0.05))
-    pivotRef.current.rotation.y += (targetRot - pivotRef.current.rotation.y) * step
+    pivotRef.current.rotation.y +=
+      (targetRot - pivotRef.current.rotation.y) * step
   })
 
   const halfW = door.width / 2
@@ -150,12 +159,21 @@ function InteractiveDoorMesh({
       <group ref={pivotRef} position={hingeOffset}>
         <mesh position={leafOffset} castShadow receiveShadow>
           <boxGeometry args={leafSize} />
-          <meshStandardMaterial color="#334155" roughness={0.45} metalness={0.25} />
+          <meshStandardMaterial
+            color="#334155"
+            roughness={0.45}
+            metalness={0.25}
+          />
         </mesh>
         {/* Frosted Vision Glass Window */}
         <mesh position={[leafOffset[0], height * 0.6, leafOffset[2]]}>
           <boxGeometry args={glassSize} />
-          <meshStandardMaterial color="#38bdf8" transparent opacity={0.35} roughness={0.1} />
+          <meshStandardMaterial
+            color="#38bdf8"
+            transparent
+            opacity={0.35}
+            roughness={0.1}
+          />
         </mesh>
         {/* Brushed Steel Lever Handle */}
         <mesh
@@ -166,7 +184,11 @@ function InteractiveDoorMesh({
           ]}
         >
           <boxGeometry args={[0.16, 0.04, 0.16]} />
-          <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.2} />
+          <meshStandardMaterial
+            color="#e2e8f0"
+            metalness={0.9}
+            roughness={0.2}
+          />
         </mesh>
       </group>
     </group>
@@ -184,12 +206,15 @@ const CLOUD_CLUSTERS: [number, number, number, number][] = [
   [-45, 43, 80, 1.2],
 ]
 
-const STAR_POSITIONS: [number, number, number][] = Array.from({ length: 36 }, (_, i) => {
-  const angle = (i / 36) * Math.PI * 2
-  const radius = 95 + (i % 4) * 14
-  const y = 38 + (i % 6) * 8
-  return [Math.cos(angle) * radius, y, Math.sin(angle) * radius]
-})
+const STAR_POSITIONS: [number, number, number][] = Array.from(
+  { length: 36 },
+  (_, i) => {
+    const angle = (i / 36) * Math.PI * 2
+    const radius = 95 + (i % 4) * 14
+    const y = 38 + (i % 6) * 8
+    return [Math.cos(angle) * radius, y, Math.sin(angle) * radius]
+  }
+)
 
 function DynamicSkyDome({ isNight }: { isNight: boolean }) {
   const cloudsRef = useRef<THREE.Group>(null)
@@ -305,7 +330,7 @@ export function BuildingArchitecture({
       if (!grp) return
       const span = cfg.range[1] - cfg.range[0]
       const raw = cfg.initialOffset + t * cfg.speed * cfg.dir - cfg.range[0]
-      const wrapped = ((raw % span) + span) % span + cfg.range[0]
+      const wrapped = (((raw % span) + span) % span) + cfg.range[0]
 
       if (cfg.axis === 'x') {
         grp.position.set(wrapped, -0.05, cfg.laneCoord)
@@ -438,7 +463,10 @@ export function BuildingArchitecture({
               carRefs.current[idx] = el
             }}
           >
-            <LowPolyVehicle color={cfg.color} type={idx % 2 === 0 ? 'sedan' : 'suv'} />
+            <LowPolyVehicle
+              color={cfg.color}
+              type={idx % 2 === 0 ? 'sedan' : 'suv'}
+            />
           </group>
         ))}
       </group>
@@ -525,7 +553,11 @@ export function BuildingArchitecture({
               <group position={[0, 0.04, 0]}>
                 <mesh receiveShadow>
                   <cylinderGeometry args={[6.8, 6.8, 0.08, 48]} />
-                  <meshStandardMaterial color="#090d16" roughness={0.4} metalness={0.8} />
+                  <meshStandardMaterial
+                    color="#090d16"
+                    roughness={0.4}
+                    metalness={0.8}
+                  />
                 </mesh>
                 <mesh position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
                   <ringGeometry args={[6.7, 6.9, 48]} />
@@ -545,10 +577,15 @@ export function BuildingArchitecture({
               <group position={[0, 0.03, 0]}>
                 <mesh receiveShadow>
                   <boxGeometry args={[room.size[0], 0.06, room.size[1]]} />
-                  <meshStandardMaterial color={room.floorColor} roughness={0.7} />
+                  <meshStandardMaterial
+                    color={room.floorColor}
+                    roughness={0.7}
+                  />
                 </mesh>
                 <mesh position={[0, 0.05, 0]}>
-                  <boxGeometry args={[room.size[0] + 0.1, 0.02, room.size[1] + 0.1]} />
+                  <boxGeometry
+                    args={[room.size[0] + 0.1, 0.02, room.size[1] + 0.1]}
+                  />
                   <meshStandardMaterial
                     color={room.accentColor}
                     roughness={0.5}
@@ -636,7 +673,11 @@ export function BuildingArchitecture({
           <meshStandardMaterial color="#0b1324" roughness={0.65} />
         </mesh>
         {[-16, -2, 16].map((z) => (
-          <mesh key={`w-win-wellness-${z}`} position={[-41.15, 1.6, z]} rotation={[0, Math.PI / 2, 0]}>
+          <mesh
+            key={`w-win-wellness-${z}`}
+            position={[-41.15, 1.6, z]}
+            rotation={[0, Math.PI / 2, 0]}
+          >
             <planeGeometry args={[6, 1.6]} />
             <meshStandardMaterial
               color="#38bdf8"
@@ -699,7 +740,11 @@ export function BuildingArchitecture({
               {[-8, -4, 0, 4, 8].map((mx) => (
                 <mesh key={`s-mul-${idx}-${mx}`} position={[mx, 1.75, 0]}>
                   <boxGeometry args={[0.14, 1.7, 0.2]} />
-                  <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.4} />
+                  <meshStandardMaterial
+                    color="#0f172a"
+                    metalness={0.6}
+                    roughness={0.4}
+                  />
                 </mesh>
               ))}
             </group>
@@ -716,12 +761,21 @@ export function BuildingArchitecture({
             </mesh>
             <mesh position={[0, 1.75, 0]}>
               <boxGeometry args={[12.2, 1.7, 0.08]} />
-              <meshStandardMaterial color="#bae6fd" transparent opacity={0.22} roughness={0.08} />
+              <meshStandardMaterial
+                color="#bae6fd"
+                transparent
+                opacity={0.22}
+                roughness={0.08}
+              />
             </mesh>
             {[-4, 0, 4].map((mx) => (
               <mesh key={`ws-mul-${mx}`} position={[mx, 1.75, 0]}>
                 <boxGeometry args={[0.14, 1.7, 0.2]} />
-                <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.4} />
+                <meshStandardMaterial
+                  color="#0f172a"
+                  metalness={0.6}
+                  roughness={0.4}
+                />
               </mesh>
             ))}
           </group>
@@ -739,12 +793,21 @@ export function BuildingArchitecture({
               </mesh>
               <mesh position={[0, 1.75, 0]}>
                 <boxGeometry args={[0.08, 1.7, 21.6]} />
-                <meshStandardMaterial color="#bae6fd" transparent opacity={0.22} roughness={0.08} />
+                <meshStandardMaterial
+                  color="#bae6fd"
+                  transparent
+                  opacity={0.22}
+                  roughness={0.08}
+                />
               </mesh>
               {[-8, -4, 0, 4, 8].map((mz) => (
                 <mesh key={`e-mul-${idx}-${mz}`} position={[0, 1.75, mz]}>
                   <boxGeometry args={[0.2, 1.7, 0.14]} />
-                  <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.4} />
+                  <meshStandardMaterial
+                    color="#0f172a"
+                    metalness={0.6}
+                    roughness={0.4}
+                  />
                 </mesh>
               ))}
             </group>
@@ -767,15 +830,30 @@ export function BuildingArchitecture({
           </mesh>
           <mesh position={[-12.5, 0.85, 23.2]}>
             <boxGeometry args={[21.8, 0.3, 0.1]} />
-            <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+            <meshStandardMaterial
+              color="#38bdf8"
+              transparent
+              opacity={0.4}
+              roughness={0.1}
+            />
           </mesh>
           <mesh position={[12.5, 0.85, 23.2]}>
             <boxGeometry args={[21.8, 0.3, 0.1]} />
-            <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+            <meshStandardMaterial
+              color="#38bdf8"
+              transparent
+              opacity={0.4}
+              roughness={0.1}
+            />
           </mesh>
           <mesh position={[-35, 0.85, 23.2]}>
             <boxGeometry args={[12.4, 0.3, 0.1]} />
-            <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+            <meshStandardMaterial
+              color="#38bdf8"
+              transparent
+              opacity={0.4}
+              roughness={0.1}
+            />
           </mesh>
 
           <mesh position={[23.2, 0.35, -12.5]} castShadow receiveShadow>
@@ -788,11 +866,21 @@ export function BuildingArchitecture({
           </mesh>
           <mesh position={[23.2, 0.85, -12.5]}>
             <boxGeometry args={[0.1, 0.3, 21.8]} />
-            <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+            <meshStandardMaterial
+              color="#38bdf8"
+              transparent
+              opacity={0.4}
+              roughness={0.1}
+            />
           </mesh>
           <mesh position={[23.2, 0.85, 12.5]}>
             <boxGeometry args={[0.1, 0.3, 21.8]} />
-            <meshStandardMaterial color="#38bdf8" transparent opacity={0.4} roughness={0.1} />
+            <meshStandardMaterial
+              color="#38bdf8"
+              transparent
+              opacity={0.4}
+              roughness={0.1}
+            />
           </mesh>
         </group>
       )}
@@ -800,18 +888,56 @@ export function BuildingArchitecture({
       {/* Floating Neon Room Signs above Wellness Wing Doors */}
       <group name="WellnessFloatingSigns">
         {[
-          { label: 'NAP ROOM', pos: [-28.8, 1.8, -16], color: '#818cf8', em: '#4f46e5' },
-          { label: "MEN'S CR", pos: [-28.8, 1.8, -8], color: '#38bdf8', em: '#0284c7' },
-          { label: "WOMEN'S CR", pos: [-28.8, 1.8, -2], color: '#f472b6', em: '#db2777' },
-          { label: 'SERVER ROOM', pos: [-28.8, 1.8, 3.5], color: '#0ea5e9', em: '#0284c7' },
-          { label: 'FACILITIES', pos: [-28.8, 1.8, 8.5], color: '#eab308', em: '#ca8a04' },
-          { label: 'GRAND CAFETERIA', pos: [-28.8, 1.8, 16], color: '#fb923c', em: '#ea580c' },
+          {
+            label: 'NAP ROOM',
+            pos: [-28.8, 1.8, -16],
+            color: '#818cf8',
+            em: '#4f46e5',
+          },
+          {
+            label: "MEN'S CR",
+            pos: [-28.8, 1.8, -8],
+            color: '#38bdf8',
+            em: '#0284c7',
+          },
+          {
+            label: "WOMEN'S CR",
+            pos: [-28.8, 1.8, -2],
+            color: '#f472b6',
+            em: '#db2777',
+          },
+          {
+            label: 'SERVER ROOM',
+            pos: [-28.8, 1.8, 3.5],
+            color: '#0ea5e9',
+            em: '#0284c7',
+          },
+          {
+            label: 'FACILITIES',
+            pos: [-28.8, 1.8, 8.5],
+            color: '#eab308',
+            em: '#ca8a04',
+          },
+          {
+            label: 'GRAND CAFETERIA',
+            pos: [-28.8, 1.8, 16],
+            color: '#fb923c',
+            em: '#ea580c',
+          },
         ].map((sign, idx) => (
-          <group key={`sign-${idx}`} position={sign.pos as [number, number, number]} rotation={[0, Math.PI / 2, 0]}>
+          <group
+            key={`sign-${idx}`}
+            position={sign.pos as [number, number, number]}
+            rotation={[0, Math.PI / 2, 0]}
+          >
             {/* Sign Plate */}
             <mesh>
               <boxGeometry args={[2.0, 0.38, 0.06]} />
-              <meshStandardMaterial color="#090d16" roughness={0.3} metalness={0.7} />
+              <meshStandardMaterial
+                color="#090d16"
+                roughness={0.3}
+                metalness={0.7}
+              />
             </mesh>
             {/* Glowing Accent Border */}
             <mesh position={[0, 0, 0.035]}>
@@ -851,7 +977,11 @@ export function BuildingArchitecture({
               {isWalkMode && (
                 <mesh position={[0, wallH / 2 - 0.12, 0]}>
                   <boxGeometry args={[6.02, 0.08, 0.34]} />
-                  <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={0.35} />
+                  <meshStandardMaterial
+                    color="#38bdf8"
+                    emissive="#0284c7"
+                    emissiveIntensity={0.35}
+                  />
                 </mesh>
               )}
             </group>
@@ -876,12 +1006,22 @@ export function BuildingArchitecture({
             return (
               <group key={`walk-wall-${idx}`} position={[wx, 1.5, wz]}>
                 <mesh castShadow receiveShadow>
-                  <boxGeometry args={isEW ? [len, 3.0, 0.3] : [0.3, 3.0, len]} />
+                  <boxGeometry
+                    args={isEW ? [len, 3.0, 0.3] : [0.3, 3.0, len]}
+                  />
                   <meshStandardMaterial color="#334155" roughness={0.8} />
                 </mesh>
                 <mesh position={[0, 1.38, 0]}>
-                  <boxGeometry args={isEW ? [len + 0.02, 0.08, 0.34] : [0.34, 0.08, len + 0.02]} />
-                  <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={0.3} />
+                  <boxGeometry
+                    args={
+                      isEW ? [len + 0.02, 0.08, 0.34] : [0.34, 0.08, len + 0.02]
+                    }
+                  />
+                  <meshStandardMaterial
+                    color="#38bdf8"
+                    emissive="#0284c7"
+                    emissiveIntensity={0.3}
+                  />
                 </mesh>
               </group>
             )
@@ -920,7 +1060,11 @@ export function BuildingArchitecture({
               </mesh>
 
               {/* Wellness Corridor East Enclosure Wall (x = -28.9) with 6 Dedicated Doorways */}
-              <mesh position={[-28.9, westWallY, -19.5]} castShadow receiveShadow>
+              <mesh
+                position={[-28.9, westWallY, -19.5]}
+                castShadow
+                receiveShadow
+              >
                 <boxGeometry args={[0.3, westWallH, 5.0]} />
                 <meshStandardMaterial color="#1e293b" roughness={0.8} />
               </mesh>
@@ -932,19 +1076,35 @@ export function BuildingArchitecture({
                 <boxGeometry args={[0.3, westWallH, 4.0]} />
                 <meshStandardMaterial color="#1e293b" roughness={0.8} />
               </mesh>
-              <mesh position={[-28.9, westWallY, 0.75]} castShadow receiveShadow>
+              <mesh
+                position={[-28.9, westWallY, 0.75]}
+                castShadow
+                receiveShadow
+              >
                 <boxGeometry args={[0.3, westWallH, 3.5]} />
                 <meshStandardMaterial color="#1e293b" roughness={0.8} />
               </mesh>
-              <mesh position={[-28.9, westWallY, 6.75]} castShadow receiveShadow>
+              <mesh
+                position={[-28.9, westWallY, 6.75]}
+                castShadow
+                receiveShadow
+              >
                 <boxGeometry args={[0.3, westWallH, 2.5]} />
                 <meshStandardMaterial color="#1e293b" roughness={0.8} />
               </mesh>
-              <mesh position={[-28.9, westWallY, 12.25]} castShadow receiveShadow>
+              <mesh
+                position={[-28.9, westWallY, 12.25]}
+                castShadow
+                receiveShadow
+              >
                 <boxGeometry args={[0.3, westWallH, 5.5]} />
                 <meshStandardMaterial color="#1e293b" roughness={0.8} />
               </mesh>
-              <mesh position={[-28.9, westWallY, 19.5]} castShadow receiveShadow>
+              <mesh
+                position={[-28.9, westWallY, 19.5]}
+                castShadow
+                receiveShadow
+              >
                 <boxGeometry args={[0.3, westWallH, 5.0]} />
                 <meshStandardMaterial color="#1e293b" roughness={0.8} />
               </mesh>
@@ -972,8 +1132,8 @@ export function BuildingArchitecture({
           [-28, -28], // Safely beside Pickleball Court
           [14, -28],
           [28, -28],
-          [-51, 0],   // Safely outside expanded Server Room West Bay
-          [-48, 14],  // Safely outside SW cafeteria
+          [-51, 0], // Safely outside expanded Server Room West Bay
+          [-48, 14], // Safely outside SW cafeteria
           [-48, 25],
           [-14, 25.2],
           [14, 25.2],
@@ -1009,12 +1169,20 @@ export function BuildingArchitecture({
           {/* Main Building Acoustic Ceiling Deck */}
           <mesh position={[0, 3.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
             <planeGeometry args={[46.4, 46.4]} />
-            <meshStandardMaterial color="#e2e8f0" roughness={0.9} side={THREE.DoubleSide} />
+            <meshStandardMaterial
+              color="#e2e8f0"
+              roughness={0.9}
+              side={THREE.DoubleSide}
+            />
           </mesh>
           {/* Wellness Wing Acoustic Ceiling Deck */}
           <mesh position={[-34, 3.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
             <planeGeometry args={[19, 46.4]} />
-            <meshStandardMaterial color="#e2e8f0" roughness={0.9} side={THREE.DoubleSide} />
+            <meshStandardMaterial
+              color="#e2e8f0"
+              roughness={0.9}
+              side={THREE.DoubleSide}
+            />
           </mesh>
           {/* Linear Recessed LED Light Troffers (Reference Image 1 aesthetic) */}
           {[-18, -10, -2, 6, 14].map((lz) =>

@@ -18,10 +18,7 @@ import {
   getCharacterStyle,
   getAgentStatusBadge,
 } from '@/config/characterStyles'
-import {
-  AgentNavState,
-  stepAgentNavigation,
-} from '@/config/walkwayGrid'
+import { AgentNavState, stepAgentNavigation } from '@/config/walkwayGrid'
 import {
   getMonitorTexture,
   MonitorRoleTheme,
@@ -75,7 +72,8 @@ function createNameplateTexture(
   const ctx = canvas.getContext('2d')
   if (ctx) {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.font = 'bold 24px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+    ctx.font =
+      'bold 24px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
     const displayText = statusIcon ? `${statusIcon} ${name}` : name
     const textMetrics = ctx.measureText(displayText)
     const pillW = Math.min(328, Math.max(124, textMetrics.width + 66))
@@ -149,7 +147,11 @@ export function ProceduralAgent3D({
     if (effectiveMode === 'PANTRY') return '☕'
     if (effectiveMode === 'GYM') return '🏋️'
     if (effectiveMode === 'COMFORT_ROOM') return '🚻'
-    if (agent.status === 'working' || (agent.current_task && agent.current_task.trim())) return '💻'
+    if (
+      agent.status === 'working' ||
+      (agent.current_task && agent.current_task.trim())
+    )
+      return '💻'
     if (agent.id.startsWith('cleaner_')) return '🧹'
     return '🟢'
   }, [effectiveMode, agent.status, agent.current_task, agent.id])
@@ -157,7 +159,12 @@ export function ProceduralAgent3D({
   // Native WebGL Sprite Nameplate Texture (Zero Lag on Pan/Zoom)
   const nameplateTexture = useMemo(() => {
     if (typeof document === 'undefined') return null
-    return createNameplateTexture(agent.name, badge.dotHex, isSelected, statusIcon)
+    return createNameplateTexture(
+      agent.name,
+      badge.dotHex,
+      isSelected,
+      statusIcon
+    )
   }, [agent.name, badge.dotHex, isSelected, statusIcon])
 
   // Target world position based on effective mode
@@ -198,7 +205,8 @@ export function ProceduralAgent3D({
     elapsed: 0,
   })
 
-  const isDeskMode = effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
+  const isDeskMode =
+    effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
 
   // Determine initial spawn position on mount from props
   const initialSpawn = useMemo(() => {
@@ -256,7 +264,8 @@ export function ProceduralAgent3D({
     const nav = navRef.current
     if (nameplateRef.current && groupRef.current) {
       nameplateRef.current.visible =
-        !isWalkMode || state.camera.position.distanceTo(groupRef.current.position) <= 10.5
+        !isWalkMode ||
+        state.camera.position.distanceTo(groupRef.current.position) <= 10.5
     }
 
     // If global mode changed, stagger by agentIndex * 80ms; if individual agent override changed, start immediately (0ms stagger)
@@ -267,12 +276,17 @@ export function ProceduralAgent3D({
     const staggerIdx = isGroupModeSwitch ? agentIndex : 0
 
     // Autonomous Roaming Patrol Loop for Boss, Cleaners, Server Admin, and Coach Miguel
-    if (roamRoute && (effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK')) {
+    if (
+      roamRoute &&
+      (effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK')
+    ) {
       roamStateRef.current.elapsed += dt
       // Rex spends 25s at PC desk, 12s inspecting racks. Boss spends 18s at each dept. Cleaners spend 15s cleaning each room. Coach Miguel spends 12s per gym station.
       const intervalSec =
         agent.id === 'server_admin'
-          ? (roamStateRef.current.index === 0 ? 25 : 12)
+          ? roamStateRef.current.index === 0
+            ? 25
+            : 12
           : agent.id === 'boss'
             ? 18
             : agent.id === 'coach_miguel'
@@ -281,19 +295,23 @@ export function ProceduralAgent3D({
 
       if (roamStateRef.current.elapsed >= intervalSec) {
         roamStateRef.current.elapsed = 0
-        roamStateRef.current.index = (roamStateRef.current.index + 1) % roamRoute.length
+        roamStateRef.current.index =
+          (roamStateRef.current.index + 1) % roamRoute.length
       }
     }
 
     const currentRoamTarget =
-      roamRoute && (effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK')
+      roamRoute &&
+      (effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK')
         ? roamRoute[roamStateRef.current.index]
         : null
 
     const effectiveTargetPos = currentRoamTarget || targetPos
     // Boss, Cleaners, and Coach Miguel never sit desk-bound in an idle loop! Server admin only sits when at PC desk (roam index 0).
     const effectiveIsDeskMode =
-      isDeskMode && (!roamRoute || (agent.id === 'server_admin' && roamStateRef.current.index === 0))
+      isDeskMode &&
+      (!roamRoute ||
+        (agent.id === 'server_admin' && roamStateRef.current.index === 0))
 
     stepAgentNavigation(
       nav,
@@ -400,7 +418,10 @@ export function ProceduralAgent3D({
         // Boss patrol: holding clipboard with left arm, gesturing with right
         leftArmRef.current.rotation.x = 0.7
         rightArmRef.current.rotation.x = 0.2 + Math.sin(t * 2) * 0.15
-      } else if (agent.id === 'server_admin' && roamStateRef.current.index > 0) {
+      } else if (
+        agent.id === 'server_admin' &&
+        roamStateRef.current.index > 0
+      ) {
         // Server rack inspection animation: reaching to check telemetry and patch cables
         leftArmRef.current.rotation.x = 0.85 + Math.sin(t * 4) * 0.15
         rightArmRef.current.rotation.x = 0.5 + Math.cos(t * 4) * 0.12
@@ -415,16 +436,21 @@ export function ProceduralAgent3D({
       } else if (effectiveMode === 'CAFETERIA' && !isWalking) {
         // Dining at Cafeteria Table: scoop-from-plate-to-mouth arm motion
         leftArmRef.current.rotation.x = 0.48
-        rightArmRef.current.rotation.x = 0.85 + Math.sin(t * 3.8 + agentIndex) * 0.35
+        rightArmRef.current.rotation.x =
+          0.85 + Math.sin(t * 3.8 + agentIndex) * 0.35
       } else if (effectiveMode === 'PICKLEBALL' && !isWalking) {
         // Pickleball rally forehand/backhand shoulder swing & ready stance
-        leftArmRef.current.rotation.x = 0.35 + Math.sin(t * 2.5 + agentIndex) * 0.14
-        rightArmRef.current.rotation.x = 0.78 + Math.sin(t * 4.8 + agentIndex * 1.3) * 0.65
-        rightArmRef.current.rotation.z = Math.cos(t * 4.8 + agentIndex * 1.3) * 0.28
+        leftArmRef.current.rotation.x =
+          0.35 + Math.sin(t * 2.5 + agentIndex) * 0.14
+        rightArmRef.current.rotation.x =
+          0.78 + Math.sin(t * 4.8 + agentIndex * 1.3) * 0.65
+        rightArmRef.current.rotation.z =
+          Math.cos(t * 4.8 + agentIndex * 1.3) * 0.28
       } else if (effectiveMode === 'PANTRY' && !isWalking) {
         // Drinking coffee at Pantry: periodic raise-to-mouth sip
         leftArmRef.current.rotation.x = 0.22
-        rightArmRef.current.rotation.x = 0.7 + Math.max(0, Math.sin(t * 1.8 + agentIndex)) * 0.45
+        rightArmRef.current.rotation.x =
+          0.7 + Math.max(0, Math.sin(t * 1.8 + agentIndex)) * 0.45
       } else {
         leftArmRef.current.rotation.x = isSeated ? 0.5 : 0.15
         rightArmRef.current.rotation.x = isSeated ? 0.5 : 0.15
@@ -466,127 +492,139 @@ export function ProceduralAgent3D({
       {/* ========================================================================= */}
       {!hasDedicatedFurniture && (
         <group position={workstation.deskPos} rotation={[0, deskRotationY, 0]}>
-        {/* Ergonomic Chair */}
-        <group position={[0, 0, 0]}>
-          <mesh position={[0, 0.08, 0]} castShadow>
-            <cylinderGeometry args={[0.3, 0.35, 0.08, 8]} />
-            <meshStandardMaterial color="#0f172a" metalness={0.7} />
-          </mesh>
-          <mesh position={[0, 0.25, 0]} castShadow>
-            <cylinderGeometry args={[0.04, 0.04, 0.25, 8]} />
-            <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
-          </mesh>
-          <mesh position={[0, 0.42, 0]} castShadow receiveShadow>
-            <boxGeometry args={[0.55, 0.08, 0.55]} />
-            <meshStandardMaterial color="#1e293b" roughness={0.7} />
-          </mesh>
-          <mesh position={[0, 0.78, -0.24]} rotation={[0.05, 0, 0]} castShadow>
-            <boxGeometry args={[0.52, 0.65, 0.06]} />
-            <meshStandardMaterial color="#0f172a" roughness={0.8} />
-          </mesh>
-        </group>
-
-        {/* Desk & Dual Glowing Monitors */}
-        <group position={[0, 0, 0.8]}>
-          <mesh position={[0, 0.7, 0]} castShadow receiveShadow>
-            <boxGeometry args={[1.8, 0.06, 0.9]} />
-            <meshStandardMaterial color="#f8fafc" roughness={0.3} />
-          </mesh>
-          <mesh position={[-0.8, 0.35, 0]} castShadow>
-            <boxGeometry args={[0.06, 0.7, 0.8]} />
-            <meshStandardMaterial color="#475569" metalness={0.8} />
-          </mesh>
-          <mesh position={[0.8, 0.35, 0]} castShadow>
-            <boxGeometry args={[0.06, 0.7, 0.8]} />
-            <meshStandardMaterial color="#475569" metalness={0.8} />
-          </mesh>
-          <mesh position={[0, 0.74, -0.1]}>
-            <boxGeometry args={[0.6, 0.02, 0.22]} />
-            <meshStandardMaterial color="#334155" roughness={0.6} />
-          </mesh>
-          <mesh position={[0.42, 0.74, -0.1]}>
-            <boxGeometry args={[0.08, 0.025, 0.12]} />
-            <meshStandardMaterial color="#475569" />
-          </mesh>
-
-          {/* Primary Center Monitor */}
-          <group position={[0, 1.05, 0.25]}>
-            <mesh position={[0, -0.22, 0]}>
-              <cylinderGeometry args={[0.03, 0.08, 0.28, 8]} />
-              <meshStandardMaterial color="#1e293b" metalness={0.8} />
+          {/* Ergonomic Chair */}
+          <group position={[0, 0, 0]}>
+            <mesh position={[0, 0.08, 0]} castShadow>
+              <cylinderGeometry args={[0.3, 0.35, 0.08, 8]} />
+              <meshStandardMaterial color="#0f172a" metalness={0.7} />
             </mesh>
-            <mesh castShadow>
-              <boxGeometry args={[1.1, 0.6, 0.04]} />
-              <meshStandardMaterial color="#0f172a" roughness={0.5} />
-            </mesh>
-            <mesh position={[0, 0, -0.025]} rotation={[0, Math.PI, 0]}>
-              <planeGeometry args={[1.05, 0.55]} />
+            <mesh position={[0, 0.25, 0]} castShadow>
+              <cylinderGeometry args={[0.04, 0.04, 0.25, 8]} />
               <meshStandardMaterial
-                map={getMonitorTexture(
-                  agent.id === 'server_admin' || agent.department === 'FACILITIES'
-                    ? ('server_admin' as MonitorRoleTheme)
-                    : agent.department === 'DESIGN'
-                    ? 'design'
-                    : agent.department === 'OPERATIONS' || agent.department === 'GROWTH'
-                    ? 'operations'
-                    : agent.department === 'EXECUTIVE'
-                    ? 'executive'
-                    : 'engineering'
-                )}
-                emissive="#ffffff"
-                emissiveMap={getMonitorTexture(
-                  agent.id === 'server_admin' || agent.department === 'FACILITIES'
-                    ? ('server_admin' as MonitorRoleTheme)
-                    : agent.department === 'DESIGN'
-                    ? 'design'
-                    : agent.department === 'OPERATIONS' || agent.department === 'GROWTH'
-                    ? 'operations'
-                    : agent.department === 'EXECUTIVE'
-                    ? 'executive'
-                    : 'engineering'
-                )}
-                emissiveIntensity={0.85}
-                roughness={0.25}
+                color="#cbd5e1"
+                metalness={0.9}
+                roughness={0.2}
               />
             </mesh>
-          </group>
-
-          {/* Secondary Angled Monitor */}
-          <group position={[0.7, 1.05, 0.2]} rotation={[0, -0.35, 0]}>
-            <mesh castShadow>
-              <boxGeometry args={[0.65, 0.6, 0.04]} />
-              <meshStandardMaterial color="#0f172a" />
+            <mesh position={[0, 0.42, 0]} castShadow receiveShadow>
+              <boxGeometry args={[0.55, 0.08, 0.55]} />
+              <meshStandardMaterial color="#1e293b" roughness={0.7} />
             </mesh>
-            <mesh position={[0, 0, -0.025]} rotation={[0, Math.PI, 0]}>
-              <planeGeometry args={[0.6, 0.55]} />
-              <meshStandardMaterial
-                map={getMonitorTexture(
-                  agent.department === 'DESIGN' ? 'design' : 'server_admin'
-                )}
-                emissive="#ffffff"
-                emissiveMap={getMonitorTexture(
-                  agent.department === 'DESIGN' ? 'design' : 'server_admin'
-                )}
-                emissiveIntensity={0.7}
-                roughness={0.25}
-              />
+            <mesh
+              position={[0, 0.78, -0.24]}
+              rotation={[0.05, 0, 0]}
+              castShadow
+            >
+              <boxGeometry args={[0.52, 0.65, 0.06]} />
+              <meshStandardMaterial color="#0f172a" roughness={0.8} />
             </mesh>
           </group>
 
-          {/* Coffee Mug */}
-          <group position={[-0.6, 0.77, -0.15]}>
-            <mesh castShadow>
-              <cylinderGeometry args={[0.06, 0.05, 0.12, 12]} />
-              <meshStandardMaterial color="#f1f5f9" />
+          {/* Desk & Dual Glowing Monitors */}
+          <group position={[0, 0, 0.8]}>
+            <mesh position={[0, 0.7, 0]} castShadow receiveShadow>
+              <boxGeometry args={[1.8, 0.06, 0.9]} />
+              <meshStandardMaterial color="#f8fafc" roughness={0.3} />
             </mesh>
-            <mesh position={[0, 0.01, 0.06]}>
-              <boxGeometry args={[0.02, 0.06, 0.04]} />
-              <meshStandardMaterial color={style.outfitColor} />
+            <mesh position={[-0.8, 0.35, 0]} castShadow>
+              <boxGeometry args={[0.06, 0.7, 0.8]} />
+              <meshStandardMaterial color="#475569" metalness={0.8} />
             </mesh>
+            <mesh position={[0.8, 0.35, 0]} castShadow>
+              <boxGeometry args={[0.06, 0.7, 0.8]} />
+              <meshStandardMaterial color="#475569" metalness={0.8} />
+            </mesh>
+            <mesh position={[0, 0.74, -0.1]}>
+              <boxGeometry args={[0.6, 0.02, 0.22]} />
+              <meshStandardMaterial color="#334155" roughness={0.6} />
+            </mesh>
+            <mesh position={[0.42, 0.74, -0.1]}>
+              <boxGeometry args={[0.08, 0.025, 0.12]} />
+              <meshStandardMaterial color="#475569" />
+            </mesh>
+
+            {/* Primary Center Monitor */}
+            <group position={[0, 1.05, 0.25]}>
+              <mesh position={[0, -0.22, 0]}>
+                <cylinderGeometry args={[0.03, 0.08, 0.28, 8]} />
+                <meshStandardMaterial color="#1e293b" metalness={0.8} />
+              </mesh>
+              <mesh castShadow>
+                <boxGeometry args={[1.1, 0.6, 0.04]} />
+                <meshStandardMaterial color="#0f172a" roughness={0.5} />
+              </mesh>
+              <mesh position={[0, 0, -0.025]} rotation={[0, Math.PI, 0]}>
+                <planeGeometry args={[1.05, 0.55]} />
+                <meshStandardMaterial
+                  map={getMonitorTexture(
+                    agent.id === 'server_admin' ||
+                      agent.department === 'FACILITIES'
+                      ? ('server_admin' as MonitorRoleTheme)
+                      : agent.department === 'DESIGN'
+                        ? 'design'
+                        : agent.department === 'OPERATIONS' ||
+                            agent.department === 'GROWTH'
+                          ? 'operations'
+                          : agent.department === 'EXECUTIVE'
+                            ? 'executive'
+                            : 'engineering'
+                  )}
+                  emissive="#ffffff"
+                  emissiveMap={getMonitorTexture(
+                    agent.id === 'server_admin' ||
+                      agent.department === 'FACILITIES'
+                      ? ('server_admin' as MonitorRoleTheme)
+                      : agent.department === 'DESIGN'
+                        ? 'design'
+                        : agent.department === 'OPERATIONS' ||
+                            agent.department === 'GROWTH'
+                          ? 'operations'
+                          : agent.department === 'EXECUTIVE'
+                            ? 'executive'
+                            : 'engineering'
+                  )}
+                  emissiveIntensity={0.85}
+                  roughness={0.25}
+                />
+              </mesh>
+            </group>
+
+            {/* Secondary Angled Monitor */}
+            <group position={[0.7, 1.05, 0.2]} rotation={[0, -0.35, 0]}>
+              <mesh castShadow>
+                <boxGeometry args={[0.65, 0.6, 0.04]} />
+                <meshStandardMaterial color="#0f172a" />
+              </mesh>
+              <mesh position={[0, 0, -0.025]} rotation={[0, Math.PI, 0]}>
+                <planeGeometry args={[0.6, 0.55]} />
+                <meshStandardMaterial
+                  map={getMonitorTexture(
+                    agent.department === 'DESIGN' ? 'design' : 'server_admin'
+                  )}
+                  emissive="#ffffff"
+                  emissiveMap={getMonitorTexture(
+                    agent.department === 'DESIGN' ? 'design' : 'server_admin'
+                  )}
+                  emissiveIntensity={0.7}
+                  roughness={0.25}
+                />
+              </mesh>
+            </group>
+
+            {/* Coffee Mug */}
+            <group position={[-0.6, 0.77, -0.15]}>
+              <mesh castShadow>
+                <cylinderGeometry args={[0.06, 0.05, 0.12, 12]} />
+                <meshStandardMaterial color="#f1f5f9" />
+              </mesh>
+              <mesh position={[0, 0.01, 0.06]}>
+                <boxGeometry args={[0.02, 0.06, 0.04]} />
+                <meshStandardMaterial color={style.outfitColor} />
+              </mesh>
+            </group>
           </group>
         </group>
-      </group>
-    )}
+      )}
 
       {/* ========================================================================= */}
       {/* B. DISTINCT ARTICULATED CHARACTER + NATIVE WEBGL SPRITE NAMEPLATE         */}
@@ -601,7 +639,11 @@ export function ProceduralAgent3D({
       >
         {/* Native WebGL Sprite Nameplate — Zero Pan/Zoom Lag */}
         {nameplateTexture && (
-          <sprite ref={nameplateRef} position={[0, 2.05, 0]} scale={[4.2, 0.95, 1]}>
+          <sprite
+            ref={nameplateRef}
+            position={[0, 2.05, 0]}
+            scale={[4.2, 0.95, 1]}
+          >
             <spriteMaterial
               map={nameplateTexture}
               transparent
@@ -696,34 +738,44 @@ export function ProceduralAgent3D({
         )}
 
         {/* Gym Dumbbell Props */}
-        {effectiveMode === 'GYM' && agentIndex % 3 === 2 && agent.id !== 'coach_miguel' && (
-          <group position={[0, 0.36, 0.24]}>
-            <mesh position={[-0.24, 0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
-              <cylinderGeometry args={[0.02, 0.02, 0.22, 8]} />
-              <meshStandardMaterial color="#64748b" metalness={0.8} />
-            </mesh>
-            <mesh position={[-0.24, 0, -0.09]} castShadow>
-              <cylinderGeometry args={[0.055, 0.055, 0.04, 10]} />
-              <meshStandardMaterial color="#0f172a" />
-            </mesh>
-            <mesh position={[-0.24, 0, 0.09]} castShadow>
-              <cylinderGeometry args={[0.055, 0.055, 0.04, 10]} />
-              <meshStandardMaterial color="#0f172a" />
-            </mesh>
-            <mesh position={[0.24, 0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
-              <cylinderGeometry args={[0.02, 0.02, 0.22, 8]} />
-              <meshStandardMaterial color="#64748b" metalness={0.8} />
-            </mesh>
-            <mesh position={[0.24, 0, -0.09]} castShadow>
-              <cylinderGeometry args={[0.055, 0.055, 0.04, 10]} />
-              <meshStandardMaterial color="#0f172a" />
-            </mesh>
-            <mesh position={[0.24, 0, 0.09]} castShadow>
-              <cylinderGeometry args={[0.055, 0.055, 0.04, 10]} />
-              <meshStandardMaterial color="#0f172a" />
-            </mesh>
-          </group>
-        )}
+        {effectiveMode === 'GYM' &&
+          agentIndex % 3 === 2 &&
+          agent.id !== 'coach_miguel' && (
+            <group position={[0, 0.36, 0.24]}>
+              <mesh
+                position={[-0.24, 0, 0]}
+                rotation={[0, 0, Math.PI / 2]}
+                castShadow
+              >
+                <cylinderGeometry args={[0.02, 0.02, 0.22, 8]} />
+                <meshStandardMaterial color="#64748b" metalness={0.8} />
+              </mesh>
+              <mesh position={[-0.24, 0, -0.09]} castShadow>
+                <cylinderGeometry args={[0.055, 0.055, 0.04, 10]} />
+                <meshStandardMaterial color="#0f172a" />
+              </mesh>
+              <mesh position={[-0.24, 0, 0.09]} castShadow>
+                <cylinderGeometry args={[0.055, 0.055, 0.04, 10]} />
+                <meshStandardMaterial color="#0f172a" />
+              </mesh>
+              <mesh
+                position={[0.24, 0, 0]}
+                rotation={[0, 0, Math.PI / 2]}
+                castShadow
+              >
+                <cylinderGeometry args={[0.02, 0.02, 0.22, 8]} />
+                <meshStandardMaterial color="#64748b" metalness={0.8} />
+              </mesh>
+              <mesh position={[0.24, 0, -0.09]} castShadow>
+                <cylinderGeometry args={[0.055, 0.055, 0.04, 10]} />
+                <meshStandardMaterial color="#0f172a" />
+              </mesh>
+              <mesh position={[0.24, 0, 0.09]} castShadow>
+                <cylinderGeometry args={[0.055, 0.055, 0.04, 10]} />
+                <meshStandardMaterial color="#0f172a" />
+              </mesh>
+            </group>
+          )}
 
         {/* Coach Whistle & Lanyard Prop */}
         {agent.id === 'coach_miguel' && (

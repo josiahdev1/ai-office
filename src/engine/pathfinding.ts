@@ -22,11 +22,7 @@ export const GRID_SIZE_Z = GRID_MAX_Z - GRID_MIN_Z + 1 // 64
 export const GRID_SIZE = Math.max(GRID_SIZE_X, GRID_SIZE_Z)
 
 export type NavigationSubState =
-  | 'seated'
-  | 'standing_up'
-  | 'walking'
-  | 'sitting_down'
-  | 'standing'
+  'seated' | 'standing_up' | 'walking' | 'sitting_down' | 'standing'
 
 export interface WaypointNode {
   x: number
@@ -62,7 +58,12 @@ function isDoorwayCoord(c: number): boolean {
  * Checks whether a 1m x 1m world tile (gx, gz) is walkable or blocked by walls/pedestal.
  */
 export function isWorldTileWalkable(gx: number, gz: number): boolean {
-  if (gx < GRID_MIN_X || gx > GRID_MAX_X || gz < GRID_MIN_Z || gz > GRID_MAX_Z) {
+  if (
+    gx < GRID_MIN_X ||
+    gx > GRID_MAX_X ||
+    gz < GRID_MIN_Z ||
+    gz > GRID_MAX_Z
+  ) {
     return false
   }
 
@@ -158,7 +159,14 @@ export function isWorldTileWalkable(gx: number, gz: number): boolean {
       const isServerDoor = gz >= 2 && gz <= 5
       const isFacDoor = gz >= 8 && gz <= 10
       const isCafeDoor = gz >= 15 && gz <= 17
-      if (!isNapDoor && !isMensCrDoor && !isWomensCrDoor && !isServerDoor && !isFacDoor && !isCafeDoor) {
+      if (
+        !isNapDoor &&
+        !isMensCrDoor &&
+        !isWomensCrDoor &&
+        !isServerDoor &&
+        !isFacDoor &&
+        !isCafeDoor
+      ) {
         return false
       }
     }
@@ -204,7 +212,8 @@ export function findPath(
     return [[targetX, 0, targetZ]]
   }
 
-  const key = (x: number, z: number) => (x - GRID_MIN_X) * GRID_SIZE_Z + (z - GRID_MIN_Z)
+  const key = (x: number, z: number) =>
+    (x - GRID_MIN_X) * GRID_SIZE_Z + (z - GRID_MIN_Z)
   const startKey = key(sx, sz)
   const targetKey = key(tx, tz)
 
@@ -213,7 +222,9 @@ export function findPath(
   const closed = new Set<number>()
   const cameFrom = new Map<number, number>()
   const gScore = new Map<number, number>([[startKey, 0]])
-  const fScore = new Map<number, number>([[startKey, Math.hypot(tx - sx, tz - sz)]])
+  const fScore = new Map<number, number>([
+    [startKey, Math.hypot(tx - sx, tz - sz)],
+  ])
 
   const dirs: [number, number, number][] = [
     [1, 0, 1],
@@ -257,20 +268,32 @@ export function findPath(
     for (const [dx, dz, stepCost] of dirs) {
       const nx = cx + dx
       const nz = cz + dz
-      if (nx < GRID_MIN_X || nx > GRID_MAX_X || nz < GRID_MIN_Z || nz > GRID_MAX_Z) {
+      if (
+        nx < GRID_MIN_X ||
+        nx > GRID_MAX_X ||
+        nz < GRID_MIN_Z ||
+        nz > GRID_MAX_Z
+      ) {
         continue
       }
 
       const nKey = key(nx, nz)
       if (closed.has(nKey)) continue
 
-      if (nKey !== targetKey && nKey !== startKey && !isWorldTileWalkable(nx, nz)) {
+      if (
+        nKey !== targetKey &&
+        nKey !== startKey &&
+        !isWorldTileWalkable(nx, nz)
+      ) {
         continue
       }
 
       // Prevent diagonal corner-cutting across wall segments
       if (dx !== 0 && dz !== 0) {
-        if (!isWorldTileWalkable(cx + dx, cz) || !isWorldTileWalkable(cx, cz + dz)) {
+        if (
+          !isWorldTileWalkable(cx + dx, cz) ||
+          !isWorldTileWalkable(cx, cz + dz)
+        ) {
           continue
         }
       }
@@ -403,13 +426,19 @@ export function stepAgentNavigation(
 
   // 2. Staggered departure delay (agents wait at their chair before standing up)
   if ((nav.staggerRemainingSec ?? 0) > 0) {
-    nav.staggerRemainingSec = Math.max(0, (nav.staggerRemainingSec ?? 0) - safeDt)
+    nav.staggerRemainingSec = Math.max(
+      0,
+      (nav.staggerRemainingSec ?? 0) - safeDt
+    )
     return
   }
 
   // 3. Phase 1: Standing up from chair (250ms)
   if ((nav.standingUpRemainingSec ?? 0) > 0) {
-    nav.standingUpRemainingSec = Math.max(0, (nav.standingUpRemainingSec ?? 0) - safeDt)
+    nav.standingUpRemainingSec = Math.max(
+      0,
+      (nav.standingUpRemainingSec ?? 0) - safeDt
+    )
     nav.subState = 'standing_up'
     nav.isWalking = false
     // Gently push back from desk while standing up

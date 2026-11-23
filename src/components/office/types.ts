@@ -1,14 +1,7 @@
 export type FacingDirection = 'SE' | 'SW' | 'NE' | 'NW'
 
 export type AgentPose =
-  | 'stand'
-  | 'walk'
-  | 'sit'
-  | 'type'
-  | 'drink_coffee'
-  | 'eat'
-  | 'gym'
-  | 'gesture'
+  'stand' | 'walk' | 'sit' | 'type' | 'drink_coffee' | 'eat' | 'gym' | 'gesture'
 
 export type AgentStatus =
   | 'active'
@@ -26,7 +19,6 @@ export type AgentStatus =
   | 'eating'
   | 'in_cr'
   | 'cleaning'
-
 
 export type AgentSubState =
   | 'typing'
@@ -64,7 +56,8 @@ export interface Agent {
   current_coord?: { x: number; y: number }
   target_coord?: { x: number; y: number }
   kind?: 'resident' | 'external'
-  cli?: 'claude-code' | 'antigravity' | 'codex' | 'opencode' | 'cursor' | 'other'
+  cli?:
+    'claude-code' | 'antigravity' | 'codex' | 'opencode' | 'cursor' | 'other'
   session_id?: string
   cwd_hash?: string
   current_tool?: string
@@ -78,7 +71,8 @@ export interface Agent {
   model?: string
 }
 
-export type CarStyle = 'sedan' | 'hatchback' | 'suv' | 'pickup' | 'van' | 'truck' | 'bus'
+export type CarStyle =
+  'sedan' | 'hatchback' | 'suv' | 'pickup' | 'van' | 'truck' | 'bus'
 
 export interface VehicleState {
   id: string

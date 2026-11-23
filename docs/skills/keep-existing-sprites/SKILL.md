@@ -8,6 +8,7 @@ description: Preservation rules and extension guidelines for the video-style low
 > Updated on **2026-11-16** per Josiah's character revision request in `TICKET-35`.
 
 ## Core Rules
+
 1. **Preserve the Video-Style Voxel/Block Character Architecture** in `src/components/office/AgentModel3D.tsx` and `src/components/office/three/VoxelAgentMesh.tsx`:
    - Cube-ish head with hair block variants (`short`, `bald`, `curly`, `long`, `ponytail`, `white_gray`), simple pixel eyes, bold outfit torso (`#f97316`, `#eab308`, `#ef4444`, `#38bdf8`, `#1e293b`, `#14b8a6`), separate swinging arm blocks, small hand cubes, two leg blocks, and dark shoes.
    - Contextual held props: Pickleball paddle (`court` players only), coffee cup (`PANTRY`), dumbbell (`GYM`), clipboard (`boss`).

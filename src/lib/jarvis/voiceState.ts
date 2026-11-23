@@ -10,12 +10,7 @@
  */
 
 export type VoiceState =
-  | 'idle'
-  | 'listening'
-  | 'thinking'
-  | 'executing'
-  | 'speaking'
-  | 'error'
+  'idle' | 'listening' | 'thinking' | 'executing' | 'speaking' | 'error'
 
 export interface VoiceTransitionRecord {
   id: string
@@ -48,25 +43,62 @@ export type VoiceActionLiveValues = Partial<VoiceTransitionRecord['liveValues']>
 
 export type VoiceAction =
   | { type: 'MIC_OPEN'; liveValues?: VoiceActionLiveValues; reason?: string }
-  | { type: 'USER_SPEECH_START'; liveValues?: VoiceActionLiveValues; reason?: string }
-  | { type: 'INTERIM_TRANSCRIPT'; transcript: string; liveValues?: VoiceActionLiveValues; reason?: string }
-  | { type: 'TRANSCRIPT_FINALIZED'; transcript: string; liveValues?: VoiceActionLiveValues; reason?: string }
-  | { type: 'EXECUTION_START'; planTitle?: string; liveValues?: VoiceActionLiveValues; reason?: string }
+  | {
+      type: 'USER_SPEECH_START'
+      liveValues?: VoiceActionLiveValues
+      reason?: string
+    }
+  | {
+      type: 'INTERIM_TRANSCRIPT'
+      transcript: string
+      liveValues?: VoiceActionLiveValues
+      reason?: string
+    }
+  | {
+      type: 'TRANSCRIPT_FINALIZED'
+      transcript: string
+      liveValues?: VoiceActionLiveValues
+      reason?: string
+    }
+  | {
+      type: 'EXECUTION_START'
+      planTitle?: string
+      liveValues?: VoiceActionLiveValues
+      reason?: string
+    }
   | { type: 'REPLY_READY'; liveValues?: VoiceActionLiveValues; reason?: string }
-  | { type: 'SPEECH_START'; liveValues?: VoiceActionLiveValues; reason?: string }
+  | {
+      type: 'SPEECH_START'
+      liveValues?: VoiceActionLiveValues
+      reason?: string
+    }
   | { type: 'SPEECH_END'; liveValues?: VoiceActionLiveValues; reason?: string }
   | {
       type: 'BARGE_IN'
-      reason: 'interim_words' | 'mic_threshold' | 'space_key' | 'manual_interrupt' | string
+      reason:
+        | 'interim_words'
+        | 'mic_threshold'
+        | 'space_key'
+        | 'manual_interrupt'
+        | string
       liveValues?: VoiceActionLiveValues
     }
-  | { type: 'SPACE_INTERRUPT'; liveValues?: VoiceActionLiveValues; reason?: string }
+  | {
+      type: 'SPACE_INTERRUPT'
+      liveValues?: VoiceActionLiveValues
+      reason?: string
+    }
   | {
       type: 'WATCHDOG_TIMEOUT'
       reason: 'speaking_no_playback' | 'listening_mic_closed' | string
       liveValues?: VoiceActionLiveValues
     }
-  | { type: 'ERROR'; error: string; liveValues?: VoiceActionLiveValues; reason?: string }
+  | {
+      type: 'ERROR'
+      error: string
+      liveValues?: VoiceActionLiveValues
+      reason?: string
+    }
   | { type: 'RECOVER'; liveValues?: VoiceActionLiveValues; reason?: string }
   | { type: 'RESET'; liveValues?: VoiceActionLiveValues; reason?: string }
 
@@ -108,9 +140,10 @@ function recordTransition(
     to,
     reason,
     liveValues: {
-      speechSynthesisSpeaking: liveValues?.speechSynthesisSpeaking ?? (to === 'speaking'),
-      audioPlaying: liveValues?.audioPlaying ?? (to === 'speaking'),
-      micOpen: liveValues?.micOpen ?? (to === 'listening'),
+      speechSynthesisSpeaking:
+        liveValues?.speechSynthesisSpeaking ?? to === 'speaking',
+      audioPlaying: liveValues?.audioPlaying ?? to === 'speaking',
+      micOpen: liveValues?.micOpen ?? to === 'listening',
       micLevel: liveValues?.micLevel ?? 0,
       lastRecognitionResult: liveValues?.lastRecognitionResult ?? '',
     },
@@ -240,7 +273,9 @@ export function voiceStateReducer(
             state.history,
             state.current,
             'executing',
-            action.planTitle ? `EXECUTION_START: ${action.planTitle}` : 'EXECUTION_START',
+            action.planTitle
+              ? `EXECUTION_START: ${action.planTitle}`
+              : 'EXECUTION_START',
             live,
             now
           ),
@@ -337,7 +372,10 @@ export function voiceStateReducer(
     }
 
     case 'WATCHDOG_TIMEOUT': {
-      if (action.reason === 'speaking_no_playback' && state.current === 'speaking') {
+      if (
+        action.reason === 'speaking_no_playback' &&
+        state.current === 'speaking'
+      ) {
         return {
           ...state,
           current: 'idle',
@@ -353,7 +391,10 @@ export function voiceStateReducer(
           ),
         }
       }
-      if (action.reason === 'listening_mic_closed' && state.current === 'listening') {
+      if (
+        action.reason === 'listening_mic_closed' &&
+        state.current === 'listening'
+      ) {
         return {
           ...state,
           current: 'idle',
@@ -520,7 +561,10 @@ export function checkBargeInCondition(params: {
 
   const minWords = params.minInterimWords ?? 2
   if (params.interimTranscript) {
-    const rawWords = params.interimTranscript.trim().split(/\s+/).filter(Boolean)
+    const rawWords = params.interimTranscript
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
     if (rawWords.length >= minWords) {
       const sentences = params.recentSpokenSentences || params.spokenSentences
       if (sentences && sentences.length > 0) {

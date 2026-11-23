@@ -118,7 +118,8 @@ export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = {
 }
 
 // Regex patterns for sensitive secret detection
-const SECRET_PATTERN = '(?:sk-[a-zA-Z0-9_-]{20,}|ghp_[a-zA-Z0-9]{20,}|eyJ[a-zA-Z0-9_-]{15,}\\.[a-zA-Z0-9_-]{15,}|password\\s*[:=]\\s*\\S+|api[_-]?key\\s*[:=]\\s*\\S+)'
+const SECRET_PATTERN =
+  '(?:sk-[a-zA-Z0-9_-]{20,}|ghp_[a-zA-Z0-9]{20,}|eyJ[a-zA-Z0-9_-]{15,}\\.[a-zA-Z0-9_-]{15,}|password\\s*[:=]\\s*\\S+|api[_-]?key\\s*[:=]\\s*\\S+)'
 
 export class ReminderManager {
   private reminders: Map<string, OfficeReminderRecord> = new Map()
@@ -146,7 +147,8 @@ export class ReminderManager {
       created_at: now.toISOString(),
       created_by: 'jarvis',
       title: 'JARVIS Standup & Systems Sync',
-      message: 'All office systems nominal. Reviewing pending approvals and active agent wellness.',
+      message:
+        'All office systems nominal. Reviewing pending approvals and active agent wellness.',
       trigger_kind: 'time',
       due_at: new Date(now.getTime() + 1800000).toISOString(), // in 30 minutes
       recurrence: {},
@@ -231,7 +233,10 @@ export class ReminderManager {
       recurrence: params.recurrence || {},
       condition: params.condition || {},
       channels: params.channels || this.settings.defaultChannels,
-      escalation: { repeat_after_mins: this.settings.escalationRepeatMins, push_fallback: true },
+      escalation: {
+        repeat_after_mins: this.settings.escalationRepeatMins,
+        push_fallback: true,
+      },
       status: 'scheduled',
       next_due_at: params.dueAt || null,
     }
@@ -256,7 +261,11 @@ export class ReminderManager {
    * Atomic Claim: Guarantees that only ONE tab or scheduled worker delivers
    * a specific occurrence of a reminder.
    */
-  public claimDueOccurrence(reminderId: string, occurrenceKey: string, tabId: string): boolean {
+  public claimDueOccurrence(
+    reminderId: string,
+    occurrenceKey: string,
+    tabId: string
+  ): boolean {
     if (this.claimedOccurrences.has(occurrenceKey)) {
       return false
     }
@@ -337,7 +346,10 @@ export class ReminderManager {
   /**
    * User declines the call. Can either snooze or cancel.
    */
-  public declineCall(reminderId: string, action: 'snooze' | 'cancel' = 'snooze'): OfficeReminderRecord | null {
+  public declineCall(
+    reminderId: string,
+    action: 'snooze' | 'cancel' = 'snooze'
+  ): OfficeReminderRecord | null {
     const rem = this.reminders.get(reminderId)
     if (!rem) return null
 
@@ -354,7 +366,10 @@ export class ReminderManager {
   /**
    * Snoozes a reminder for N minutes.
    */
-  public snoozeReminder(reminderId: string, minutes: number = 10): OfficeReminderRecord | null {
+  public snoozeReminder(
+    reminderId: string,
+    minutes: number = 10
+  ): OfficeReminderRecord | null {
     const rem = this.reminders.get(reminderId)
     if (!rem) return null
 
@@ -441,7 +456,11 @@ export class ReminderManager {
     const missedReminders: OfficeReminderRecord[] = []
 
     for (const rem of this.reminders.values()) {
-      if (rem.status === 'cancelled' || rem.status === 'done' || rem.status === 'acknowledged') {
+      if (
+        rem.status === 'cancelled' ||
+        rem.status === 'done' ||
+        rem.status === 'acknowledged'
+      ) {
         continue
       }
 
@@ -487,7 +506,8 @@ export class ReminderManager {
     const lowerTitle = taskTitle.toLowerCase()
 
     for (const rem of this.reminders.values()) {
-      if (rem.status !== 'scheduled' || rem.trigger_kind !== 'task_complete') continue
+      if (rem.status !== 'scheduled' || rem.trigger_kind !== 'task_complete')
+        continue
 
       const keyword = (rem.condition?.taskKeyword as string) || ''
       if (keyword && lowerTitle.includes(keyword.toLowerCase())) {
@@ -506,11 +526,14 @@ export class ReminderManager {
   /**
    * Evaluates pending approvals waiting longer than N minutes.
    */
-  public onApprovalWaitingCheck(pendingApprovals: { id: string; waitMinutes: number }[]): OfficeReminderRecord[] {
+  public onApprovalWaitingCheck(
+    pendingApprovals: { id: string; waitMinutes: number }[]
+  ): OfficeReminderRecord[] {
     const triggered: OfficeReminderRecord[] = []
 
     for (const rem of this.reminders.values()) {
-      if (rem.status !== 'scheduled' || rem.trigger_kind !== 'approval_waiting') continue
+      if (rem.status !== 'scheduled' || rem.trigger_kind !== 'approval_waiting')
+        continue
 
       const maxWait = (rem.condition?.approvalMaxWaitMins as number) || 30
       const offending = pendingApprovals.find((a) => a.waitMinutes >= maxWait)
@@ -536,7 +559,10 @@ export class ReminderManager {
   public startSynthesizedRingtone() {
     if (typeof window === 'undefined') return
     try {
-      const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      const AudioCtxClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext
       if (!AudioCtxClass) return
 
       if (!this.audioCtx) {
@@ -602,7 +628,10 @@ export class ReminderManager {
   public unlockAudio(): boolean {
     if (typeof window === 'undefined') return false
     try {
-      const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      const AudioCtxClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext
       if (!AudioCtxClass) return false
 
       if (!this.audioCtx) {
@@ -637,7 +666,9 @@ export class ReminderManager {
   }
 
   public getUnacknowledgedMissed(): OfficeReminderRecord[] {
-    return Array.from(this.reminders.values()).filter((r) => r.status === 'missed')
+    return Array.from(this.reminders.values()).filter(
+      (r) => r.status === 'missed'
+    )
   }
 
   public getReminderEvents(limit: number = 50): OfficeReminderEventRecord[] {
@@ -691,7 +722,10 @@ export class ReminderManager {
   /**
    * Triggers an immediate test call.
    */
-  public triggerTestCall(title: string = 'Test Call from JARVIS', message: string = 'This is a test reminder call from JARVIS verifying audio and visual alerts.'): OfficeReminderRecord {
+  public triggerTestCall(
+    title: string = 'Test Call from JARVIS',
+    message: string = 'This is a test reminder call from JARVIS verifying audio and visual alerts.'
+  ): OfficeReminderRecord {
     const rem = this.createReminder({
       title,
       message,
@@ -710,7 +744,16 @@ export class ReminderManager {
    * Exports reminder events to clean RFC-4180 CSV string.
    */
   public exportEventsCSV(): string {
-    const headers = ['ID', 'Timestamp (PHT)', 'Reminder ID', 'Occurrence Key', 'Kind', 'Channel', 'Detail', 'Tab ID']
+    const headers = [
+      'ID',
+      'Timestamp (PHT)',
+      'Reminder ID',
+      'Occurrence Key',
+      'Kind',
+      'Channel',
+      'Detail',
+      'Tab ID',
+    ]
     const escapeCsv = (val: unknown) => {
       if (val === null || val === undefined) return '""'
       const str = String(val).replace(/"/g, '""')
@@ -768,10 +811,17 @@ export class ReminderManager {
   private async persistReminder(record: OfficeReminderRecord) {
     try {
       interface DuckTable {
-        upsert: (values: Record<string, unknown>, opts?: { onConflict: string }) => Promise<unknown>
+        upsert: (
+          values: Record<string, unknown>,
+          opts?: { onConflict: string }
+        ) => Promise<unknown>
         insert: (values: Record<string, unknown>) => Promise<unknown>
       }
-      const client = (officeSupabase as unknown as { client: { from: (table: string) => DuckTable } }).client
+      const client = (
+        officeSupabase as unknown as {
+          client: { from: (table: string) => DuckTable }
+        }
+      ).client
       await client.from('office_reminders').upsert(
         {
           id: record.id,
@@ -802,7 +852,11 @@ export class ReminderManager {
       interface DuckTable {
         insert: (values: Record<string, unknown>) => Promise<unknown>
       }
-      const client = (officeSupabase as unknown as { client: { from: (table: string) => DuckTable } }).client
+      const client = (
+        officeSupabase as unknown as {
+          client: { from: (table: string) => DuckTable }
+        }
+      ).client
       await client.from('office_reminder_events').insert({
         id: event.id,
         ts: event.ts,
@@ -823,9 +877,16 @@ export class ReminderManager {
   private async persistPushSubscription(sub: OfficePushSubscriptionRecord) {
     try {
       interface DuckTable {
-        upsert: (values: Record<string, unknown>, opts?: { onConflict: string }) => Promise<unknown>
+        upsert: (
+          values: Record<string, unknown>,
+          opts?: { onConflict: string }
+        ) => Promise<unknown>
       }
-      const client = (officeSupabase as unknown as { client: { from: (table: string) => DuckTable } }).client
+      const client = (
+        officeSupabase as unknown as {
+          client: { from: (table: string) => DuckTable }
+        }
+      ).client
       await client.from('office_push_subscriptions').upsert(
         {
           id: sub.id,

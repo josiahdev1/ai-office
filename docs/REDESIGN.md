@@ -1,9 +1,11 @@
 # EasyUp Software Solution HQ — Isometric Redesign Blueprint
 
 ## 1. Executive Summary & Design Directive
+
 This document outlines the architectural upgrade of the EasyUp Software Solution HQ AI Office from isolated floating room clusters to a unified, high-fidelity **Isometric Open-Plan Studio** matching `/design-ref/ref-hq.png`.
 
 ### Core Design Tenets
+
 1. **Contiguous Open-Plan Floor Slab**:
    - Single floating 2:1 isometric floor slab (`tileWidth = 64px`, `tileHeight = 32px`).
    - Warm cream/beige floor tiles (`#e5dec9` / `#d8cfb8`) with subtle grout borders.
@@ -43,6 +45,7 @@ This document outlines the architectural upgrade of the EasyUp Software Solution
 ```
 
 ### Department Zones & Desk Allocations
+
 1. **Executive / Lead Architect**:
    - Coordinates: `(4, 5)` — Josiah's triple-monitor command rig.
 2. **Engineering Core (4 Desks)**:
@@ -64,17 +67,19 @@ This document outlines the architectural upgrade of the EasyUp Software Solution
 
 ## 3. Interactive Office Modes & Behaviors
 
-| Mode | Trigger | Agent Behavior | Reservation Target |
-| :--- | :--- | :--- | :--- |
-| **FOCUS_WORK** | Default / "Focus Work" button | Agents walk back to their assigned departmental desks and resume typing. | Assigned Desk Chair Coordinates |
-| **ALL_HANDS** | "All Hands" button | All 23 agents pathfind to the central round table ("The Brain") and take seats / stand in the outer ring. | 30+ Brain Meeting Spots |
-| **COFFEE_BREAK**| "Pantry & Canteen" button | Agents walk to the L-counter, coffee machine, vending snacks, or lounge sofas. | 30+ Pantry & Lounge Spots |
-| **GYM_WELLNESS**| "Rec & Gym" button | Agents pathfind to wellness zone, treadmills, yoga mats, or stretching areas. | Gym Equipment Coordinates |
+| Mode             | Trigger                       | Agent Behavior                                                                                            | Reservation Target              |
+| :--------------- | :---------------------------- | :-------------------------------------------------------------------------------------------------------- | :------------------------------ |
+| **FOCUS_WORK**   | Default / "Focus Work" button | Agents walk back to their assigned departmental desks and resume typing.                                  | Assigned Desk Chair Coordinates |
+| **ALL_HANDS**    | "All Hands" button            | All 23 agents pathfind to the central round table ("The Brain") and take seats / stand in the outer ring. | 30+ Brain Meeting Spots         |
+| **COFFEE_BREAK** | "Pantry & Canteen" button     | Agents walk to the L-counter, coffee machine, vending snacks, or lounge sofas.                            | 30+ Pantry & Lounge Spots       |
+| **GYM_WELLNESS** | "Rec & Gym" button            | Agents pathfind to wellness zone, treadmills, yoga mats, or stretching areas.                             | Gym Equipment Coordinates       |
 
 ---
 
 ## 4. Map Validation & Integrity Engine (`validateMap.ts`)
+
 To permanently eliminate overlaps and pathfinding traps (Bug 3), `validateMap.ts` enforces:
+
 1. `validateNoOverlaps(zones)`: Checks every bounding box; zero overlaps allowed.
 2. `validateFurnitureBounds(furniture, mapWidth, mapHeight)`: All items strictly within the 28x28 grid.
 3. `validateAisles(grid)`: All primary pathways guarantee $\ge 2$ walkable contiguous tiles.

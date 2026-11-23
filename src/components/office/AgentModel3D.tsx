@@ -19,7 +19,14 @@ const HAIR_VARIANTS: AgentAppearance['hairStyle'][] = [
   'white_gray',
 ]
 const HAIR_COLORS = ['#111827', '#451a03', '#78350f', '#cbd5e1', '#1e293b']
-const OUTFIT_COLORS = ['#f97316', '#eab308', '#ef4444', '#38bdf8', '#1e293b', '#14b8a6']
+const OUTFIT_COLORS = [
+  '#f97316',
+  '#eab308',
+  '#ef4444',
+  '#38bdf8',
+  '#1e293b',
+  '#14b8a6',
+]
 const ACCESSORIES: AgentAppearance['accessory'][] = [
   'none',
   'glasses',

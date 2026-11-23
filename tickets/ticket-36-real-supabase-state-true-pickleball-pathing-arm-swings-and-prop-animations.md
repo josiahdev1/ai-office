@@ -5,11 +5,12 @@
 **Date**: 2026-11-16  
 **Commit SHA**: recorded-on-merge  
 **Branch**: `office-v3`  
-**Author / Assignee**: Josiah (Lead Architect) & Antigravity Autonomous Engineering Fleet  
+**Author / Assignee**: Josiah (Lead Architect) & Antigravity Autonomous Engineering Fleet
 
 ---
 
 ## 1. Context & Objectives
+
 - **100% Real Supabase State (Zero Mock Resets on Reload / New Tab)**: Remove all client-side auto-seeding of hardcoded agents (`boss`, `josiah`, `khent`, `blaze`, `ferwin`, `jo_vincent`) onto the Pickleball Court in `OfficeScene.tsx`, `OfficeCanvas2D.tsx`, and `PickleballCourt3D.tsx`. Hydrate strictly from Supabase (`office_agents`): when all agents are `WORKING` / at desks, 0 agents are on the Pickleball Court and the ball rests stationary.
 - **Walkable Path & Gate to Pickleball Court**: Ensure the North Garden Gate (`z = -23.2`), paved outdoor footpath, and open court fence gate are walkable in `pathfinding.ts` and rendered cleanly in 3D, 2D (`?v=2`), and `Walk-3D` (verified by `validateMap`).
 - **Realistic Pickleball Footwork & Arm/Paddle Swings**: Only when `>= 2` real Supabase-assigned players are on court does the rally animate, with dynamic lateral footwork + full articulated shoulder/arm forehand & backhand paddle swings across 3D, 2D (`?v=2`), and `Walk-3D`.
@@ -19,6 +20,7 @@
   - **Gym**: Dumbbell curls with visible dumbbells, bench press, and treadmill running stride.
 
 ## 2. Architectural Design & Key Changes
+
 1. **Zero-Mock Supabase Hydration (`OfficeScene.tsx`, `OfficeCanvas2D.tsx`, `PickleballCourt3D.tsx`)**:
    - Compute active court & bench agents strictly from live `agents` (`agent.room === 'Pickleball Court'` or `agentRouteOverrides[agent.id] === 'PICKLEBALL'`).
    - Pass real active court player count & IDs to `PickleballCourt3D` and `OfficeCanvas2D` so `stepPickleballRally` only runs when `activePlayers.length >= 2`; otherwise the ball rests stationary in the ball basket.
@@ -29,9 +31,11 @@
    - `VoxelAgentMesh.tsx`: Render plate + food & spoon when `EATING`/`CAFETERIA`, coffee mug when `PANTRY`/`COFFEE`, dumbbells when `GYM`, and paddle when `PICKLEBALL` with full shoulder/elbow forehand & backhand swings in `ProceduralAgent3D.tsx` (and mirrored in `OfficeCanvas2D.tsx`).
 
 ## 3. Data & Schema Modifications
+
 - `supabase/migrations/0024_enforce_real_agent_activity_and_court_slots.sql` (idempotent, non-destructive): Adds `activity_detail text` and `court_slot text` to `public.office_agents` and `public.agents` if not present.
 
 ## 4. Verification & Quality Gates
+
 - **Lint**: PASS (`npm run lint` — 0 errors, canonical Tailwind v4 classes)
 - **Type Check**: PASS (`npx tsc --noEmit` — 0 errors)
 - **Unit & Integration Tests**: PASS (`npm test -- --run` — **30/30** test files, **279/279** tests passed in 11.94s, including `tests/ticket35.test.ts` and `tests/pickleballSimulation.test.ts`)
@@ -40,4 +44,5 @@
   - **3D View & 2D View (`?v=2`)**: Verified zero mock Pickleball seeding—with real Supabase state, 0 ghost players appear on the court and the ball stays stationary in the ball basket while all agents remain at their real Supabase stations; verified green non-volley kitchen strips, glowing green corner lamps, white perimeter railings, wooden benches, North Garden Gate exterior path, and top camera-only room-tab bar with zero React/hydration console errors.
 
 ## 5. Notes & Dependencies
+
 - Follows `tickets/ticket-35-pickleball-video-style-agents-shadows-parity-orbit-and-facilities.md`.

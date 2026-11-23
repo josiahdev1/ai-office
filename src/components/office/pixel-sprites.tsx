@@ -41,7 +41,11 @@ export function PixelSprite({
 }: PixelSpriteProps) {
   // Normalize facing direction
   const normalizedFacing: FacingDirection =
-    facing === 'left' ? 'SW' : facing === 'right' ? 'SE' : (facing as FacingDirection) || 'SE'
+    facing === 'left'
+      ? 'SW'
+      : facing === 'right'
+        ? 'SE'
+        : (facing as FacingDirection) || 'SE'
 
   const isBackView = normalizedFacing === 'NW' || normalizedFacing === 'NE'
   // When facing NW or SW, we mirror the canonical NE / SE sprite along horizontal axis
@@ -51,10 +55,16 @@ export function PixelSprite({
   const legShift = isWalking ? (walkFrame % 2 === 0 ? 0 : 1) : 0
 
   // 3-Frame Dynamic Typing Animation
-  const effectiveTypeFrame = (typeFrame !== undefined ? typeFrame : (walkFrame % 3)) % 3
-  const isCurrentlyTyping = (isTyping || pose === 'type' || activity === 'typing') && !isWalking
+  const effectiveTypeFrame =
+    (typeFrame !== undefined ? typeFrame : walkFrame % 3) % 3
+  const isCurrentlyTyping =
+    (isTyping || pose === 'type' || activity === 'typing') && !isWalking
   // Head bob down on frame 1
-  const typeHeadBob = isCurrentlyTyping ? (effectiveTypeFrame === 1 ? 0.5 : 0) : 0
+  const typeHeadBob = isCurrentlyTyping
+    ? effectiveTypeFrame === 1
+      ? 0.5
+      : 0
+    : 0
 
   // Activity poses
   const isGesturing =
@@ -71,7 +81,9 @@ export function PixelSprite({
 
   const isGymStrength =
     activity !== undefined &&
-    (activity.includes('dumbbell') || activity.includes('yoga') || activity.includes('stretching'))
+    (activity.includes('dumbbell') ||
+      activity.includes('yoga') ||
+      activity.includes('stretching'))
 
   const effectiveHasCoffee =
     hasCoffee ||
@@ -169,7 +181,13 @@ export function PixelSprite({
               // Arwin: Dark Headset band
               <>
                 <rect x="2" y="3.5" width="1.5" height="2.5" fill="#475569" />
-                <rect x="10.5" y="3.5" width="1.5" height="2.5" fill="#475569" />
+                <rect
+                  x="10.5"
+                  y="3.5"
+                  width="1.5"
+                  height="2.5"
+                  fill="#475569"
+                />
                 <rect x="3" y="2" width="8" height="0.6" fill="#64748b" />
               </>
             )}
@@ -372,7 +390,13 @@ export function PixelSprite({
               // Arwin: Lead Backend Dark Studio Headset
               <>
                 <rect x="2" y="3.5" width="1.5" height="2.5" fill="#475569" />
-                <rect x="10.5" y="3.5" width="1.5" height="2.5" fill="#475569" />
+                <rect
+                  x="10.5"
+                  y="3.5"
+                  width="1.5"
+                  height="2.5"
+                  fill="#475569"
+                />
                 <rect x="3" y="2" width="8" height="0.6" fill="#64748b" />
               </>
             )}
@@ -452,8 +476,20 @@ export function PixelSprite({
                 ) : (
                   // Classic 1-pixel dark eyes
                   <>
-                    <rect x="4.5" y="5" width="1.2" height="1.2" fill="#0f172a" />
-                    <rect x="8.3" y="5" width="1.2" height="1.2" fill="#0f172a" />
+                    <rect
+                      x="4.5"
+                      y="5"
+                      width="1.2"
+                      height="1.2"
+                      fill="#0f172a"
+                    />
+                    <rect
+                      x="8.3"
+                      y="5"
+                      width="1.2"
+                      height="1.2"
+                      fill="#0f172a"
+                    />
                   </>
                 )}
               </>
@@ -498,12 +534,24 @@ export function PixelSprite({
               {effectiveTypeFrame === 0 ? (
                 <>
                   <rect x="2" y="11" width="1.5" height="1.5" fill={skin} />
-                  <rect x="10.5" y="10.4" width="1.5" height="1.5" fill={skin} />
+                  <rect
+                    x="10.5"
+                    y="10.4"
+                    width="1.5"
+                    height="1.5"
+                    fill={skin}
+                  />
                 </>
               ) : effectiveTypeFrame === 1 ? (
                 <>
                   <rect x="2" y="10.6" width="1.5" height="1.5" fill={skin} />
-                  <rect x="10.5" y="10.6" width="1.5" height="1.5" fill={skin} />
+                  <rect
+                    x="10.5"
+                    y="10.6"
+                    width="1.5"
+                    height="1.5"
+                    fill={skin}
+                  />
                 </>
               ) : (
                 <>

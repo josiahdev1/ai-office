@@ -30,7 +30,8 @@ export function VoxelAgentMesh({
   rightHandRef,
 }: VoxelAgentMeshProps) {
   const pbSlot = getPickleballSlotForAgent(agentId)
-  const isPickleball = effectiveMode === 'PICKLEBALL' && pbSlot?.role === 'court'
+  const isPickleball =
+    effectiveMode === 'PICKLEBALL' && pbSlot?.role === 'court'
   const isGym = effectiveMode === 'GYM'
   const isPantry = effectiveMode === 'PANTRY'
   const isEating = effectiveMode === 'CAFETERIA'
@@ -49,7 +50,9 @@ export function VoxelAgentMesh({
       <group ref={leftLegRef} position={[-0.14, 0.06, 0.08]}>
         <mesh position={[0, -0.14, 0.06]} castShadow receiveShadow>
           <boxGeometry args={[0.15, 0.36, 0.18]} />
-          <meshStandardMaterial color={style.isSkirt ? style.skinColor : style.bottomColor} />
+          <meshStandardMaterial
+            color={style.isSkirt ? style.skinColor : style.bottomColor}
+          />
         </mesh>
         <mesh position={[0, -0.36, 0.12]} castShadow receiveShadow>
           <boxGeometry args={[0.15, 0.08, 0.22]} />
@@ -61,7 +64,9 @@ export function VoxelAgentMesh({
       <group ref={rightLegRef} position={[0.14, 0.06, 0.08]}>
         <mesh position={[0, -0.14, 0.06]} castShadow receiveShadow>
           <boxGeometry args={[0.15, 0.36, 0.18]} />
-          <meshStandardMaterial color={style.isSkirt ? style.skinColor : style.bottomColor} />
+          <meshStandardMaterial
+            color={style.isSkirt ? style.skinColor : style.bottomColor}
+          />
         </mesh>
         <mesh position={[0, -0.36, 0.12]} castShadow receiveShadow>
           <boxGeometry args={[0.15, 0.08, 0.22]} />
@@ -71,7 +76,9 @@ export function VoxelAgentMesh({
 
       {/* Distinct Styled Torso / Outfit + Collar Detail */}
       <mesh position={[0, 0.34, 0.02]} castShadow receiveShadow>
-        <boxGeometry args={[style.gender === 'female' ? 0.44 : 0.48, 0.48, 0.27]} />
+        <boxGeometry
+          args={[style.gender === 'female' ? 0.44 : 0.48, 0.48, 0.27]}
+        />
         <meshStandardMaterial color={style.outfitColor} roughness={0.6} />
       </mesh>
       <mesh position={[0, 0.56, 0.09]} castShadow>
@@ -81,7 +88,11 @@ export function VoxelAgentMesh({
       {agentId === 'boss' && (
         <mesh position={[0, 0.4, 0.16]} castShadow>
           <boxGeometry args={[0.07, 0.24, 0.02]} />
-          <meshStandardMaterial color="#f59e0b" roughness={0.4} metalness={0.3} />
+          <meshStandardMaterial
+            color="#f59e0b"
+            roughness={0.4}
+            metalness={0.3}
+          />
         </mesh>
       )}
 
@@ -127,7 +138,11 @@ export function VoxelAgentMesh({
           {/* Paddle Blade */}
           <mesh position={[0, 0.1, 0]} castShadow>
             <boxGeometry args={[0.22, 0.28, 0.028]} />
-            <meshStandardMaterial color="#14b8a6" roughness={0.35} metalness={0.1} />
+            <meshStandardMaterial
+              color="#14b8a6"
+              roughness={0.35}
+              metalness={0.1}
+            />
           </mesh>
           <mesh position={[0, 0.1, 0.016]}>
             <boxGeometry args={[0.18, 0.24, 0.008]} />
@@ -176,9 +191,17 @@ export function VoxelAgentMesh({
             <meshStandardMaterial color="#b45309" roughness={0.6} />
           </mesh>
           {/* Metallic Spoon in Right Hand */}
-          <mesh position={[0.16, 0.36, 0.46]} rotation={[0.45, 0, 0]} castShadow>
+          <mesh
+            position={[0.16, 0.36, 0.46]}
+            rotation={[0.45, 0, 0]}
+            castShadow
+          >
             <cylinderGeometry args={[0.01, 0.01, 0.16, 8]} />
-            <meshStandardMaterial color="#cbd5e1" metalness={0.85} roughness={0.2} />
+            <meshStandardMaterial
+              color="#cbd5e1"
+              metalness={0.85}
+              roughness={0.2}
+            />
           </mesh>
         </group>
       )}
@@ -259,18 +282,26 @@ export function VoxelAgentMesh({
         <group>
           <mesh position={[0, 0.9, 0.02]} castShadow>
             <cylinderGeometry args={[0.2, 0.22, 0.12, 16]} />
-            <meshStandardMaterial color={style.accessoryColor} roughness={0.5} />
+            <meshStandardMaterial
+              color={style.accessoryColor}
+              roughness={0.5}
+            />
           </mesh>
           <mesh position={[0, 0.86, 0.2]} rotation={[0.1, 0, 0]} castShadow>
             <boxGeometry args={[0.3, 0.03, 0.18]} />
-            <meshStandardMaterial color={style.accessoryColor} roughness={0.5} />
+            <meshStandardMaterial
+              color={style.accessoryColor}
+              roughness={0.5}
+            />
           </mesh>
         </group>
       )}
 
       {style.accessory === 'beanie' && (
         <mesh position={[0, 0.9, 0.01]} castShadow>
-          <sphereGeometry args={[0.21, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.65]} />
+          <sphereGeometry
+            args={[0.21, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.65]}
+          />
           <meshStandardMaterial color={style.accessoryColor} roughness={0.85} />
         </mesh>
       )}
@@ -304,11 +335,17 @@ export function VoxelAgentMesh({
         <group position={[0, 0.74, 0.19]}>
           <mesh position={[-0.08, 0, 0]}>
             <boxGeometry args={[0.1, 0.06, 0.02]} />
-            <meshStandardMaterial color={style.accessoryColor} metalness={0.8} />
+            <meshStandardMaterial
+              color={style.accessoryColor}
+              metalness={0.8}
+            />
           </mesh>
           <mesh position={[0.08, 0, 0]}>
             <boxGeometry args={[0.1, 0.06, 0.02]} />
-            <meshStandardMaterial color={style.accessoryColor} metalness={0.8} />
+            <meshStandardMaterial
+              color={style.accessoryColor}
+              metalness={0.8}
+            />
           </mesh>
         </group>
       )}

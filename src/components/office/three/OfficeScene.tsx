@@ -2,10 +2,7 @@
 
 import React, { useMemo } from 'react'
 import { Agent } from '@/components/office/types'
-import {
-  DepartmentMode,
-  AGENT_WORKSTATIONS_3D,
-} from './office3DData'
+import { DepartmentMode, AGENT_WORKSTATIONS_3D } from './office3DData'
 import { BuildingArchitecture } from './BuildingArchitecture'
 import { BrainCore } from './BrainCore'
 import { OfficeFurniture } from './OfficeFurniture'
@@ -125,7 +122,11 @@ export function OfficeScene({
       {/* 1. Dynamic Environmental Lighting (Auto PHT Solar / Day / Night) */}
       <ambientLight
         color={lighting.ambientColor}
-        intensity={isWalkMode ? Math.max(1.15, lighting.ambientIntensity) : lighting.ambientIntensity}
+        intensity={
+          isWalkMode
+            ? Math.max(1.15, lighting.ambientIntensity)
+            : lighting.ambientIntensity
+        }
       />
       <directionalLight
         position={lighting.sunPosition}
@@ -148,12 +149,42 @@ export function OfficeScene({
       />
       {isWalkMode && (
         <>
-          <pointLight position={[0, 2.8, 0]} intensity={1.8} distance={38} color="#f8fafc" />
-          <pointLight position={[-16, 2.8, -16]} intensity={1.4} distance={26} color="#e0f2fe" />
-          <pointLight position={[16, 2.8, -16]} intensity={1.4} distance={26} color="#e0f2fe" />
-          <pointLight position={[-16, 2.8, 16]} intensity={1.4} distance={26} color="#e0f2fe" />
-          <pointLight position={[16, 2.8, 16]} intensity={1.4} distance={26} color="#e0f2fe" />
-          <pointLight position={[-36, 2.8, 4]} intensity={1.5} distance={28} color="#e0f2fe" />
+          <pointLight
+            position={[0, 2.8, 0]}
+            intensity={1.8}
+            distance={38}
+            color="#f8fafc"
+          />
+          <pointLight
+            position={[-16, 2.8, -16]}
+            intensity={1.4}
+            distance={26}
+            color="#e0f2fe"
+          />
+          <pointLight
+            position={[16, 2.8, -16]}
+            intensity={1.4}
+            distance={26}
+            color="#e0f2fe"
+          />
+          <pointLight
+            position={[-16, 2.8, 16]}
+            intensity={1.4}
+            distance={26}
+            color="#e0f2fe"
+          />
+          <pointLight
+            position={[16, 2.8, 16]}
+            intensity={1.4}
+            distance={26}
+            color="#e0f2fe"
+          />
+          <pointLight
+            position={[-36, 2.8, 4]}
+            intensity={1.5}
+            distance={28}
+            color="#e0f2fe"
+          />
         </>
       )}
 

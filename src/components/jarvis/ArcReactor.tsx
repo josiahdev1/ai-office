@@ -6,12 +6,7 @@ import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 
 export type JarvisCoreState =
-  | 'idle'
-  | 'listening'
-  | 'thinking'
-  | 'executing'
-  | 'speaking'
-  | 'error'
+  'idle' | 'listening' | 'thinking' | 'executing' | 'speaking' | 'error'
 
 export type ArcReactorSizeVariant = 'office' | 'interior'
 
@@ -41,7 +36,10 @@ export interface ArcReactorStateSpec {
   particleInwardSpeed: number
 }
 
-export const ARC_REACTOR_STATE_CONFIG: Record<JarvisCoreState, ArcReactorStateSpec> = {
+export const ARC_REACTOR_STATE_CONFIG: Record<
+  JarvisCoreState,
+  ArcReactorStateSpec
+> = {
   idle: {
     state: 'idle',
     label: 'IDLE',
@@ -262,7 +260,9 @@ export const INTERIOR_RING_LAYERS: RingLayerDefinition[] = [
   },
 ]
 
-export function getRingLayersForSize(size: ArcReactorSizeVariant): RingLayerDefinition[] {
+export function getRingLayersForSize(
+  size: ArcReactorSizeVariant
+): RingLayerDefinition[] {
   return size === 'interior' ? INTERIOR_RING_LAYERS : OFFICE_RING_LAYERS
 }
 
@@ -323,11 +323,15 @@ export function computeArcReactorFrame(
   const radiusMultiplier = reduced
     ? spec.radiusScale * (options?.hovered ? 1.05 : 1.0)
     : spec.radiusScale *
-      (1 + combinedPulse * 0.4 + (state === 'listening' ? audioLevel * 0.14 : 0)) *
+      (1 +
+        combinedPulse * 0.4 +
+        (state === 'listening' ? audioLevel * 0.14 : 0)) *
       (options?.hovered ? 1.05 : 1.0)
   const lightIntensity = reduced
     ? 2.8 * (options?.hovered ? 1.35 : 1.0)
-    : (2.8 + combinedPulse * 2.2 + (state === 'speaking' ? audioLevel * 1.5 : 0)) *
+    : (2.8 +
+        combinedPulse * 2.2 +
+        (state === 'speaking' ? audioLevel * 1.5 : 0)) *
       (options?.hovered ? 1.35 : 1.0)
 
   // 32-bar radial waveform amplitudes
@@ -341,7 +345,9 @@ export function computeArcReactorFrame(
       const waveA = Math.sin(t * 9.5 + i * 0.55) * 0.5 + 0.5
       const waveB = Math.cos(t * 6.2 - i * 0.35) * 0.5 + 0.5
       const dynamicLevel = Math.max(audioLevel, beatPulse * 0.8)
-      waveformAmplitudes.push(0.18 + (waveA * 0.6 + waveB * 0.4) * 0.85 * dynamicLevel)
+      waveformAmplitudes.push(
+        0.18 + (waveA * 0.6 + waveB * 0.4) * 0.85 * dynamicLevel
+      )
     } else if (state === 'listening') {
       const ripple = Math.sin(t * 5.0 + i * 0.4) * 0.5 + 0.5
       waveformAmplitudes.push(0.1 + ripple * 0.3 * Math.max(0.3, audioLevel))
@@ -391,7 +397,8 @@ function createMicroTextTexture(): THREE.CanvasTexture | null {
     'VECTOR_RADIAL: 0.9842 // THREADS: 24 ACTIVE // BUS_LOAD: 12.4% // INGEST_ID: LIVE',
   ]
 
-  ctx.font = 'bold 15px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+  ctx.font =
+    'bold 15px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
   lines.forEach((line, i) => {
     ctx.fillStyle = i % 2 === 0 ? '#00e5ff' : '#fb923c'
     ctx.fillText(line, 18, 28 + i * 26)
@@ -442,11 +449,16 @@ function createJarvisBadgeTexture(
     ctx.fill()
 
     // Label text
-    ctx.font = 'bold 21px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+    ctx.font =
+      'bold 21px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
     ctx.fillStyle = '#f8fafc'
     ctx.textBaseline = 'middle'
     ctx.textAlign = 'left'
-    ctx.fillText(hovered ? 'JARVIS // CLICK TO ENTER' : 'JARVIS', pillX + 42, dotY + 1)
+    ctx.fillText(
+      hovered ? 'JARVIS // CLICK TO ENTER' : 'JARVIS',
+      pillX + 42,
+      dotY + 1
+    )
   }
   const tex = new THREE.CanvasTexture(canvas)
   tex.needsUpdate = true
@@ -537,7 +549,8 @@ export function ArcReactor({
       const speed = 0.45 + (i % 6) * 0.18
       const pSize = size === 'interior' ? 0.036 : 0.044
       // 30% of sparks are radiant orange matching the reference sweep
-      const isOrange = i % 3 === 0 || (angle > Math.PI * 0.1 && angle < Math.PI * 0.7)
+      const isOrange =
+        i % 3 === 0 || (angle > Math.PI * 0.1 && angle < Math.PI * 0.7)
       arr.push({ angle, radius, yOffset, speed, size: pSize, isOrange })
     }
     return arr
@@ -574,8 +587,10 @@ export function ArcReactor({
     if (tiltGroupRef.current && pointerParallax && !reducedMotion) {
       const targetRotX = -r3fState.pointer.y * 0.18
       const targetRotY = r3fState.pointer.x * 0.22
-      tiltGroupRef.current.rotation.x += (targetRotX - tiltGroupRef.current.rotation.x) * 0.08
-      tiltGroupRef.current.rotation.y += (targetRotY - tiltGroupRef.current.rotation.y) * 0.08
+      tiltGroupRef.current.rotation.x +=
+        (targetRotX - tiltGroupRef.current.rotation.x) * 0.08
+      tiltGroupRef.current.rotation.y +=
+        (targetRotY - tiltGroupRef.current.rotation.y) * 0.08
     }
 
     // 1. Central Plasma Core, Dark Lens & Wireframe Nucleus
@@ -586,8 +601,10 @@ export function ArcReactor({
     }
     if (wireframeCageRef.current) {
       wireframeCageRef.current.scale.setScalar(frame.coreScale * 1.08)
-      wireframeCageRef.current.rotation.y = -effTime * 0.7 * spec.ringSpeedMultiplier
-      wireframeCageRef.current.rotation.x = effTime * 0.45 * spec.ringSpeedMultiplier
+      wireframeCageRef.current.rotation.y =
+        -effTime * 0.7 * spec.ringSpeedMultiplier
+      wireframeCageRef.current.rotation.x =
+        effTime * 0.45 * spec.ringSpeedMultiplier
     }
     if (darkLensRef.current) {
       darkLensRef.current.scale.setScalar(frame.coreScale)
@@ -623,16 +640,19 @@ export function ArcReactor({
     // 3. Radial Tick Marks & Radial Line Reticles
     if (tickGroupRef.current) {
       tickGroupRef.current.scale.setScalar(frame.radiusMultiplier)
-      tickGroupRef.current.rotation.z = -effTime * 0.22 * spec.ringSpeedMultiplier
+      tickGroupRef.current.rotation.z =
+        -effTime * 0.22 * spec.ringSpeedMultiplier
     }
     if (radialLinesGroupRef.current) {
       radialLinesGroupRef.current.scale.setScalar(frame.radiusMultiplier)
-      radialLinesGroupRef.current.rotation.z = effTime * 0.12 * spec.ringSpeedMultiplier
+      radialLinesGroupRef.current.rotation.z =
+        effTime * 0.12 * spec.ringSpeedMultiplier
     }
 
     // 4. Scrolling Micro-Text Ring Texture (spins ring in 3D)
     if (microTextRingRef.current) {
-      microTextRingRef.current.rotation.z = effTime * 0.18 * spec.ringSpeedMultiplier
+      microTextRingRef.current.rotation.z =
+        effTime * 0.18 * spec.ringSpeedMultiplier
     }
 
     // 5. Audio-Reactive 32-Bar Waveform Ring
@@ -951,7 +971,10 @@ export function ArcReactor({
 
         {/* 11. Floating "JARVIS" Callout Badge Pill */}
         {showLabel && badgeTexture && (
-          <sprite position={[0, size === 'interior' ? 3.4 : 2.5, 0.2]} scale={[2.4, 0.56, 1]}>
+          <sprite
+            position={[0, size === 'interior' ? 3.4 : 2.5, 0.2]}
+            scale={[2.4, 0.56, 1]}
+          >
             <spriteMaterial map={badgeTexture} transparent depthTest={false} />
           </sprite>
         )}
@@ -1061,7 +1084,10 @@ export function drawArcReactor2D(
         : layer.colorRole === 'accent'
           ? spec.secondaryColor
           : spec.primaryColor
-      ctx.lineWidth = Math.max(1.5, layer.tubeRadius * scaleR * 2.2 * (isSweep ? 1.3 : 1.0))
+      ctx.lineWidth = Math.max(
+        1.5,
+        layer.tubeRadius * scaleR * 2.2 * (isSweep ? 1.3 : 1.0)
+      )
       const start = rot + s * step
       ctx.beginPath()
       ctx.ellipse(cx, cy, r, ry, 0, start, start + arcSpan)
@@ -1087,8 +1113,14 @@ export function drawArcReactor2D(
         : spec.secondaryColor
     ctx.lineWidth = isMajor ? 1.8 : 1.1
     ctx.beginPath()
-    ctx.moveTo(cx + Math.cos(ang) * innerR, cy + Math.sin(ang) * innerR * yScale)
-    ctx.lineTo(cx + Math.cos(ang) * outerR, cy + Math.sin(ang) * outerR * yScale)
+    ctx.moveTo(
+      cx + Math.cos(ang) * innerR,
+      cy + Math.sin(ang) * innerR * yScale
+    )
+    ctx.lineTo(
+      cx + Math.cos(ang) * outerR,
+      cy + Math.sin(ang) * outerR * yScale
+    )
     ctx.stroke()
   }
 
@@ -1108,7 +1140,10 @@ export function drawArcReactor2D(
           : spec.accentColor
       ctx.lineWidth = Math.max(1.4, scaleR * 0.045)
       ctx.beginPath()
-      ctx.moveTo(cx + Math.cos(ang) * waveR, cy + Math.sin(ang) * waveR * yScale)
+      ctx.moveTo(
+        cx + Math.cos(ang) * waveR,
+        cy + Math.sin(ang) * waveR * yScale
+      )
       ctx.lineTo(
         cx + Math.cos(ang) * (waveR + barLen),
         cy + Math.sin(ang) * (waveR + barLen) * yScale
@@ -1157,7 +1192,8 @@ export function drawArcReactor2D(
   // 8. Floating "JARVIS" Callout Pill on Hover
   if (hovered || showLabel) {
     const labelText = hovered ? 'JARVIS // CLICK TO ENTER' : 'JARVIS'
-    ctx.font = 'bold 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+    ctx.font =
+      'bold 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
     const textW = ctx.measureText(labelText).width
     const pillW = textW + 28
     const pillH = 22
@@ -1240,22 +1276,40 @@ export function ArcReactorPreviewCanvas({
         cvs.height = h
       }
       ctx.clearRect(0, 0, w, h)
-      drawArcReactor2D(ctx, w * 0.5, h * 0.5, Math.min(w, h) * 0.22, state, elapsed, {
-        size,
-        progress,
-        audioLevel,
-        beatPulse,
-        hovered,
-        showLabel,
-        reducedMotion,
-        isometricTilt: false,
-      })
+      drawArcReactor2D(
+        ctx,
+        w * 0.5,
+        h * 0.5,
+        Math.min(w, h) * 0.22,
+        state,
+        elapsed,
+        {
+          size,
+          progress,
+          audioLevel,
+          beatPulse,
+          hovered,
+          showLabel,
+          reducedMotion,
+          isometricTilt: false,
+        }
+      )
       animId = requestAnimationFrame(render)
     }
 
     animId = requestAnimationFrame(render)
     return () => cancelAnimationFrame(animId)
-  }, [renderMode, state, size, progress, audioLevel, beatPulse, hovered, showLabel, reducedMotion])
+  }, [
+    renderMode,
+    state,
+    size,
+    progress,
+    audioLevel,
+    beatPulse,
+    hovered,
+    showLabel,
+    reducedMotion,
+  ])
 
   if (renderMode === '2d') {
     return (

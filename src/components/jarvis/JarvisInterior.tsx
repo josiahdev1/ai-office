@@ -144,7 +144,9 @@ export default function JarvisInterior({
     modelLabel: 'LIVE AI • GEMINI 2.0 FLASH',
     isLiveAI: true,
   })
-  const [dispatchedPlanIds, setDispatchedPlanIds] = useState<Record<string, boolean>>({})
+  const [dispatchedPlanIds, setDispatchedPlanIds] = useState<
+    Record<string, boolean>
+  >({})
 
   const [reducedMotion, setReducedMotion] = useState<boolean>(() => {
     if (typeof window !== 'undefined' && window.matchMedia) {
@@ -191,15 +193,21 @@ export default function JarvisInterior({
     handsFreeModeRef.current = handsFreeMode
   }, [handsFreeMode])
 
-  const [voiceInterruptHeadphones, setVoiceInterruptHeadphones] = useState<boolean>(false)
+  const [voiceInterruptHeadphones, setVoiceInterruptHeadphones] =
+    useState<boolean>(false)
   const voiceInterruptHeadphonesRef = useRef<boolean>(false)
   useEffect(() => {
     voiceInterruptHeadphonesRef.current = voiceInterruptHeadphones
   }, [voiceInterruptHeadphones])
 
-  const [showDiagnosticsModal, setShowDiagnosticsModal] = useState<boolean>(false)
-  const [diagnosticsTab, setDiagnosticsTab] = useState<'voice' | 'data_health'>('voice')
-  const recentSpokenSentencesRef = useRef<{ text: string; timestamp: number }[]>([])
+  const [showDiagnosticsModal, setShowDiagnosticsModal] =
+    useState<boolean>(false)
+  const [diagnosticsTab, setDiagnosticsTab] = useState<'voice' | 'data_health'>(
+    'voice'
+  )
+  const recentSpokenSentencesRef = useRef<
+    { text: string; timestamp: number }[]
+  >([])
   const lastHeardTranscriptRef = useRef<string>('')
 
   // Space key interrupt: pressing Space while JARVIS speaks stops TTS immediately and transitions to listening
@@ -213,7 +221,10 @@ export default function JarvisInterior({
           (document.activeElement as HTMLElement)?.isContentEditable
         if (isInput) return
 
-        if (voiceMachineRef.current.current === 'speaking' || isSpeakingTtsRef.current) {
+        if (
+          voiceMachineRef.current.current === 'speaking' ||
+          isSpeakingTtsRef.current
+        ) {
           e.preventDefault()
           if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
             window.speechSynthesis.cancel()
@@ -283,9 +294,15 @@ export default function JarvisInterior({
       if (voiceMachineRef.current.current === 'listening') {
         const hasLiveTrack = Boolean(
           micStreamRef.current &&
-            micStreamRef.current.getAudioTracks().some((t) => t.readyState === 'live')
+          micStreamRef.current
+            .getAudioTracks()
+            .some((t) => t.readyState === 'live')
         )
-        if (!hasLiveTrack && !isRecognitionRunningRef.current && !voiceEnabledRef.current) {
+        if (
+          !hasLiveTrack &&
+          !isRecognitionRunningRef.current &&
+          !voiceEnabledRef.current
+        ) {
           closedMicTicks++
           if (closedMicTicks >= 10) {
             dispatchVoice({
@@ -318,7 +335,8 @@ export default function JarvisInterior({
 
   // Hardware echo-protected Web Audio AnalyserNode setup
   useEffect(() => {
-    if (typeof window === 'undefined' || !navigator.mediaDevices?.getUserMedia) return
+    if (typeof window === 'undefined' || !navigator.mediaDevices?.getUserMedia)
+      return
     if (!voiceEnabled) return
 
     let isCancelled = false
@@ -336,7 +354,8 @@ export default function JarvisInterior({
         micStreamRef.current = stream
         const AudioCtx =
           window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+          (window as unknown as { webkitAudioContext: typeof AudioContext })
+            .webkitAudioContext
         if (!AudioCtx) return
 
         const ctx = new AudioCtx()
@@ -370,11 +389,17 @@ export default function JarvisInterior({
           }
 
           // Volume duration barge-in check when speaking (300ms threshold)
-          if (voiceMachineRef.current.current === 'speaking' || isSpeakingTtsRef.current) {
+          if (
+            voiceMachineRef.current.current === 'speaking' ||
+            isSpeakingTtsRef.current
+          ) {
             if (level > 0.32) {
               consecutiveHighVolumeMs += delta
             } else {
-              consecutiveHighVolumeMs = Math.max(0, consecutiveHighVolumeMs - delta * 2)
+              consecutiveHighVolumeMs = Math.max(
+                0,
+                consecutiveHighVolumeMs - delta * 2
+              )
             }
             const isBargingIn = checkBargeInCondition({
               isSpeaking: true,
@@ -383,7 +408,10 @@ export default function JarvisInterior({
             })
             if (isBargingIn) {
               // Mic level above threshold for 300ms -> Instant Barge-in!
-              if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+              if (
+                typeof window !== 'undefined' &&
+                'speechSynthesis' in window
+              ) {
                 window.speechSynthesis.cancel()
               }
               isSpeakingTtsRef.current = false
@@ -411,7 +439,10 @@ export default function JarvisInterior({
         micStreamRef.current.getTracks().forEach((t) => t.stop())
         micStreamRef.current = null
       }
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      if (
+        audioContextRef.current &&
+        audioContextRef.current.state !== 'closed'
+      ) {
         void audioContextRef.current.close()
         audioContextRef.current = null
       }
@@ -529,14 +560,17 @@ export default function JarvisInterior({
   const speakWithJarvisVoice = useCallback(
     (text: string, forceSpeak = false) => {
       onVoiceTranscription?.(text, 'jarvis')
-      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+      if (typeof window === 'undefined' || !('speechSynthesis' in window))
+        return
       if (ttsMutedRef.current && !forceSpeak) return
 
       try {
         // Record sentence in 8-second spoken window for echo-filtering in headphones mode
         const nowMs = Date.now()
         recentSpokenSentencesRef.current = [
-          ...recentSpokenSentencesRef.current.filter((s) => nowMs - s.timestamp < 8000),
+          ...recentSpokenSentencesRef.current.filter(
+            (s) => nowMs - s.timestamp < 8000
+          ),
           { text, timestamp: nowMs },
         ]
 
@@ -659,23 +693,28 @@ export default function JarvisInterior({
           setProviderStatus(data.providerStatus)
         }
         if (Array.isArray(data.messages) && data.messages.length > 0) {
-          const loaded: JarvisChatMessage[] = data.messages.slice(-12).map(
-            (row: {
-              id: string
-              sender_id: string
-              content: string
-              created_at: string
-            }) => ({
-              id: row.id,
-              role: row.sender_id === 'jarvis' ? 'jarvis' : 'user',
-              text: row.content,
-              timestamp: new Date(row.created_at).toLocaleTimeString('en-US', {
-                timeZone: 'Asia/Manila',
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
-            })
-          )
+          const loaded: JarvisChatMessage[] = data.messages
+            .slice(-12)
+            .map(
+              (row: {
+                id: string
+                sender_id: string
+                content: string
+                created_at: string
+              }) => ({
+                id: row.id,
+                role: row.sender_id === 'jarvis' ? 'jarvis' : 'user',
+                text: row.content,
+                timestamp: new Date(row.created_at).toLocaleTimeString(
+                  'en-US',
+                  {
+                    timeZone: 'Asia/Manila',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }
+                ),
+              })
+            )
           setMessages(loaded)
         }
       } catch {
@@ -710,8 +749,7 @@ export default function JarvisInterior({
         (ag.department || '').toLowerCase().includes(q)
       const deptStr =
         `${ag.department || ''} ${ag.room || ''} ${ag.role || ''}`.toUpperCase()
-      const matchesDept =
-        deptFilter === 'ALL' || deptStr.includes(deptFilter)
+      const matchesDept = deptFilter === 'ALL' || deptStr.includes(deptFilter)
       return matchesSearch && matchesDept
     })
   }, [agents, rosterSearch, deptFilter])
@@ -772,7 +810,8 @@ export default function JarvisInterior({
         .filter((m) => !m.errorReason && !m.isStreaming)
         .slice(-20)
         .map((m) => ({
-          role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+          role: (m.role === 'user' ? 'user' : 'assistant') as
+            'user' | 'assistant',
           content: m.text,
         }))
 
@@ -841,7 +880,10 @@ export default function JarvisInterior({
               const payload = JSON.parse(rawJson)
 
               if (eventName === 'status') {
-                dispatchVoice({ type: 'TRANSCRIPT_FINALIZED', transcript: trimmed })
+                dispatchVoice({
+                  type: 'TRANSCRIPT_FINALIZED',
+                  transcript: trimmed,
+                })
                 onCoreStateChange('thinking')
                 if (payload.modelLabel) {
                   setProviderStatus({
@@ -982,7 +1024,9 @@ export default function JarvisInterior({
           voiceMachineRef.current.current !== 'speaking' &&
           voiceMachineRef.current.current !== 'executing'
         ) {
-          dispatchVoice({ type: voiceEnabledRef.current ? 'MIC_OPEN' : 'RESET' })
+          dispatchVoice({
+            type: voiceEnabledRef.current ? 'MIC_OPEN' : 'RESET',
+          })
           onCoreStateChange(voiceEnabledRef.current ? 'listening' : 'idle')
         }
       }
@@ -1043,7 +1087,10 @@ export default function JarvisInterior({
 
       instance.onresult = (event: SpeechRecognitionEventLike) => {
         // 1. Instant Barge-In detection while speaking
-        if (voiceMachineRef.current.current === 'speaking' || isSpeakingTtsRef.current) {
+        if (
+          voiceMachineRef.current.current === 'speaking' ||
+          isSpeakingTtsRef.current
+        ) {
           let wordsSpoken = ''
           for (let i = event.resultIndex; i < event.results.length; i++) {
             wordsSpoken += event.results[i][0].transcript + ' '
@@ -1109,7 +1156,10 @@ export default function JarvisInterior({
           const spoken = finalTranscript.trim()
           lastHeardTranscriptRef.current = spoken
           // Echo-overlap filter check
-          const echoCheck = checkEchoOverlap(spoken, recentSpokenSentencesRef.current)
+          const echoCheck = checkEchoOverlap(
+            spoken,
+            recentSpokenSentencesRef.current
+          )
           if (echoCheck.isEcho) {
             return
           }
@@ -1245,7 +1295,9 @@ export default function JarvisInterior({
     } finally {
       setTimeout(() => {
         if (!isSpeakingTtsRef.current) {
-          dispatchVoice({ type: voiceEnabledRef.current ? 'MIC_OPEN' : 'RESET' })
+          dispatchVoice({
+            type: voiceEnabledRef.current ? 'MIC_OPEN' : 'RESET',
+          })
           onCoreStateChange(voiceEnabledRef.current ? 'listening' : 'idle')
         }
       }, 1200)
@@ -1279,7 +1331,10 @@ export default function JarvisInterior({
 
   const handleToggleVoice = () => {
     // If speaking, tapping mic interrupts immediately (Barge-In)
-    if (voiceMachineRef.current.current === 'speaking' || isSpeakingTtsRef.current) {
+    if (
+      voiceMachineRef.current.current === 'speaking' ||
+      isSpeakingTtsRef.current
+    ) {
       handleInterruptSpeech()
       return
     }
@@ -1330,10 +1385,10 @@ export default function JarvisInterior({
       role="dialog"
       aria-modal="true"
       aria-label="JARVIS Holographic Interior Chamber"
-      className={`fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#030711] text-slate-100 select-none transition-all duration-300 ${
+      className={`fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#030711] text-slate-100 transition-all duration-300 select-none ${
         isOpen
-          ? 'opacity-100 pointer-events-auto visible'
-          : 'opacity-0 pointer-events-none invisible'
+          ? 'pointer-events-auto visible opacity-100'
+          : 'pointer-events-none invisible opacity-0'
       }`}
     >
       {/* Spherical Chamber Radial Hex-Grid & Holographic Vignette Backdrop */}
@@ -1363,7 +1418,7 @@ export default function JarvisInterior({
             type="button"
             data-testid="jarvis-exit-button"
             onClick={onExit}
-            className="cursor-pointer flex items-center gap-2 rounded-lg border border-cyan-400/60 bg-cyan-950/70 px-3 py-1.5 font-mono text-xs font-bold text-cyan-200 shadow-[0_0_16px_rgba(0,229,255,0.25)] transition hover:border-cyan-300 hover:bg-cyan-500 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-cyan-400 whitespace-nowrap"
+            className="flex cursor-pointer items-center gap-2 rounded-lg border border-cyan-400/60 bg-cyan-950/70 px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-cyan-200 shadow-[0_0_16px_rgba(0,229,255,0.25)] transition hover:border-cyan-300 hover:bg-cyan-500 hover:text-slate-950 focus:ring-2 focus:ring-cyan-400 focus:outline-none"
           >
             <span>← EXIT JARVIS</span>
             <kbd className="rounded border border-cyan-400/40 bg-slate-950/60 px-1.5 py-0.5 text-[10px]">
@@ -1374,7 +1429,7 @@ export default function JarvisInterior({
           <div className="hidden sm:block">
             <div className="flex items-center gap-2">
               <span
-                className="h-2.5 w-2.5 rounded-full animate-pulse"
+                className="h-2.5 w-2.5 animate-pulse rounded-full"
                 style={{
                   backgroundColor: activeSpec.primaryColor,
                   boxShadow: `0 0 10px ${activeSpec.primaryColor}`,
@@ -1400,8 +1455,9 @@ export default function JarvisInterior({
               </span>
             </div>
             <div className="font-mono text-[10px] text-slate-400">
-              Operator: <strong className="text-slate-200">{userName}</strong> • Core
-              State: <strong className="text-cyan-300 uppercase">{coreState}</strong>
+              Operator: <strong className="text-slate-200">{userName}</strong> •
+              Core State:{' '}
+              <strong className="text-cyan-300 uppercase">{coreState}</strong>
             </div>
           </div>
         </div>
@@ -1412,36 +1468,36 @@ export default function JarvisInterior({
           className="flex flex-wrap items-center gap-2"
         >
           <div className="rounded-lg border border-cyan-500/30 bg-slate-950/85 px-3 py-1 font-mono">
-            <div className="text-[9px] tracking-wider text-slate-400 uppercase whitespace-nowrap">
+            <div className="text-[9px] tracking-wider whitespace-nowrap text-slate-400 uppercase">
               AGENTS ACTIVE
             </div>
             <div
               data-testid="readout-agents-active"
-              className="text-xs font-black text-emerald-400 whitespace-nowrap"
+              className="text-xs font-black whitespace-nowrap text-emerald-400"
             >
               {telemetry.agentsActive} / {telemetry.totalAgents}
             </div>
           </div>
 
           <div className="rounded-lg border border-cyan-500/30 bg-slate-950/85 px-3 py-1 font-mono">
-            <div className="text-[9px] tracking-wider text-slate-400 uppercase whitespace-nowrap">
+            <div className="text-[9px] tracking-wider whitespace-nowrap text-slate-400 uppercase">
               TASKS RUNNING
             </div>
             <div
               data-testid="readout-tasks-running"
-              className="text-xs font-black text-cyan-300 whitespace-nowrap"
+              className="text-xs font-black whitespace-nowrap text-cyan-300"
             >
               {telemetry.tasksRunning}
             </div>
           </div>
 
           <div className="rounded-lg border border-cyan-500/30 bg-slate-950/85 px-3 py-1 font-mono">
-            <div className="text-[9px] tracking-wider text-slate-400 uppercase whitespace-nowrap">
+            <div className="text-[9px] tracking-wider whitespace-nowrap text-slate-400 uppercase">
               QUEUE
             </div>
             <div
               data-testid="readout-queue"
-              className="text-xs font-black text-sky-300 whitespace-nowrap"
+              className="text-xs font-black whitespace-nowrap text-sky-300"
             >
               {telemetry.queueCount}
             </div>
@@ -1454,13 +1510,15 @@ export default function JarvisInterior({
                 : 'border-cyan-500/30 bg-slate-950/85'
             }`}
           >
-            <div className="text-[9px] tracking-wider text-slate-400 uppercase whitespace-nowrap">
+            <div className="text-[9px] tracking-wider whitespace-nowrap text-slate-400 uppercase">
               WAITING FOR YOU
             </div>
             <div
               data-testid="readout-waiting-for-you"
               className={`text-xs font-black whitespace-nowrap ${
-                telemetry.waitingForYou > 0 ? 'text-orange-400' : 'text-slate-300'
+                telemetry.waitingForYou > 0
+                  ? 'text-orange-400'
+                  : 'text-slate-300'
               }`}
             >
               {telemetry.waitingForYou}
@@ -1468,16 +1526,17 @@ export default function JarvisInterior({
           </div>
 
           <div className="rounded-lg border border-cyan-500/30 bg-slate-950/85 px-3 py-1 font-mono">
-            <div className="text-[9px] tracking-wider text-slate-400 uppercase whitespace-nowrap">
+            <div className="text-[9px] tracking-wider whitespace-nowrap text-slate-400 uppercase">
               TOKENS (API / LOCAL SLM)
             </div>
             <div
               data-testid="readout-tokens"
-              className="flex items-center gap-1.5 text-xs font-black text-indigo-300 whitespace-nowrap"
+              className="flex items-center gap-1.5 text-xs font-black whitespace-nowrap text-indigo-300"
             >
               <span>{sessionTokens.toLocaleString()}</span>
               <span className="text-[9px] font-semibold text-cyan-300/90">
-                (API: {apiTokens.toLocaleString()} • SLM: {localSlmTokens.toLocaleString()})
+                (API: {apiTokens.toLocaleString()} • SLM:{' '}
+                {localSlmTokens.toLocaleString()})
               </span>
             </div>
           </div>
@@ -1514,7 +1573,7 @@ export default function JarvisInterior({
             ))}
           </select>
 
-          <div className="hidden xl:flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950/90 p-1">
+          <div className="hidden items-center gap-1 rounded-lg border border-slate-800 bg-slate-950/90 p-1 xl:flex">
             {JARVIS_CORE_STATES.map((st) => {
               const cfg = ARC_REACTOR_STATE_CONFIG[st]
               const active = coreState === st
@@ -1523,7 +1582,7 @@ export default function JarvisInterior({
                   key={st}
                   type="button"
                   onClick={() => onCoreStateChange(st)}
-                  className={`cursor-pointer rounded px-2 py-0.5 font-mono text-[10px] font-bold uppercase transition whitespace-nowrap ${
+                  className={`cursor-pointer rounded px-2 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap uppercase transition ${
                     active
                       ? 'bg-cyan-500 text-slate-950'
                       : 'text-slate-400 hover:text-slate-200'
@@ -1541,7 +1600,7 @@ export default function JarvisInterior({
             <button
               type="button"
               onClick={() => setRenderMode('3d')}
-              className={`cursor-pointer rounded px-2 py-1 font-bold transition whitespace-nowrap ${
+              className={`cursor-pointer rounded px-2 py-1 font-bold whitespace-nowrap transition ${
                 renderMode === '3d'
                   ? 'bg-cyan-500 text-slate-950'
                   : 'text-slate-400 hover:text-white'
@@ -1552,7 +1611,7 @@ export default function JarvisInterior({
             <button
               type="button"
               onClick={() => setRenderMode('2d')}
-              className={`cursor-pointer rounded px-2 py-1 font-bold transition whitespace-nowrap ${
+              className={`cursor-pointer rounded px-2 py-1 font-bold whitespace-nowrap transition ${
                 renderMode === '2d'
                   ? 'bg-cyan-500 text-slate-950'
                   : 'text-slate-400 hover:text-white'
@@ -1584,7 +1643,7 @@ export default function JarvisInterior({
               setDiagnosticsTab('data_health')
               setShowDiagnosticsModal(true)
             }}
-            className="cursor-pointer flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-950/40 px-2.5 py-1 font-mono text-[10px] font-bold text-cyan-300 hover:border-cyan-400 hover:bg-cyan-900/60 transition whitespace-nowrap"
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-950/40 px-2.5 py-1 font-mono text-[10px] font-bold whitespace-nowrap text-cyan-300 transition hover:border-cyan-400 hover:bg-cyan-900/60"
             title="Open Supabase Data Health Panel"
           >
             <span>🗄️ DATA HEALTH</span>
@@ -1598,11 +1657,11 @@ export default function JarvisInterior({
               setDiagnosticsTab('voice')
               setShowDiagnosticsModal(true)
             }}
-            className="cursor-pointer flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-950/40 px-2.5 py-1 font-mono text-[10px] font-bold text-amber-300 hover:border-amber-400 hover:bg-amber-900/60 transition whitespace-nowrap"
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-950/40 px-2.5 py-1 font-mono text-[10px] font-bold whitespace-nowrap text-amber-300 transition hover:border-amber-400 hover:bg-amber-900/60"
             title="Open Jarvis Voice & State Diagnostics"
           >
             <span>⚡ DIAGNOSTICS</span>
-            <span className="rounded bg-amber-500/30 px-1 py-0.2 text-[9px] text-amber-200">
+            <span className="py-0.2 rounded bg-amber-500/30 px-1 text-[9px] text-amber-200">
               {voiceMachine.history.length}
             </span>
           </button>
@@ -1612,11 +1671,11 @@ export default function JarvisInterior({
       {/* ===================================================================== */}
       {/* 2. CURVED HOLOGRAPHIC CHAMBER BODY (3-COLUMN DESKTOP / STACKED MOBILE)*/}
       {/* ===================================================================== */}
-      <div className="relative z-10 grid flex-1 min-h-0 grid-cols-1 gap-4 overflow-y-auto lg:grid-cols-12 lg:overflow-hidden p-4">
+      <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto p-4 lg:grid-cols-12 lg:overflow-hidden">
         {/* LEFT CURVED HOLOGRAPHIC PANEL: LIVE 24-AGENT ROSTER BY DEPARTMENT */}
         <aside
           data-testid="jarvis-left-roster-panel"
-          className="flex flex-col min-h-[280px] lg:col-span-4 xl:col-span-3 lg:h-full overflow-hidden rounded-2xl border border-cyan-500/30 bg-[#061020]/80 shadow-[0_0_35px_rgba(0,229,255,0.08)] backdrop-blur-xl"
+          className="flex min-h-[280px] flex-col overflow-hidden rounded-2xl border border-cyan-500/30 bg-[#061020]/80 shadow-[0_0_35px_rgba(0,229,255,0.08)] backdrop-blur-xl lg:col-span-4 lg:h-full xl:col-span-3"
         >
           <div className="border-b border-cyan-500/20 px-4 py-3">
             <div className="flex items-center justify-between">
@@ -1638,26 +1697,32 @@ export default function JarvisInterior({
             />
 
             <div className="mt-2 flex flex-wrap items-center gap-1">
-              {['ALL', 'ENGINEERING', 'QA', 'GROWTH', 'INTELLIGENCE', 'OPERATIONS', 'COMMAND'].map(
-                (dept) => (
-                  <button
-                    key={dept}
-                    type="button"
-                    onClick={() => setDeptFilter(dept)}
-                    className={`cursor-pointer rounded px-2 py-0.5 font-mono text-[9px] font-bold transition whitespace-nowrap ${
-                      deptFilter === dept
-                        ? 'bg-cyan-500 text-slate-950'
-                        : 'bg-slate-900/80 text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {dept}
-                  </button>
-                )
-              )}
+              {[
+                'ALL',
+                'ENGINEERING',
+                'QA',
+                'GROWTH',
+                'INTELLIGENCE',
+                'OPERATIONS',
+                'COMMAND',
+              ].map((dept) => (
+                <button
+                  key={dept}
+                  type="button"
+                  onClick={() => setDeptFilter(dept)}
+                  className={`cursor-pointer rounded px-2 py-0.5 font-mono text-[9px] font-bold whitespace-nowrap transition ${
+                    deptFilter === dept
+                      ? 'bg-cyan-500 text-slate-950'
+                      : 'bg-slate-900/80 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {dept}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          <div className="flex-1 space-y-3 overflow-y-auto p-3">
             {groupedByDept.map(([deptName, deptAgents]) => (
               <div key={deptName} className="space-y-1.5">
                 <div className="flex items-center justify-between px-1 font-mono text-[10px] font-bold tracking-wider text-cyan-400/90 uppercase">
@@ -1680,10 +1745,10 @@ export default function JarvisInterior({
                       type="button"
                       data-testid={`jarvis-roster-agent-${ag.id}`}
                       onClick={() => onSelectAgentAndExit(ag)}
-                      className="cursor-pointer w-full text-left rounded-xl border border-slate-800/90 bg-slate-950/75 p-2.5 transition hover:border-cyan-400/60 hover:bg-cyan-950/30 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                      className="w-full cursor-pointer rounded-xl border border-slate-800/90 bg-slate-950/75 p-2.5 text-left transition hover:border-cyan-400/60 hover:bg-cyan-950/30 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex min-w-0 items-center gap-2.5">
                           {/* Pixel-style Avatar Badge */}
                           <div className="relative flex h-7 w-7 shrink-0 flex-col items-center justify-center rounded-md border border-slate-700 bg-slate-900">
                             <div
@@ -1701,22 +1766,24 @@ export default function JarvisInterior({
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-mono text-xs font-bold text-slate-100 truncate">
+                              <span className="truncate font-mono text-xs font-bold text-slate-100">
                                 {ag.name}
                               </span>
-                              <span className="rounded border border-cyan-500/30 bg-cyan-950/60 px-1.5 py-0.2 font-mono text-[8px] font-bold text-cyan-300 uppercase whitespace-nowrap">
+                              <span className="py-0.2 rounded border border-cyan-500/30 bg-cyan-950/60 px-1.5 font-mono text-[8px] font-bold whitespace-nowrap text-cyan-300 uppercase">
                                 {ag.model || 'gemini-2.0-flash'}
                               </span>
                             </div>
-                            <div className="font-mono text-[10px] text-slate-400 truncate">
+                            <div className="truncate font-mono text-[10px] text-slate-400">
                               {ag.role}
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900 px-2 py-0.5 shrink-0">
-                          <span className={`h-2 w-2 rounded-full ${stBadge.dotTailwind}`} />
-                          <span className="font-mono text-[9px] font-semibold text-slate-200 whitespace-nowrap">
+                        <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900 px-2 py-0.5">
+                          <span
+                            className={`h-2 w-2 rounded-full ${stBadge.dotTailwind}`}
+                          />
+                          <span className="font-mono text-[9px] font-semibold whitespace-nowrap text-slate-200">
                             {stBadge.label}
                           </span>
                         </div>
@@ -1724,12 +1791,14 @@ export default function JarvisInterior({
 
                       <div className="mt-1.5 flex items-center justify-between gap-2 font-mono text-[9px] text-slate-400">
                         <span className="truncate">{ag.current_task}</span>
-                        <span className="text-cyan-300 shrink-0">{prog}%</span>
+                        <span className="shrink-0 text-cyan-300">{prog}%</span>
                       </div>
                       <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-slate-800">
                         <div
                           className="h-full bg-cyan-400 transition-all"
-                          style={{ width: `${Math.min(100, Math.max(5, prog))}%` }}
+                          style={{
+                            width: `${Math.min(100, Math.max(5, prog))}%`,
+                          }}
                         />
                       </div>
                     </button>
@@ -1743,25 +1812,27 @@ export default function JarvisInterior({
         {/* CENTER STAGE: HIGH-DETAIL SHARED ARC REACTOR CORE */}
         <section
           data-testid="jarvis-center-reactor-stage"
-          className="relative flex flex-col items-center justify-center min-h-[340px] lg:col-span-4 xl:col-span-6 lg:h-full overflow-hidden rounded-2xl border border-cyan-500/35 bg-[#040914]/85 shadow-[0_0_60px_rgba(0,229,255,0.12)]"
+          className="relative flex min-h-[340px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-cyan-500/35 bg-[#040914]/85 shadow-[0_0_60px_rgba(0,229,255,0.12)] lg:col-span-4 lg:h-full xl:col-span-6"
         >
           {/* Decorative HUD Corner Brackets & Circular Reticle */}
           <div className="pointer-events-none absolute inset-4 rounded-xl border border-cyan-500/15" />
 
           <div className="pointer-events-none absolute top-4 left-4 z-10 flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-slate-950/80 px-3 py-1 font-mono text-[10px] text-cyan-300">
-            <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
-            <span>ARC REACTOR // MK-VI HOLOGRAPHIC CORE (size=&quot;interior&quot;)</span>
+            <span className="h-2 w-2 animate-ping rounded-full bg-cyan-400" />
+            <span>
+              ARC REACTOR // MK-VI HOLOGRAPHIC CORE (size=&quot;interior&quot;)
+            </span>
           </div>
 
           {telemetry.waitingForYou > 0 && (
             <div className="pointer-events-none absolute top-4 right-4 z-10 flex items-center gap-1.5 rounded-lg border border-orange-500/60 bg-orange-950/75 px-3 py-1 font-mono text-[10px] font-bold text-orange-300">
-              <span className="h-2 w-2 rounded-full bg-orange-400 animate-pulse" />
+              <span className="h-2 w-2 animate-pulse rounded-full bg-orange-400" />
               <span>{telemetry.waitingForYou} GO-SIGNAL ALERT</span>
             </div>
           )}
 
           {/* Shared High-Detail ArcReactor */}
-          <div className="h-full w-full min-h-[320px]">
+          <div className="h-full min-h-[320px] w-full">
             <ArcReactorPreviewCanvas
               state={coreState}
               size="interior"
@@ -1780,14 +1851,17 @@ export default function JarvisInterior({
           </div>
 
           {/* Bottom Reactor Telemetry Strip */}
-          <div className="pointer-events-none absolute bottom-3 inset-x-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[10px] text-slate-400">
+          <div className="pointer-events-none absolute inset-x-4 bottom-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-800/80 bg-slate-950/85 px-3 py-1.5 font-mono text-[10px] text-slate-400">
             <span>
-              STATE: <strong className="text-cyan-300 uppercase">{coreState}</strong> (
+              STATE:{' '}
+              <strong className="text-cyan-300 uppercase">{coreState}</strong> (
               {activeSpec.subtitle})
             </span>
             <span>
               AVG FLEET PROGRESS:{' '}
-              <strong className="text-emerald-400">{telemetry.avgProgress}%</strong>
+              <strong className="text-emerald-400">
+                {telemetry.avgProgress}%
+              </strong>
             </span>
           </div>
         </section>
@@ -1795,15 +1869,15 @@ export default function JarvisInterior({
         {/* RIGHT CURVED HOLOGRAPHIC PANEL: CONVERSATION, APPROVALS & ACTIVE PLAN */}
         <aside
           data-testid="jarvis-right-conversation-panel"
-          className="flex flex-col min-h-[300px] lg:col-span-4 xl:col-span-3 lg:h-full overflow-hidden rounded-2xl border border-cyan-500/30 bg-[#061020]/80 shadow-[0_0_35px_rgba(0,229,255,0.08)] backdrop-blur-xl"
+          className="flex min-h-[300px] flex-col overflow-hidden rounded-2xl border border-cyan-500/30 bg-[#061020]/80 shadow-[0_0_35px_rgba(0,229,255,0.08)] backdrop-blur-xl lg:col-span-4 lg:h-full xl:col-span-3"
         >
           {/* Panel Header + Operator Name / Autonomy Setting */}
-          <div className="border-b border-cyan-500/20 px-4 py-3 space-y-2">
+          <div className="space-y-2 border-b border-cyan-500/20 px-4 py-3">
             <div className="flex items-center justify-between">
               <span className="font-mono text-xs font-bold tracking-wider text-cyan-300 uppercase">
                 JARVIS CONVERSATION &amp; PLAN
               </span>
-              <span className="rounded border border-cyan-500/30 bg-cyan-950/50 px-2 py-0.5 font-mono text-[9px] text-cyan-300 whitespace-nowrap">
+              <span className="rounded border border-cyan-500/30 bg-cyan-950/50 px-2 py-0.5 font-mono text-[9px] whitespace-nowrap text-cyan-300">
                 {autonomyMode === 'ask' ? 'ASK ME FIRST' : 'AUTO-RUN SAFE'}
               </span>
             </div>
@@ -1829,7 +1903,7 @@ export default function JarvisInterior({
                   const next = autonomyMode === 'ask' ? 'auto_safe' : 'ask'
                   setAutonomyMode(next)
                 }}
-                className="cursor-pointer rounded-lg border border-slate-800 bg-slate-950/80 px-2 py-1 font-mono text-[10px] font-semibold text-slate-300 hover:border-cyan-500/50 hover:text-cyan-300 whitespace-nowrap"
+                className="cursor-pointer rounded-lg border border-slate-800 bg-slate-950/80 px-2 py-1 font-mono text-[10px] font-semibold whitespace-nowrap text-slate-300 hover:border-cyan-500/50 hover:text-cyan-300"
               >
                 Autonomy: {autonomyMode === 'ask' ? 'Ask First' : 'Auto Safe'}
               </button>
@@ -1838,9 +1912,10 @@ export default function JarvisInterior({
 
           {/* Pending Approvals Alert Box inside Jarvis (Human-in-the-loop) */}
           {telemetry.pendingApprovals.length > 0 && (
-            <div className="border-b border-orange-500/30 bg-orange-950/30 p-3 space-y-2">
+            <div className="space-y-2 border-b border-orange-500/30 bg-orange-950/30 p-3">
               <div className="font-mono text-[10px] font-bold text-orange-300 uppercase">
-                ⚠ WAITING FOR YOUR GO-SIGNAL ({telemetry.pendingApprovals.length})
+                ⚠ WAITING FOR YOUR GO-SIGNAL (
+                {telemetry.pendingApprovals.length})
               </div>
               {telemetry.pendingApprovals.slice(0, 2).map((app) => (
                 <div
@@ -1855,14 +1930,14 @@ export default function JarvisInterior({
                       <button
                         type="button"
                         onClick={() => onApprove(app.id, 'approved')}
-                        className="cursor-pointer rounded bg-emerald-600 px-2 py-0.5 font-bold text-white hover:bg-emerald-500 whitespace-nowrap"
+                        className="cursor-pointer rounded bg-emerald-600 px-2 py-0.5 font-bold whitespace-nowrap text-white hover:bg-emerald-500"
                       >
                         Approve ✓
                       </button>
                       <button
                         type="button"
                         onClick={() => onApprove(app.id, 'rejected')}
-                        className="cursor-pointer rounded bg-rose-700 px-2 py-0.5 font-bold text-white hover:bg-rose-600 whitespace-nowrap"
+                        className="cursor-pointer rounded bg-rose-700 px-2 py-0.5 font-bold whitespace-nowrap text-white hover:bg-rose-600"
                       >
                         Reject ✕
                       </button>
@@ -1877,16 +1952,19 @@ export default function JarvisInterior({
           {wellnessWarnings.length > 0 && (
             <div
               data-testid="jarvis-wellness-warnings"
-              className="border-b border-amber-500/30 bg-amber-950/30 p-2.5 space-y-1.5 font-mono text-[10px]"
+              className="space-y-1.5 border-b border-amber-500/30 bg-amber-950/30 p-2.5 font-mono text-[10px]"
             >
-              <div className="flex items-center justify-between text-amber-300 font-bold uppercase tracking-wider">
+              <div className="flex items-center justify-between font-bold tracking-wider text-amber-300 uppercase">
                 <span className="flex items-center gap-1.5">
-                  <span className="inline-block h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                  ⚠ WELLNESS &amp; EXHAUSTION WARNINGS ({wellnessWarnings.length})
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+                  ⚠ WELLNESS &amp; EXHAUSTION WARNINGS (
+                  {wellnessWarnings.length})
                 </span>
-                <span className="text-[9px] text-amber-400/80">[SIMULATED ENGINE]</span>
+                <span className="text-[9px] text-amber-400/80">
+                  [SIMULATED ENGINE]
+                </span>
               </div>
-              <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+              <div className="flex max-h-24 flex-wrap gap-2 overflow-y-auto">
                 {wellnessWarnings.slice(0, 4).map((w) => (
                   <div
                     key={w.id}
@@ -1907,7 +1985,7 @@ export default function JarvisInterior({
           {/* Conversation Feed */}
           <div
             data-testid="jarvis-conversation-feed"
-            className="flex-1 overflow-y-auto p-3 space-y-3 font-mono text-xs"
+            className="flex-1 space-y-3 overflow-y-auto p-3 font-mono text-xs"
           >
             {/* Initial Grounded Briefing Card */}
             <div className="rounded-xl border border-cyan-500/35 bg-cyan-950/25 p-3">
@@ -1916,12 +1994,14 @@ export default function JarvisInterior({
                 <button
                   type="button"
                   onClick={() => speakWithJarvisVoice(greetingText, true)}
-                  className="cursor-pointer rounded border border-cyan-500/40 bg-cyan-950/60 px-1.5 py-0.5 text-[9px] font-bold text-cyan-200 hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
+                  className="cursor-pointer rounded border border-cyan-500/40 bg-cyan-950/60 px-1.5 py-0.5 text-[9px] font-bold whitespace-nowrap text-cyan-200 hover:bg-cyan-500 hover:text-slate-950"
                 >
                   🔊 SPEAK
                 </button>
               </div>
-              <p className="mt-1.5 leading-relaxed text-slate-200">{greetingText}</p>
+              <p className="mt-1.5 leading-relaxed text-slate-200">
+                {greetingText}
+              </p>
             </div>
 
             {messages.map((m) => (
@@ -1950,20 +2030,24 @@ export default function JarvisInterior({
                         : ''}
                   </span>
                   <div className="flex items-center gap-1.5">
-                    {m.role === 'jarvis' && !m.isStreaming && !m.errorReason && (
-                      <button
-                        type="button"
-                        onClick={() => speakWithJarvisVoice(m.text, true)}
-                        className="cursor-pointer rounded border border-cyan-500/30 bg-slate-900 px-1.5 py-0.5 text-[9px] text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
-                        title="Speak this response aloud"
-                      >
-                        🔊
-                      </button>
-                    )}
+                    {m.role === 'jarvis' &&
+                      !m.isStreaming &&
+                      !m.errorReason && (
+                        <button
+                          type="button"
+                          onClick={() => speakWithJarvisVoice(m.text, true)}
+                          className="cursor-pointer rounded border border-cyan-500/30 bg-slate-900 px-1.5 py-0.5 text-[9px] whitespace-nowrap text-cyan-300 hover:bg-cyan-500 hover:text-slate-950"
+                          title="Speak this response aloud"
+                        >
+                          🔊
+                        </button>
+                      )}
                     <span>{m.timestamp}</span>
                   </div>
                 </div>
-                <p className="mt-1.5 leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                <p className="mt-1.5 leading-relaxed whitespace-pre-wrap">
+                  {m.text}
+                </p>
 
                 {/* Visible Error Retry Button (never a fake canned reply) */}
                 {m.errorReason && m.retryPrompt && (
@@ -1976,7 +2060,7 @@ export default function JarvisInterior({
                       data-testid="jarvis-retry-button"
                       disabled={isTransmitting}
                       onClick={() => void submitDirectiveText(m.retryPrompt!)}
-                      className="cursor-pointer rounded-lg border border-rose-400 bg-rose-500/20 px-2.5 py-1 font-mono text-[10px] font-bold text-rose-200 transition hover:bg-rose-500 hover:text-slate-950 disabled:opacity-50 whitespace-nowrap"
+                      className="cursor-pointer rounded-lg border border-rose-400 bg-rose-500/20 px-2.5 py-1 font-mono text-[10px] font-bold whitespace-nowrap text-rose-200 transition hover:bg-rose-500 hover:text-slate-950 disabled:opacity-50"
                     >
                       ↻ Retry
                     </button>
@@ -1987,10 +2071,12 @@ export default function JarvisInterior({
                 {m.taskPlan && (
                   <div
                     data-testid="jarvis-task-plan-card"
-                    className="mt-2.5 rounded-lg border border-cyan-400/40 bg-slate-950/90 p-2.5 space-y-2"
+                    className="mt-2.5 space-y-2 rounded-lg border border-cyan-400/40 bg-slate-950/90 p-2.5"
                   >
                     <div className="flex items-center justify-between text-[10px] font-bold text-cyan-300">
-                      <span>MULTI-AGENT PLAN ({m.taskPlan.subtasks.length} STAGES)</span>
+                      <span>
+                        MULTI-AGENT PLAN ({m.taskPlan.subtasks.length} STAGES)
+                      </span>
                       <span>~{m.taskPlan.totalEstimatedTokens} TOKENS</span>
                     </div>
                     <div className="space-y-1.5">
@@ -2001,11 +2087,16 @@ export default function JarvisInterior({
                         >
                           <div className="flex items-center justify-between font-bold text-slate-200">
                             <span>
-                              {idx + 1}. {sub.assignedAgentName} ({sub.department})
+                              {idx + 1}. {sub.assignedAgentName} (
+                              {sub.department})
                             </span>
-                            <span className="text-cyan-400 uppercase">{sub.priority}</span>
+                            <span className="text-cyan-400 uppercase">
+                              {sub.priority}
+                            </span>
                           </div>
-                          <div className="text-slate-400 truncate">{sub.title}</div>
+                          <div className="truncate text-slate-400">
+                            {sub.title}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -2013,9 +2104,9 @@ export default function JarvisInterior({
                       type="button"
                       disabled={Boolean(dispatchedPlanIds[m.taskPlan.id])}
                       onClick={() => void handleDispatchPlan(m.taskPlan!)}
-                      className={`cursor-pointer w-full rounded-lg py-1.5 font-mono text-[10px] font-black uppercase transition whitespace-nowrap ${
+                      className={`w-full cursor-pointer rounded-lg py-1.5 font-mono text-[10px] font-black whitespace-nowrap uppercase transition ${
                         dispatchedPlanIds[m.taskPlan.id]
-                          ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
+                          ? 'border border-emerald-500/40 bg-emerald-950/80 text-emerald-300'
                           : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400'
                       }`}
                     >
@@ -2033,7 +2124,8 @@ export default function JarvisInterior({
                     className="mt-2 border-t border-slate-800/80 pt-1.5 text-[9px] text-cyan-400/90"
                   >
                     <summary className="cursor-pointer font-semibold select-none hover:text-cyan-300">
-                      Sources ({m.toolsUsed.length} tool{m.toolsUsed.length > 1 ? 's' : ''})
+                      Sources ({m.toolsUsed.length} tool
+                      {m.toolsUsed.length > 1 ? 's' : ''})
                     </summary>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {m.toolsUsed.map((toolName, idx) => (
@@ -2083,7 +2175,7 @@ export default function JarvisInterior({
                   type="button"
                   disabled={isTransmitting}
                   onClick={() => void submitDirectiveText(chip)}
-                  className="cursor-pointer rounded-full border border-cyan-500/30 bg-cyan-950/40 px-2.5 py-1 font-mono text-[10px] text-cyan-200 transition hover:border-cyan-400 hover:bg-cyan-900/50 disabled:opacity-50 whitespace-nowrap"
+                  className="cursor-pointer rounded-full border border-cyan-500/30 bg-cyan-950/40 px-2.5 py-1 font-mono text-[10px] whitespace-nowrap text-cyan-200 transition hover:border-cyan-400 hover:bg-cyan-900/50 disabled:opacity-50"
                 >
                   {chip}
                 </button>
@@ -2103,12 +2195,14 @@ export default function JarvisInterior({
             data-testid="jarvis-live-transcript-banner"
             className="mx-auto mb-2 flex max-w-5xl items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-950/60 px-3 py-1.5 font-mono text-xs text-cyan-200"
           >
-            <span className="inline-block h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
-            <span className="font-bold uppercase tracking-wider text-cyan-400 text-[10px]">
+            <span className="inline-block h-2 w-2 animate-ping rounded-full bg-cyan-400" />
+            <span className="text-[10px] font-bold tracking-wider text-cyan-400 uppercase">
               You are saying:
             </span>
-            <span className="truncate italic text-cyan-100">
-              {voiceMachine.interimTranscript || commandInput || 'Listening for your voice...'}
+            <span className="truncate text-cyan-100 italic">
+              {voiceMachine.interimTranscript ||
+                commandInput ||
+                'Listening for your voice...'}
             </span>
           </div>
         )}
@@ -2120,11 +2214,11 @@ export default function JarvisInterior({
             className="mx-auto mb-2 flex max-w-5xl items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-950/60 px-3 py-1.5 font-mono text-xs text-amber-200"
           >
             <div className="flex items-center gap-2 truncate">
-              <span className="inline-block h-2 w-2 rounded-full bg-amber-400 animate-ping shrink-0" />
-              <span className="font-bold uppercase tracking-wider text-amber-300 text-[10px] shrink-0">
+              <span className="inline-block h-2 w-2 shrink-0 animate-ping rounded-full bg-amber-400" />
+              <span className="shrink-0 text-[10px] font-bold tracking-wider text-amber-300 uppercase">
                 JARVIS is speaking:
               </span>
-              <span className="truncate italic text-amber-100">
+              <span className="truncate text-amber-100 italic">
                 Press Space or tap Interrupt to talk
               </span>
             </div>
@@ -2132,7 +2226,7 @@ export default function JarvisInterior({
               type="button"
               data-testid="jarvis-interrupt-btn"
               onClick={handleInterruptSpeech}
-              className="cursor-pointer rounded-md border border-amber-400/80 bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold text-amber-200 hover:bg-amber-500/40 transition whitespace-nowrap shrink-0"
+              className="shrink-0 cursor-pointer rounded-md border border-amber-400/80 bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap text-amber-200 transition hover:bg-amber-500/40"
             >
               🛑 INTERRUPT (SPACE)
             </button>
@@ -2148,15 +2242,15 @@ export default function JarvisInterior({
             type="button"
             data-testid="jarvis-mic-button"
             onClick={handleToggleVoice}
-            className={`cursor-pointer flex items-center gap-1.5 rounded-xl border px-3 py-2 font-mono text-xs font-bold transition whitespace-nowrap ${
+            className={`flex cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-2 font-mono text-xs font-bold whitespace-nowrap transition ${
               voiceMachine.current === 'listening'
-                ? 'border-cyan-400 bg-cyan-950/80 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.35)] animate-pulse'
+                ? 'animate-pulse border-cyan-400 bg-cyan-950/80 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.35)]'
                 : voiceMachine.current === 'speaking'
-                  ? 'border-emerald-400 bg-emerald-950/80 text-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.35)] animate-pulse'
+                  ? 'animate-pulse border-emerald-400 bg-emerald-950/80 text-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.35)]'
                   : voiceMachine.current === 'thinking'
-                    ? 'border-amber-400 bg-amber-950/80 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.35)] animate-pulse'
+                    ? 'animate-pulse border-amber-400 bg-amber-950/80 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.35)]'
                     : voiceMachine.current === 'executing'
-                      ? 'border-indigo-400 bg-indigo-950/80 text-indigo-300 shadow-[0_0_15px_rgba(129,140,248,0.35)] animate-pulse'
+                      ? 'animate-pulse border-indigo-400 bg-indigo-950/80 text-indigo-300 shadow-[0_0_15px_rgba(129,140,248,0.35)]'
                       : voiceEnabled
                         ? 'border-emerald-500/50 bg-emerald-950/40 text-emerald-400'
                         : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-cyan-500/50 hover:text-cyan-200'
@@ -2195,7 +2289,7 @@ export default function JarvisInterior({
                 window.speechSynthesis.cancel()
               }
             }}
-            className={`cursor-pointer rounded-xl border px-3 py-2 font-mono text-xs font-bold transition whitespace-nowrap ${
+            className={`cursor-pointer rounded-xl border px-3 py-2 font-mono text-xs font-bold whitespace-nowrap transition ${
               !ttsMuted
                 ? 'border-cyan-400 bg-cyan-950/70 text-cyan-300'
                 : 'border-slate-700 bg-slate-900 text-slate-400 hover:text-slate-200'
@@ -2214,14 +2308,14 @@ export default function JarvisInterior({
               setCommandInput(e.target.value)
             }}
             placeholder={`Speak or type a directive for JARVIS, ${userName}...`}
-            className="flex-1 min-w-[220px] rounded-xl border border-cyan-500/40 bg-slate-950/90 px-4 py-2 font-mono text-xs text-slate-100 placeholder-slate-500 focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+            className="min-w-[220px] flex-1 rounded-xl border border-cyan-500/40 bg-slate-950/90 px-4 py-2 font-mono text-xs text-slate-100 placeholder-slate-500 focus:border-cyan-300 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
           />
 
           <button
             type="submit"
             disabled={isTransmitting}
             data-testid="jarvis-send-button"
-            className="cursor-pointer rounded-xl border border-cyan-400 bg-cyan-500 px-4 py-2 font-mono text-xs font-black text-slate-950 shadow-[0_0_20px_rgba(0,229,255,0.4)] transition hover:bg-cyan-400 disabled:opacity-50 whitespace-nowrap"
+            className="cursor-pointer rounded-xl border border-cyan-400 bg-cyan-500 px-4 py-2 font-mono text-xs font-black whitespace-nowrap text-slate-950 shadow-[0_0_20px_rgba(0,229,255,0.4)] transition hover:bg-cyan-400 disabled:opacity-50"
           >
             {isTransmitting ? 'SYNTHESIZING...' : 'TRANSMIT TO JARVIS →'}
           </button>
@@ -2237,28 +2331,28 @@ export default function JarvisInterior({
           aria-label="JARVIS Voice & State Diagnostics"
           className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
         >
-          <div className="flex flex-col w-full max-w-4xl max-h-[85vh] rounded-2xl border border-cyan-500/40 bg-[#061020] shadow-[0_0_50px_rgba(0,229,255,0.25)] overflow-hidden">
+          <div className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-cyan-500/40 bg-[#061020] shadow-[0_0_50px_rgba(0,229,255,0.25)]">
             {/* Header with Navigation Tabs */}
-            <div className="flex items-center justify-between border-b border-cyan-500/20 px-5 py-3.5 bg-slate-950/80">
+            <div className="flex items-center justify-between border-b border-cyan-500/20 bg-slate-950/80 px-5 py-3.5">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setDiagnosticsTab('voice')}
-                  className={`cursor-pointer flex items-center gap-2 rounded-lg px-3 py-1.5 font-mono text-xs font-bold transition ${
+                  className={`flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 font-mono text-xs font-bold transition ${
                     diagnosticsTab === 'voice'
                       ? 'border border-amber-500/50 bg-amber-950/70 text-amber-300'
                       : 'border border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white'
                   }`}
                 >
                   <span>⚡ VOICE DIAGNOSTICS</span>
-                  <span className="rounded bg-amber-500/30 px-1 py-0.2 text-[9px] text-amber-200">
+                  <span className="py-0.2 rounded bg-amber-500/30 px-1 text-[9px] text-amber-200">
                     {voiceMachine.history.length}
                   </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setDiagnosticsTab('data_health')}
-                  className={`cursor-pointer flex items-center gap-2 rounded-lg px-3 py-1.5 font-mono text-xs font-bold transition ${
+                  className={`flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 font-mono text-xs font-bold transition ${
                     diagnosticsTab === 'data_health'
                       ? 'border border-cyan-500/50 bg-cyan-950/70 text-cyan-300'
                       : 'border border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white'
@@ -2271,7 +2365,7 @@ export default function JarvisInterior({
                 type="button"
                 data-testid="jarvis-diagnostics-close"
                 onClick={() => setShowDiagnosticsModal(false)}
-                className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-xs text-slate-300 hover:border-cyan-400 hover:text-white transition"
+                className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-xs text-slate-300 transition hover:border-cyan-400 hover:text-white"
               >
                 ✕ CLOSE
               </button>
@@ -2283,149 +2377,209 @@ export default function JarvisInterior({
                 <DataHealthPanel />
               </div>
             ) : (
-              <div className="flex-1 overflow-y-auto p-5 space-y-4 font-mono text-xs">
-              {/* Telemetry Cards Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="rounded-xl border border-cyan-500/25 bg-slate-950/60 p-3">
-                  <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">State Machine</div>
-                  <div className="mt-1 text-sm font-black text-white uppercase">{voiceMachine.current}</div>
-                  <div className="mt-0.5 text-[9px] text-slate-400">Sole state writer</div>
-                </div>
-                <div className="rounded-xl border border-cyan-500/25 bg-slate-950/60 p-3">
-                  <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">SpeechSynthesis</div>
-                  <div className="mt-1 text-sm font-black text-white">
-                    {voiceMachine.current === 'speaking' ? 'SPEAKING' : 'IDLE / SILENT'}
+              <div className="flex-1 space-y-4 overflow-y-auto p-5 font-mono text-xs">
+                {/* Telemetry Cards Grid */}
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <div className="rounded-xl border border-cyan-500/25 bg-slate-950/60 p-3">
+                    <div className="text-[10px] font-bold tracking-wider text-cyan-400 uppercase">
+                      State Machine
+                    </div>
+                    <div className="mt-1 text-sm font-black text-white uppercase">
+                      {voiceMachine.current}
+                    </div>
+                    <div className="mt-0.5 text-[9px] text-slate-400">
+                      Sole state writer
+                    </div>
                   </div>
-                  <div className="mt-0.5 text-[9px] text-slate-400">Audio playback lock</div>
-                </div>
-                <div className="rounded-xl border border-cyan-500/25 bg-slate-950/60 p-3">
-                  <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Mic &amp; Stream</div>
-                  <div className="mt-1 text-sm font-black text-white">
-                    {voiceEnabled
-                      ? voiceMachine.current === 'speaking'
-                        ? 'PAUSED (SPEAKING)'
-                        : 'STREAM LIVE'
-                      : 'CLOSED / OFF'}
+                  <div className="rounded-xl border border-cyan-500/25 bg-slate-950/60 p-3">
+                    <div className="text-[10px] font-bold tracking-wider text-cyan-400 uppercase">
+                      SpeechSynthesis
+                    </div>
+                    <div className="mt-1 text-sm font-black text-white">
+                      {voiceMachine.current === 'speaking'
+                        ? 'SPEAKING'
+                        : 'IDLE / SILENT'}
+                    </div>
+                    <div className="mt-0.5 text-[9px] text-slate-400">
+                      Audio playback lock
+                    </div>
                   </div>
-                  <div className="mt-0.5 text-[9px] text-slate-400">Hardware echo cancel</div>
-                </div>
-                <div className="rounded-xl border border-cyan-500/25 bg-slate-950/60 p-3">
-                  <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Live Audio Level</div>
-                  <div className="mt-1 text-sm font-black text-cyan-300">
-                    {(liveAudioLevel * 100).toFixed(0)}%
+                  <div className="rounded-xl border border-cyan-500/25 bg-slate-950/60 p-3">
+                    <div className="text-[10px] font-bold tracking-wider text-cyan-400 uppercase">
+                      Mic &amp; Stream
+                    </div>
+                    <div className="mt-1 text-sm font-black text-white">
+                      {voiceEnabled
+                        ? voiceMachine.current === 'speaking'
+                          ? 'PAUSED (SPEAKING)'
+                          : 'STREAM LIVE'
+                        : 'CLOSED / OFF'}
+                    </div>
+                    <div className="mt-0.5 text-[9px] text-slate-400">
+                      Hardware echo cancel
+                    </div>
                   </div>
-                  <div className="mt-0.5 text-[9px] text-slate-400">AnalyserNode RMS</div>
+                  <div className="rounded-xl border border-cyan-500/25 bg-slate-950/60 p-3">
+                    <div className="text-[10px] font-bold tracking-wider text-cyan-400 uppercase">
+                      Live Audio Level
+                    </div>
+                    <div className="mt-1 text-sm font-black text-cyan-300">
+                      {(liveAudioLevel * 100).toFixed(0)}%
+                    </div>
+                    <div className="mt-0.5 text-[9px] text-slate-400">
+                      AnalyserNode RMS
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Toggles & Safe Mode Configuration */}
-              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 space-y-3">
-                <div className="font-bold text-slate-200 text-xs uppercase tracking-wider">
-                  Echo Protection &amp; Voice Mode Controls
-                </div>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
-                    <input
-                      type="checkbox"
-                      checked={handsFreeMode}
-                      onChange={(e) => setHandsFreeMode(e.target.checked)}
-                      className="rounded border-cyan-500/40 bg-slate-900 text-cyan-400 focus:ring-0"
-                    />
-                    <span>Hands-Free Auto-Resume (re-opens mic after speaking finishes)</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
-                    <input
-                      type="checkbox"
-                      checked={voiceInterruptHeadphones}
-                      onChange={(e) => setVoiceInterruptHeadphones(e.target.checked)}
-                      className="rounded border-cyan-500/40 bg-slate-900 text-cyan-400 focus:ring-0"
-                    />
-                    <span>Voice Interrupt (Headphones mode with &gt;60% echo filter)</span>
-                  </label>
-                </div>
-                {voiceMachine.history[0]?.liveValues?.lastRecognitionResult && (
-                  <div className="text-[10px] text-slate-400 truncate">
-                    Last Heard Transcript: <span className="text-cyan-300">&quot;{voiceMachine.history[0].liveValues.lastRecognitionResult}&quot;</span>
+                {/* Toggles & Safe Mode Configuration */}
+                <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+                  <div className="text-xs font-bold tracking-wider text-slate-200 uppercase">
+                    Echo Protection &amp; Voice Mode Controls
                   </div>
-                )}
-              </div>
-
-              {/* State Transition History Table (Last 30 transitions) */}
-              <div className="rounded-xl border border-slate-800 bg-slate-950/80 overflow-hidden">
-                <div className="border-b border-slate-800 px-4 py-2.5 text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                  <span>State Transition History (Last 30 Ring-Buffer Entries)</span>
-                  <span className="text-[9px] text-slate-500">Most recent first</span>
+                  <div className="flex flex-col gap-4 sm:flex-row">
+                    <label className="flex cursor-pointer items-center gap-2 text-slate-300 hover:text-white">
+                      <input
+                        type="checkbox"
+                        checked={handsFreeMode}
+                        onChange={(e) => setHandsFreeMode(e.target.checked)}
+                        className="rounded border-cyan-500/40 bg-slate-900 text-cyan-400 focus:ring-0"
+                      />
+                      <span>
+                        Hands-Free Auto-Resume (re-opens mic after speaking
+                        finishes)
+                      </span>
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 text-slate-300 hover:text-white">
+                      <input
+                        type="checkbox"
+                        checked={voiceInterruptHeadphones}
+                        onChange={(e) =>
+                          setVoiceInterruptHeadphones(e.target.checked)
+                        }
+                        className="rounded border-cyan-500/40 bg-slate-900 text-cyan-400 focus:ring-0"
+                      />
+                      <span>
+                        Voice Interrupt (Headphones mode with &gt;60% echo
+                        filter)
+                      </span>
+                    </label>
+                  </div>
+                  {voiceMachine.history[0]?.liveValues
+                    ?.lastRecognitionResult && (
+                    <div className="truncate text-[10px] text-slate-400">
+                      Last Heard Transcript:{' '}
+                      <span className="text-cyan-300">
+                        &quot;
+                        {
+                          voiceMachine.history[0].liveValues
+                            .lastRecognitionResult
+                        }
+                        &quot;
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <div className="max-h-72 overflow-y-auto">
-                  <table className="w-full text-left text-[10px]">
-                    <thead className="sticky top-0 bg-slate-900/90 text-slate-400 uppercase tracking-wider">
-                      <tr>
-                        <th className="px-3 py-1.5">#</th>
-                        <th className="px-3 py-1.5">Time</th>
-                        <th className="px-3 py-1.5">From</th>
-                        <th className="px-3 py-1.5">To</th>
-                        <th className="px-3 py-1.5">Reason</th>
-                        <th className="px-3 py-1.5">Live Telemetry</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60">
-                      {voiceMachine.history.length === 0 ? (
+
+                {/* State Transition History Table (Last 30 transitions) */}
+                <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/80">
+                  <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2.5 text-[11px] font-bold tracking-wider text-slate-300 uppercase">
+                    <span>
+                      State Transition History (Last 30 Ring-Buffer Entries)
+                    </span>
+                    <span className="text-[9px] text-slate-500">
+                      Most recent first
+                    </span>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    <table className="w-full text-left text-[10px]">
+                      <thead className="sticky top-0 bg-slate-900/90 tracking-wider text-slate-400 uppercase">
                         <tr>
-                          <td colSpan={6} className="px-3 py-4 text-center text-slate-500">
-                            No state transitions recorded yet. Speak or transmit a command to generate transitions.
-                          </td>
+                          <th className="px-3 py-1.5">#</th>
+                          <th className="px-3 py-1.5">Time</th>
+                          <th className="px-3 py-1.5">From</th>
+                          <th className="px-3 py-1.5">To</th>
+                          <th className="px-3 py-1.5">Reason</th>
+                          <th className="px-3 py-1.5">Live Telemetry</th>
                         </tr>
-                      ) : (
-                        voiceMachine.history.map((rec, idx) => (
-                          <tr key={`${rec.timestamp}-${idx}`} className="hover:bg-slate-900/40 transition">
-                            <td className="px-3 py-1.5 text-slate-500">{voiceMachine.history.length - idx}</td>
-                            <td className="px-3 py-1.5 text-slate-300 whitespace-nowrap">
-                              {new Date(rec.timestamp).toLocaleTimeString('en-US', {
-                                hour12: false,
-                                minute: '2-digit',
-                                second: '2-digit',
-                                fractionalSecondDigits: 3,
-                              })}
-                            </td>
-                            <td className="px-3 py-1.5">
-                              <span className="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-slate-300 uppercase">
-                                {rec.from}
-                              </span>
-                            </td>
-                            <td className="px-3 py-1.5">
-                              <span className="rounded border border-cyan-500/40 bg-cyan-950/60 px-1.5 py-0.5 font-bold text-cyan-300 uppercase">
-                                {rec.to}
-                              </span>
-                            </td>
-                            <td className="px-3 py-1.5 text-amber-200/90 truncate max-w-[200px]" title={rec.reason}>
-                              {rec.reason}
-                            </td>
-                            <td className="px-3 py-1.5 text-slate-400 whitespace-nowrap text-[9px]">
-                              TTS: {rec.liveValues?.speechSynthesisSpeaking ? '🔊 ON' : 'OFF'} | Mic:{' '}
-                              {rec.liveValues?.micOpen ? 'ON' : 'OFF'}
-                              {typeof rec.liveValues?.micLevel === 'number'
-                                ? ` (${(rec.liveValues.micLevel * 100).toFixed(0)}%)`
-                                : ''}
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60">
+                        {voiceMachine.history.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={6}
+                              className="px-3 py-4 text-center text-slate-500"
+                            >
+                              No state transitions recorded yet. Speak or
+                              transmit a command to generate transitions.
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          voiceMachine.history.map((rec, idx) => (
+                            <tr
+                              key={`${rec.timestamp}-${idx}`}
+                              className="transition hover:bg-slate-900/40"
+                            >
+                              <td className="px-3 py-1.5 text-slate-500">
+                                {voiceMachine.history.length - idx}
+                              </td>
+                              <td className="px-3 py-1.5 whitespace-nowrap text-slate-300">
+                                {new Date(rec.timestamp).toLocaleTimeString(
+                                  'en-US',
+                                  {
+                                    hour12: false,
+                                    minute: '2-digit',
+                                    second: '2-digit',
+                                    fractionalSecondDigits: 3,
+                                  }
+                                )}
+                              </td>
+                              <td className="px-3 py-1.5">
+                                <span className="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-slate-300 uppercase">
+                                  {rec.from}
+                                </span>
+                              </td>
+                              <td className="px-3 py-1.5">
+                                <span className="rounded border border-cyan-500/40 bg-cyan-950/60 px-1.5 py-0.5 font-bold text-cyan-300 uppercase">
+                                  {rec.to}
+                                </span>
+                              </td>
+                              <td
+                                className="max-w-[200px] truncate px-3 py-1.5 text-amber-200/90"
+                                title={rec.reason}
+                              >
+                                {rec.reason}
+                              </td>
+                              <td className="px-3 py-1.5 text-[9px] whitespace-nowrap text-slate-400">
+                                TTS:{' '}
+                                {rec.liveValues?.speechSynthesisSpeaking
+                                  ? '🔊 ON'
+                                  : 'OFF'}{' '}
+                                | Mic: {rec.liveValues?.micOpen ? 'ON' : 'OFF'}
+                                {typeof rec.liveValues?.micLevel === 'number'
+                                  ? ` (${(rec.liveValues.micLevel * 100).toFixed(0)}%)`
+                                  : ''}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between border-t border-cyan-500/20 px-5 py-3 bg-slate-950/90">
-              <span className="text-[10px] text-slate-500 font-mono">
-                Single State Machine: idle · listening · thinking · executing · speaking · error
+            <div className="flex items-center justify-between border-t border-cyan-500/20 bg-slate-950/90 px-5 py-3">
+              <span className="font-mono text-[10px] text-slate-500">
+                Single State Machine: idle · listening · thinking · executing ·
+                speaking · error
               </span>
               <button
                 type="button"
                 onClick={() => setShowDiagnosticsModal(false)}
-                className="cursor-pointer rounded-lg border border-cyan-500/40 bg-cyan-950/60 px-4 py-1.5 font-mono text-xs font-bold text-cyan-300 hover:border-cyan-400 hover:bg-cyan-900/60 transition"
+                className="cursor-pointer rounded-lg border border-cyan-500/40 bg-cyan-950/60 px-4 py-1.5 font-mono text-xs font-bold text-cyan-300 transition hover:border-cyan-400 hover:bg-cyan-900/60"
               >
                 DISMISS
               </button>

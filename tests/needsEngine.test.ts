@@ -20,7 +20,9 @@ describe('Agent Needs Engine & Dynamics (Phase K3)', () => {
     expect(traits1).toEqual(traits2)
     expect(traitsOther).toBeDefined()
     expect(['fast', 'normal', 'slow']).toContain(traits1.metabolism)
-    expect(['early_bird', 'night_owl', 'balanced']).toContain(traits1.sleepiness)
+    expect(['early_bird', 'night_owl', 'balanced']).toContain(
+      traits1.sleepiness
+    )
     expect(typeof traits1.gymLover).toBe('boolean')
     expect(traits1.caffeineSensitivity).toBeGreaterThanOrEqual(0.8)
     expect(traits1.caffeineSensitivity).toBeLessThanOrEqual(1.2)
@@ -205,7 +207,12 @@ describe('Agent Needs Engine & Dynamics (Phase K3)', () => {
       sleepDebt: 5,
     }
 
-    const decision = evaluateNextAction('arwin', hungryAgentNeeds, null, noonTime)
+    const decision = evaluateNextAction(
+      'arwin',
+      hungryAgentNeeds,
+      null,
+      noonTime
+    )
     expect(decision.nextKind).toBe('eat')
     expect(decision.shouldRequestBreak).toBe(true)
     expect(decision.breakKind).toBe('meal')

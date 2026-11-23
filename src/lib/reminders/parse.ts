@@ -18,7 +18,8 @@
 
 import { getPHTParts } from '@/lib/office/clock'
 
-export type ReminderTriggerKind = 'time' | 'recurring' | 'task_complete' | 'approval_waiting'
+export type ReminderTriggerKind =
+  'time' | 'recurring' | 'task_complete' | 'approval_waiting'
 
 export interface ParsedReminderResult {
   ok: boolean
@@ -81,7 +82,15 @@ const MONTH_NAMES_FULL = [
   'December',
 ]
 
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const DAY_NAMES = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+]
 
 /**
  * Formats a 12-hour time string from hour (0-23) and minute (0-59)
@@ -121,7 +130,9 @@ export function parseReminderNaturalLanguage(
   }
 
   // 1. Check for Event-Based Triggers (Task Completion or Approval Waiting)
-  const taskCompleteMatch = lower.match(/(?:call|remind)\s+me\s+when\s+(?:the\s+)?(.+?)\s+(?:is\s+)?(?:done|complete|finishes)/i)
+  const taskCompleteMatch = lower.match(
+    /(?:call|remind)\s+me\s+when\s+(?:the\s+)?(.+?)\s+(?:is\s+)?(?:done|complete|finishes)/i
+  )
   if (taskCompleteMatch) {
     const taskKeyword = taskCompleteMatch[1].trim()
     const msg = `Task '${taskKeyword}' has completed.`
@@ -137,7 +148,9 @@ export function parseReminderNaturalLanguage(
     }
   }
 
-  const approvalWaitingMatch = lower.match(/(?:call|remind)\s+me\s+if\s+(?:an?\s+)?approval\s+waits?\s+(?:more\s+than\s+)?(\d+)\s*(?:min|minute|mins)/i)
+  const approvalWaitingMatch = lower.match(
+    /(?:call|remind)\s+me\s+if\s+(?:an?\s+)?approval\s+waits?\s+(?:more\s+than\s+)?(\d+)\s*(?:min|minute|mins)/i
+  )
   if (approvalWaitingMatch) {
     const waitMins = parseInt(approvalWaitingMatch[1], 10)
     return {
@@ -159,15 +172,24 @@ export function parseReminderNaturalLanguage(
   const aboutMatch = text.match(/(?:about|to|for)\s+(.+)$/i)
   if (aboutMatch) {
     userMessage = aboutMatch[1].trim()
-    userTitle = userMessage.length > 40 ? `${userMessage.substring(0, 37)}...` : userMessage
+    userTitle =
+      userMessage.length > 40
+        ? `${userMessage.substring(0, 37)}...`
+        : userMessage
   }
 
   // 3. Check for Recurrence ("every weekday at 8:30", "every day at 9")
-  const recurringWeekdayMatch = lower.match(/every\s+weekday\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i)
+  const recurringWeekdayMatch = lower.match(
+    /every\s+weekday\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i
+  )
   if (recurringWeekdayMatch) {
     let hour = parseInt(recurringWeekdayMatch[1], 10)
-    const minute = recurringWeekdayMatch[2] ? parseInt(recurringWeekdayMatch[2], 10) : 0
-    const ampm = recurringWeekdayMatch[3] ? recurringWeekdayMatch[3].toLowerCase() : null
+    const minute = recurringWeekdayMatch[2]
+      ? parseInt(recurringWeekdayMatch[2], 10)
+      : 0
+    const ampm = recurringWeekdayMatch[3]
+      ? recurringWeekdayMatch[3].toLowerCase()
+      : null
 
     if (ampm === 'pm' && hour < 12) hour += 12
     if (ampm === 'am' && hour === 12) hour = 0
@@ -180,7 +202,13 @@ export function parseReminderNaturalLanguage(
     const isTodayPastTime =
       phtNow.hour > hour || (phtNow.hour === hour && phtNow.minute >= minute)
 
-    let testDate = phtToUtcDate(targetYear, targetMonth, targetDay, hour, minute)
+    let testDate = phtToUtcDate(
+      targetYear,
+      targetMonth,
+      targetDay,
+      hour,
+      minute
+    )
     let testParts = getPHTParts(testDate)
 
     // Weekdays are Mon-Fri (1-5 in JS getUTCDay() for PHT parts)
@@ -217,7 +245,9 @@ export function parseReminderNaturalLanguage(
   }
 
   // 4. Relative Offsets ("in 10 minutes", "in 2 hours", "in 30 mins")
-  const relativeMatch = lower.match(/in\s+(\d+)\s*(minute|min|mins|minutes|hour|hours|hr|hrs)/i)
+  const relativeMatch = lower.match(
+    /in\s+(\d+)\s*(minute|min|mins|minutes|hour|hours|hr|hrs)/i
+  )
   if (relativeMatch) {
     const amount = parseInt(relativeMatch[1], 10)
     const unit = relativeMatch[2].toLowerCase()
@@ -257,12 +287,21 @@ export function parseReminderNaturalLanguage(
   } else {
     for (let i = 0; i < DAY_NAMES.length; i++) {
       const dayName = DAY_NAMES[i].toLowerCase()
-      if (lower.includes(`next ${dayName}`) || lower.includes(`on ${dayName}`)) {
+      if (
+        lower.includes(`next ${dayName}`) ||
+        lower.includes(`on ${dayName}`)
+      ) {
         isSpecificWeekday = true
         // Calculate offset to next target weekday
-        const currentDayIndex = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].indexOf(
-          phtNow.weekday.toLowerCase()
-        )
+        const currentDayIndex = [
+          'sun',
+          'mon',
+          'tue',
+          'wed',
+          'thu',
+          'fri',
+          'sat',
+        ].indexOf(phtNow.weekday.toLowerCase())
         let diff = i - currentDayIndex
         if (diff <= 0) diff += 7
         dayOffset = diff
@@ -280,21 +319,33 @@ export function parseReminderNaturalLanguage(
   let parsedHour: number | null = null
   let parsedMinute: number = 0
 
-  if (lower.includes('midnight') || lower.includes('12am') || lower.includes('12 am')) {
+  if (
+    lower.includes('midnight') ||
+    lower.includes('12am') ||
+    lower.includes('12 am')
+  ) {
     parsedHour = 0
     parsedMinute = 0
-  } else if (lower.includes('noon') || lower.includes('12pm') || lower.includes('12 pm')) {
+  } else if (
+    lower.includes('noon') ||
+    lower.includes('12pm') ||
+    lower.includes('12 pm')
+  ) {
     parsedHour = 12
     parsedMinute = 0
   } else {
     // Check 24-hour time "14:00" or "09:30"
-    const militaryMatch = lower.match(/(?:at\s+)?([01]?\d|2[0-3]):([0-5]\d)(?!\s*[ap]m)/i)
+    const militaryMatch = lower.match(
+      /(?:at\s+)?([01]?\d|2[0-3]):([0-5]\d)(?!\s*[ap]m)/i
+    )
     if (militaryMatch) {
       parsedHour = parseInt(militaryMatch[1], 10)
       parsedMinute = parseInt(militaryMatch[2], 10)
     } else {
       // Check 12-hour time "2:30 pm", "2pm", "9am", "at 9"
-      const time12Match = lower.match(/(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i)
+      const time12Match = lower.match(
+        /(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i
+      )
       if (time12Match) {
         let rawHour = parseInt(time12Match[1], 10)
         parsedMinute = time12Match[2] ? parseInt(time12Match[2], 10) : 0
@@ -316,7 +367,12 @@ export function parseReminderNaturalLanguage(
     }
   }
 
-  if (parsedHour === null || isNaN(parsedHour) || parsedHour < 0 || parsedHour > 23) {
+  if (
+    parsedHour === null ||
+    isNaN(parsedHour) ||
+    parsedHour < 0 ||
+    parsedHour > 23
+  ) {
     return {
       ok: false,
       triggerKind: 'time',
@@ -326,7 +382,8 @@ export function parseReminderNaturalLanguage(
       title: userTitle,
       message: userMessage,
       clarificationNeeded: true,
-      clarifyingQuestion: 'What time would you like me to call you? (e.g. 2:00 PM)',
+      clarifyingQuestion:
+        'What time would you like me to call you? (e.g. 2:00 PM)',
       error: 'ambiguous_time',
     }
   }
@@ -338,15 +395,20 @@ export function parseReminderNaturalLanguage(
 
   // Handle month rollover if dayOffset pushed beyond days in current month
   // Create test date in UTC using phtToUtcDate
-  let candidateDate = phtToUtcDate(targetYear, targetMonth, targetDay, parsedHour, parsedMinute)
+  let candidateDate = phtToUtcDate(
+    targetYear,
+    targetMonth,
+    targetDay,
+    parsedHour,
+    parsedMinute
+  )
   let candidatePHT = getPHTParts(candidateDate)
 
   let isRolledOver = false
 
   // Check if target is already in past today (and no explicit tomorrow or future weekday was stated)
   if (!isTomorrowExplicit && !isSpecificWeekday && dayOffset === 0) {
-    const isPastTimeToday =
-      candidateDate.getTime() <= refDate.getTime()
+    const isPastTimeToday = candidateDate.getTime() <= refDate.getTime()
 
     if (isPastTimeToday) {
       // Roll over to tomorrow at the exact same hour/minute
@@ -376,7 +438,11 @@ export function parseReminderNaturalLanguage(
     candidatePHT.month === phtNow.month &&
     candidatePHT.year === phtNow.year
 
-  let daySpoken = isToday ? 'today' : isRolledOver ? 'tomorrow' : candidatePHT.weekdayFull
+  let daySpoken = isToday
+    ? 'today'
+    : isRolledOver
+      ? 'tomorrow'
+      : candidatePHT.weekdayFull
   if (!isToday && isTomorrowExplicit) daySpoken = 'tomorrow'
 
   let readBack = ''
@@ -393,7 +459,8 @@ export function parseReminderNaturalLanguage(
     dueAtPHT: `${candidatePHT.weekdayFull}, ${candidatePHT.day} ${MONTH_NAMES_FULL[candidatePHT.month - 1]} at ${time12Str}`,
     readBack,
     title: userTitle || 'Call with JARVIS',
-    message: userMessage || `Reminder call from JARVIS scheduled for ${time12Str}.`,
+    message:
+      userMessage || `Reminder call from JARVIS scheduled for ${time12Str}.`,
     isRolledOver,
   }
 }

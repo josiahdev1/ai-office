@@ -41,7 +41,9 @@ describe('JARVIS V2 Voice State Machine (Phase J10 Revised)', () => {
   })
 
   it('transitions idle -> listening on USER_SPEECH_START', () => {
-    const s1 = voiceStateReducer(INITIAL_VOICE_STATE, { type: 'USER_SPEECH_START' })
+    const s1 = voiceStateReducer(INITIAL_VOICE_STATE, {
+      type: 'USER_SPEECH_START',
+    })
     expect(s1.current).toBe('listening')
     expect(s1.previous).toBe('idle')
     expect(s1.history[0].to).toBe('listening')
@@ -209,7 +211,8 @@ describe('JARVIS V2 Voice State Machine (Phase J10 Revised)', () => {
 
     it('identifies acoustic echo when transcript overlaps >60% with JARVIS spoken text', () => {
       // Transcript is JARVIS's own sentence heard through the speakers
-      const echoTranscript = 'welcome inside the brain core josiah all 24 agents'
+      const echoTranscript =
+        'welcome inside the brain core josiah all 24 agents'
       const result = checkEchoOverlap(echoTranscript, jarvisRecentSpeech, 0.6)
       expect(result.isEcho).toBe(true)
       expect(result.overlapRatio).toBeGreaterThanOrEqual(0.6)

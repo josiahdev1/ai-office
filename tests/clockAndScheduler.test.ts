@@ -227,12 +227,20 @@ describe('Phase K1: Distributed Scheduler & Leader Lease Tests', () => {
     expect(claimB.currentLeader).toBe('tab-a')
 
     // Tab A renews lease -> Permitted!
-    const renewA = acquireOrRenewLeaderLease('tab-a', 30, new Date('2026-11-12T08:00:10Z'))
+    const renewA = acquireOrRenewLeaderLease(
+      'tab-a',
+      30,
+      new Date('2026-11-12T08:00:10Z')
+    )
     expect(renewA.isLeader).toBe(true)
 
     // Tab A explicitly releases lease -> Tab B can now claim!
     releaseLeaderLease('tab-a')
-    const claimBAfterRelease = acquireOrRenewLeaderLease('tab-b', 30, new Date('2026-11-12T08:00:11Z'))
+    const claimBAfterRelease = acquireOrRenewLeaderLease(
+      'tab-b',
+      30,
+      new Date('2026-11-12T08:00:11Z')
+    )
     expect(claimBAfterRelease.isLeader).toBe(true)
     expect(claimBAfterRelease.currentLeader).toBe('tab-b')
   })
@@ -256,7 +264,9 @@ describe('Phase K1: Distributed Scheduler & Leader Lease Tests', () => {
     expect(tickGap.tickCount).toBe(3)
     expect(tickGap.gapDetected).toBe(true)
     expect(tickGap.gapDurationS).toBe(7200)
-    expect(tickGap.gapSummary).toContain('No tick for 2h 0m: needs recomputed from schedule rules')
+    expect(tickGap.gapSummary).toContain(
+      'No tick for 2h 0m: needs recomputed from schedule rules'
+    )
   })
 
   it('3. timing-safe verification protects CRON_SECRET against timing attacks', () => {

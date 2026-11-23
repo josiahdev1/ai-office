@@ -41,9 +41,9 @@
 
 ## 3. Verification & Quality Gates
 
-* **Lint & Type Check**: PASS (`npm run lint` — 0 errors; `npx tsc --noEmit` — 0 errors).
-* **Unit Tests**: PASS (`npm test -- --run` — **29/29** test files, **273/273** tests passed in 11.01s, including `tests/pickleballSimulation.test.ts` verifying max 4 court players, sideline bench queue, and stationary ball when `< 2` players).
-* **Build**: PASS (`npm run build` — Next.js 16.4.5 Turbopack production build compiled and generated 18/18 routes).
-* **Playwright Visual & Interactive QA**: PASS against live production server (`http://localhost:3001` at `1440x900`):
+- **Lint & Type Check**: PASS (`npm run lint` — 0 errors; `npx tsc --noEmit` — 0 errors).
+- **Unit Tests**: PASS (`npm test -- --run` — **29/29** test files, **273/273** tests passed in 11.01s, including `tests/pickleballSimulation.test.ts` verifying max 4 court players, sideline bench queue, and stationary ball when `< 2` players).
+- **Build**: PASS (`npm run build` — Next.js 16.4.5 Turbopack production build compiled and generated 18/18 routes).
+- **Playwright Visual & Interactive QA**: PASS against live production server (`http://localhost:3001` at `1440x900`):
   - **3D View**: Verified `Pickleball Court` pill smoothly focuses camera onto the court without summoning all 31 employees; `+` zoom button smoothly zooms in close-up (`CameraController.tsx`); 2v2 players (`Josiah`, `Blaze`, `Khent`, `Boss`) equip paddles on the blue court while `Ferwin` and `Jo Vincent` wait on the wooden sideline bench; zero React/hydration errors.
   - **2D View (`?v=2`)**: Verified identical blue inner court, teal apron, crisp white kitchen/boundary lines, center net, wooden benches, `PICKLEBALL COURT` label, live ball, and 4-player + 2-bench roster parity.

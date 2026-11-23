@@ -21,8 +21,11 @@ export function BrainCore({ state = 'idle', onClickCore }: BrainCoreProps) {
   useFrame((clockState) => {
     const t = clockState.clock.getElapsedTime()
     if (pedestalRingMatRef.current) {
-      const cfg = ARC_REACTOR_STATE_CONFIG[state] || ARC_REACTOR_STATE_CONFIG.idle
-      pedestalRingMatRef.current.color.set(hovered ? '#ffffff' : cfg.primaryColor)
+      const cfg =
+        ARC_REACTOR_STATE_CONFIG[state] || ARC_REACTOR_STATE_CONFIG.idle
+      pedestalRingMatRef.current.color.set(
+        hovered ? '#ffffff' : cfg.primaryColor
+      )
       pedestalRingMatRef.current.opacity = hovered
         ? 0.98
         : 0.72 + Math.sin(t * 2.5) * 0.18
@@ -43,12 +46,14 @@ export function BrainCore({ state = 'idle', onClickCore }: BrainCoreProps) {
         onPointerOver={(e) => {
           e.stopPropagation()
           setHovered(true)
-          if (typeof document !== 'undefined') document.body.style.cursor = 'pointer'
+          if (typeof document !== 'undefined')
+            document.body.style.cursor = 'pointer'
         }}
         onPointerOut={(e) => {
           e.stopPropagation()
           setHovered(false)
-          if (typeof document !== 'undefined') document.body.style.cursor = 'auto'
+          if (typeof document !== 'undefined')
+            document.body.style.cursor = 'auto'
         }}
       >
         <cylinderGeometry args={[1.5, 1.9, 0.7, 32]} />
@@ -93,11 +98,19 @@ export function BrainCore({ state = 'idle', onClickCore }: BrainCoreProps) {
         const x = Math.sin(angle) * radius
         const z = Math.cos(angle) * radius
         return (
-          <group key={`console-${i}`} position={[x, 0.45, z]} rotation={[0, angle, 0]}>
+          <group
+            key={`console-${i}`}
+            position={[x, 0.45, z]}
+            rotation={[0, angle, 0]}
+          >
             {/* Curved Desk Segment */}
             <mesh castShadow receiveShadow>
               <boxGeometry args={[2.8, 0.8, 0.7]} />
-              <meshStandardMaterial color="#1e293b" metalness={0.6} roughness={0.4} />
+              <meshStandardMaterial
+                color="#1e293b"
+                metalness={0.6}
+                roughness={0.4}
+              />
             </mesh>
             {/* Holographic Monitor Strip */}
             <mesh position={[0, 0.55, -0.1]} rotation={[-0.15, 0, 0]}>
@@ -114,28 +127,31 @@ export function BrainCore({ state = 'idle', onClickCore }: BrainCoreProps) {
 
       {/* 5. Glass Half-Wall Surrounding The Brain with Doorway Openings */}
       {/* 4 curved glass segments with gaps for North, South, East, West entryways */}
-      {[Math.PI / 4, (3 * Math.PI) / 4, (5 * Math.PI) / 4, (7 * Math.PI) / 4].map(
-        (rot, idx) => (
-          <group key={`glass-wall-${idx}`} rotation={[0, rot, 0]}>
-            <mesh position={[0, 0.5, 6.2]}>
-              <boxGeometry args={[5.5, 0.9, 0.1]} />
-              <meshStandardMaterial
-                color="#0284c7"
-                emissive="#00e5ff"
-                emissiveIntensity={0.2}
-                transparent
-                opacity={0.35}
-                roughness={0.1}
-              />
-            </mesh>
-            {/* Glowing top rim */}
-            <mesh position={[0, 0.97, 6.2]}>
-              <boxGeometry args={[5.5, 0.04, 0.12]} />
-              <meshBasicMaterial color="#00e5ff" />
-            </mesh>
-          </group>
-        )
-      )}
+      {[
+        Math.PI / 4,
+        (3 * Math.PI) / 4,
+        (5 * Math.PI) / 4,
+        (7 * Math.PI) / 4,
+      ].map((rot, idx) => (
+        <group key={`glass-wall-${idx}`} rotation={[0, rot, 0]}>
+          <mesh position={[0, 0.5, 6.2]}>
+            <boxGeometry args={[5.5, 0.9, 0.1]} />
+            <meshStandardMaterial
+              color="#0284c7"
+              emissive="#00e5ff"
+              emissiveIntensity={0.2}
+              transparent
+              opacity={0.35}
+              roughness={0.1}
+            />
+          </mesh>
+          {/* Glowing top rim */}
+          <mesh position={[0, 0.97, 6.2]}>
+            <boxGeometry args={[5.5, 0.04, 0.12]} />
+            <meshBasicMaterial color="#00e5ff" />
+          </mesh>
+        </group>
+      ))}
     </group>
   )
 }

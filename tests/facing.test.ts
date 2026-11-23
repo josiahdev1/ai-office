@@ -77,8 +77,18 @@ describe('Agent Facing Direction Model (Phase 14)', () => {
       const agentA = { x: 500, y: 300 }
       const agentB = { x: 600, y: 350 } // Down-right (+dx, +dy) relative to A
 
-      const facingA = calculateFacingBetweenPoints(agentA.x, agentA.y, agentB.x, agentB.y)
-      const facingB = calculateFacingBetweenPoints(agentB.x, agentB.y, agentA.x, agentA.y)
+      const facingA = calculateFacingBetweenPoints(
+        agentA.x,
+        agentA.y,
+        agentB.x,
+        agentB.y
+      )
+      const facingB = calculateFacingBetweenPoints(
+        agentB.x,
+        agentB.y,
+        agentA.x,
+        agentA.y
+      )
 
       expect(facingA).toBe('SE')
       expect(facingB).toBe('NW')
@@ -88,8 +98,18 @@ describe('Agent Facing Direction Model (Phase 14)', () => {
       const agentA = { x: 500, y: 400 }
       const agentB = { x: 600, y: 350 } // Up-right (+dx, -dy) relative to A
 
-      const facingA = calculateFacingBetweenPoints(agentA.x, agentA.y, agentB.x, agentB.y)
-      const facingB = calculateFacingBetweenPoints(agentB.x, agentB.y, agentA.x, agentA.y)
+      const facingA = calculateFacingBetweenPoints(
+        agentA.x,
+        agentA.y,
+        agentB.x,
+        agentB.y
+      )
+      const facingB = calculateFacingBetweenPoints(
+        agentB.x,
+        agentB.y,
+        agentA.x,
+        agentA.y
+      )
 
       expect(facingA).toBe('NE')
       expect(facingB).toBe('SW')

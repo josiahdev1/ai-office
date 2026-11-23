@@ -5,11 +5,12 @@
 **Date**: 2026-11-13  
 **Commit SHA**: `638367c`  
 **Branch**: `office-v3`  
-**Author / Assignee**: Josiah (Lead Architect) & Antigravity Autonomous Engineering Fleet  
+**Author / Assignee**: Josiah (Lead Architect) & Antigravity Autonomous Engineering Fleet
 
 ---
 
 ## 1. Context & Objectives
+
 - **Playwright Visual & Glitch Audit**: Run a full Playwright inspection across both 3D and 2D (`?v=2`) views to detect and fix any remaining visual glitches, clipping geometry, overlapping props, floating labels, or broken camera bounds before and after applying the redesign.
 - **Server Room Expansion**: The current Server Room is too cramped. Expand its floorplan footprint (`validateMap` passing, full A* walkability) to comfortably house multiple server rack aisles, overhead cable trays, dual CRAC cooling units, telemetry wall displays, and Rex's SysAdmin workstation with generous patrol clearances.
 - **Realistic Walkable 3D Interior Mode (Reference Image 1)**: Upgrade the 3D office aesthetic and camera system to support an immersive, realistic interior perspective where you can walk inside the office (`WASD` / Arrow keys + mouse look / click-to-walk interior navigation) with realistic architectural details—drop-ceiling acoustic grid panels with recessed LED light strips, large panoramic exterior windows with Iloilo skyline/day-night lighting, warm wood-grain executive desks, potted indoor plants, ergonomic task chairs, and depth-rich lighting.
@@ -20,6 +21,7 @@
   - **True Fullscreen Office-Only Mode (`[ ]` Fullscreen Button & `F` Hotkey)**: Clicking the Fullscreen button (or pressing `F`) smoothly collapses the sidebars and top telemetry bars so the 3D/2D office canvas fills 100% of the viewport edge-to-edge, with a subtle floating exit-fullscreen pill in the corner.
 
 ## 2. Architectural Design & Key Changes
+
 1. **Playwright Glitch Detection & Remediation Pass**:
    - Audited 3D, Walk-3D, Fullscreen, and 2D (`?v=2`) views at `1440x900` and `1280x800`; fixed bottom-right help tooltip overlap at `1280x800` (`hidden 2xl:flex`), eliminated Wing Quick-Switcher horizontal scrollbar, and moved the Jarvis Voice HUD pill to `top-3` so bottom controls never collide.
 2. **Server Room Floorplan & Prop Expansion (`src/lib/office/wellnessWing.ts`, `src/config/officeLayout.ts`, `src/engine/pathfinding.ts`, `BuildingArchitecture.tsx`, `OfficeFurniture.tsx`, `OfficeCanvas2D.tsx`)**:
@@ -32,9 +34,11 @@
    - Added Left Navigation Sidebar, Top KPI & Control Strip, Wing Quick-Switcher Bar, and `Fullscreen [F]` edge-to-edge Office-Only mode with floating `Exit Fullscreen [F]` pill.
 
 ## 3. Data & Schema Modifications
+
 - `supabase/migrations/0020_expand_server_room_and_interior_layout.sql` (additive, idempotent migration): Updates `server_admin` coordinates and records the new active `office_map_versions` entry for the expanded Server Room & Walk-Inside 3D layout.
 
 ## 4. Verification & Quality Gates
+
 - **Lint**: `npm run lint` — **PASSED** (0 errors, 7 pre-existing warnings).
 - **Type Check**: `npx tsc --noEmit` — **PASSED** (0 errors).
 - **Unit & Integration Tests**: `npm test` — **PASSED** (28/28 test files, 267/267 tests passed in 10.78s).
@@ -43,5 +47,6 @@
   - Verified Left Sidebar, Top KPI Strip, `Auto / Day / Night` lighting switcher, `Walk Inside [V]` eye-level 3D perspective with acoustic drop ceiling & LED strips, `Fullscreen [F]` edge-to-edge mode, expanded 6-rack Server Room in 3D & 2D, zero HUD overlap at `1280x800`, and zero React hydration/JS runtime errors.
 
 ## 5. Notes & Dependencies
+
 - Follows `tickets/ticket-29-fix-2d-isometric-doorway-and-walkway-parity-with-3d-view.md`.
 - Reference visuals provided by Josiah: Reference 1 (realistic eye-level interior office with ceiling light grid, panoramic windows, wood desks, and plants) and Reference 2 (clean left-sidebar + top KPI strip + right agent hierarchy + fullscreen canvas toggle).

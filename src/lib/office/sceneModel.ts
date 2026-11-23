@@ -73,8 +73,7 @@ export function buildSceneModel(
       rallyState.benchQueue
     )
     const isRealPickleball =
-      overrides[agent.id] === 'PICKLEBALL' ||
-      agent.room === 'Pickleball Court'
+      overrides[agent.id] === 'PICKLEBALL' || agent.room === 'Pickleball Court'
     const effectiveMode =
       overrides[agent.id] ??
       (isRealPickleball
@@ -106,7 +105,8 @@ export function buildSceneModel(
             : 'pickleball_ready'
         prop = 'paddle'
       } else {
-        const seat = PICKLEBALL_8_BENCH_SEATS[pbSlot.index] ?? PICKLEBALL_8_BENCH_SEATS[0]
+        const seat =
+          PICKLEBALL_8_BENCH_SEATS[pbSlot.index] ?? PICKLEBALL_8_BENCH_SEATS[0]
         x = seat[0]
         z = seat[2]
         facing = seat[2] > -33 ? Math.PI : 0

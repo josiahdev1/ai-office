@@ -18,8 +18,10 @@ import { officeSupabase } from '../supabase/officeService'
 import { getPHTParts } from './clock'
 
 export type GatherTrigger = 'manual' | 'schedule' | 'tasks'
-export type LearningKind = 'learned' | 'updated' | 'duplicate' | 'rejected' | 'forgotten'
-export type InsightKind = 'strength' | 'weakness' | 'preference' | 'team_pattern' | 'lesson'
+export type LearningKind =
+  'learned' | 'updated' | 'duplicate' | 'rejected' | 'forgotten'
+export type InsightKind =
+  'strength' | 'weakness' | 'preference' | 'team_pattern' | 'lesson'
 
 export interface GatherRunRecord {
   id: string
@@ -67,7 +69,13 @@ export interface AgentInsightRecord {
 export const BrainInsightSchema = z.object({
   id: z.string(),
   agentId: z.string().optional().nullable(),
-  kind: z.enum(['strength', 'weakness', 'preference', 'team_pattern', 'lesson']),
+  kind: z.enum([
+    'strength',
+    'weakness',
+    'preference',
+    'team_pattern',
+    'lesson',
+  ]),
   category: z.string().min(1),
   text: z.string().min(5),
   confidence: z.number().min(0).max(1),
@@ -106,7 +114,12 @@ export function sanitizeSecretText(text: string): string {
 
 export interface RawEventItem {
   id: string
-  type: 'task_completed' | 'task_failed' | 'approval_decision' | 'message' | 'wellness_pattern'
+  type:
+    | 'task_completed'
+    | 'task_failed'
+    | 'approval_decision'
+    | 'message'
+    | 'wellness_pattern'
   agentId?: string | null
   agentName?: string | null
   category?: string
@@ -215,7 +228,8 @@ export class BrainLearningManager {
 
   public getGatherRuns(): GatherRunRecord[] {
     return Array.from(this.gatherRuns.values()).sort(
-      (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+      (a, b) =>
+        new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
     )
   }
 
@@ -226,7 +240,9 @@ export class BrainLearningManager {
   }
 
   public getAgentInsights(agentId?: string): AgentInsightRecord[] {
-    const list = Array.from(this.agentInsights.values()).filter((i) => !i.deleted)
+    const list = Array.from(this.agentInsights.values()).filter(
+      (i) => !i.deleted
+    )
     if (!agentId) return list
     return list.filter((i) => i.agentId === agentId)
   }
@@ -236,14 +252,18 @@ export class BrainLearningManager {
   }
 
   public getLastLearnedInsight(): BrainLearningLogRecord | null {
-    const active = this.getLearningLogs().filter((l) => l.kind === 'learned' || l.kind === 'updated')
+    const active = this.getLearningLogs().filter(
+      (l) => l.kind === 'learned' || l.kind === 'updated'
+    )
     return active.length > 0 ? active[0] : null
   }
 
   /**
    * Deterministically computes performance statistics for agents across task events.
    */
-  public computeDeterministicStats(events: RawEventItem[]): Map<string, AgentPerformanceStats> {
+  public computeDeterministicStats(
+    events: RawEventItem[]
+  ): Map<string, AgentPerformanceStats> {
     const statsMap = new Map<string, AgentPerformanceStats>()
 
     for (const ev of events) {
@@ -317,14 +337,26 @@ export class BrainLearningManager {
       run.status = 'completed'
       run.endedAt = new Date().toISOString()
       run.error = 'Boss gathering is disabled in Settings.'
-      return { run, insightsCreated: 0, insightsUpdated: 0, duplicatesSkipped: 0, rejected: 0 }
+      return {
+        run,
+        insightsCreated: 0,
+        insightsUpdated: 0,
+        duplicatesSkipped: 0,
+        rejected: 0,
+      }
     }
 
     if (this.dailyTokensUsed >= this.dailyTokenCap) {
       run.status = 'failed'
       run.endedAt = new Date().toISOString()
       run.error = `Daily token cap reached (${this.dailyTokensUsed}/${this.dailyTokenCap}).`
-      return { run, insightsCreated: 0, insightsUpdated: 0, duplicatesSkipped: 0, rejected: 0 }
+      return {
+        run,
+        insightsCreated: 0,
+        insightsUpdated: 0,
+        duplicatesSkipped: 0,
+        rejected: 0,
+      }
     }
 
     const events = providedEvents || this.collectMockDeltaEvents()
@@ -382,7 +414,9 @@ export class BrainLearningManager {
           category: 'agent_strength',
           text: `${st.agentName} shows high reliability in ${st.topCategories.join(', ') || 'assigned tasks'}, success rate ${st.successRate}% over ${st.totalTasks} tasks.`,
           confidence: Number((st.successRate / 100).toFixed(2)),
-          sourceIds: cleanEvents.filter((e) => e.agentId === agentId).map((e) => e.id),
+          sourceIds: cleanEvents
+            .filter((e) => e.agentId === agentId)
+            .map((e) => e.id),
         })
       } else if (st.totalTasks >= 2 && st.successRate < 60) {
         candidateInsights.push({
@@ -391,7 +425,9 @@ export class BrainLearningManager {
           category: 'team_pattern',
           text: `${st.agentName} encountered repeated task failures (success rate ${st.successRate}%). Recommendation: pair with senior lead Christians or Gian.`,
           confidence: 0.85,
-          sourceIds: cleanEvents.filter((e) => e.agentId === agentId).map((e) => e.id),
+          sourceIds: cleanEvents
+            .filter((e) => e.agentId === agentId)
+            .map((e) => e.id),
         })
       }
     }
@@ -413,7 +449,9 @@ export class BrainLearningManager {
     for (const cand of candidateInsights) {
       const normalizedKey = this.normalizeInsightKey(cand.text, cand.agentId)
       const existing = Array.from(this.agentInsights.values()).find(
-        (ins) => this.normalizeInsightKey(ins.text, ins.agentId) === normalizedKey && !ins.deleted
+        (ins) =>
+          this.normalizeInsightKey(ins.text, ins.agentId) === normalizedKey &&
+          !ins.deleted
       )
 
       if (existing) {
@@ -524,7 +562,8 @@ export class BrainLearningManager {
     const ins =
       this.agentInsights.get(idOrText) ||
       Array.from(this.agentInsights.values()).find(
-        (i) => i.text.toLowerCase().includes(idOrText.toLowerCase()) && !i.deleted
+        (i) =>
+          i.text.toLowerCase().includes(idOrText.toLowerCase()) && !i.deleted
       )
     if (!ins) return false
 
@@ -549,7 +588,16 @@ export class BrainLearningManager {
    * RFC-4180 CSV export of Brain Learning Log entries.
    */
   public exportBrainLogCSV(): string {
-    const headers = ['Timestamp (PHT)', 'Run ID', 'Agent ID', 'Category', 'Kind', 'Confidence', 'Text', 'Source IDs']
+    const headers = [
+      'Timestamp (PHT)',
+      'Run ID',
+      'Agent ID',
+      'Category',
+      'Kind',
+      'Confidence',
+      'Text',
+      'Source IDs',
+    ]
     const rows = this.getLearningLogs().map((log) => [
       `"${log.tsPht}"`,
       `"${log.runId || 'N/A'}"`,
@@ -595,7 +643,8 @@ export class BrainLearningManager {
         agentName: 'Gian',
         category: 'test_automation',
         durationSeconds: 120,
-        content: 'Gian completed test automation suite with 100% assertions passed.',
+        content:
+          'Gian completed test automation suite with 100% assertions passed.',
         timestamp: new Date().toISOString(),
       },
       {
@@ -615,7 +664,8 @@ export class BrainLearningManager {
         agentName: 'Christian',
         category: 'systems_architecture',
         durationSeconds: 240,
-        content: 'Christian finalized clean architecture boundaries and zero-drift modules.',
+        content:
+          'Christian finalized clean architecture boundaries and zero-drift modules.',
         timestamp: new Date().toISOString(),
       },
       {
@@ -623,7 +673,8 @@ export class BrainLearningManager {
         type: 'approval_decision',
         agentId: null,
         agentName: 'Josiah',
-        content: 'Approved standing policy lunch waves and gym slots without manual intervention.',
+        content:
+          'Approved standing policy lunch waves and gym slots without manual intervention.',
         timestamp: new Date().toISOString(),
       },
     ]

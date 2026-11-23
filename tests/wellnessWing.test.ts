@@ -109,7 +109,12 @@ describe('Phase K2: Wellness Wing, Departments & New Agents', () => {
     it('can route from every desk to the Nap Room without NaN or collisions', () => {
       const targetBed = WELLNESS_BEDS[0].approachTile
       for (const ws of allWorkstations) {
-        const path = findPath(ws.deskPos[0], ws.deskPos[2], targetBed[0], targetBed[2])
+        const path = findPath(
+          ws.deskPos[0],
+          ws.deskPos[2],
+          targetBed[0],
+          targetBed[2]
+        )
         expect(path.length).toBeGreaterThan(0)
         const endNode = path[path.length - 1]
         expect(endNode[0]).toBeCloseTo(targetBed[0], 1)
@@ -126,7 +131,12 @@ describe('Phase K2: Wellness Wing, Departments & New Agents', () => {
     it('can route from every desk to the Comfort Room (CR)', () => {
       const targetStall = COMFORT_ROOM_STALLS[0].approachTile
       for (const ws of allWorkstations) {
-        const path = findPath(ws.deskPos[0], ws.deskPos[2], targetStall[0], targetStall[2])
+        const path = findPath(
+          ws.deskPos[0],
+          ws.deskPos[2],
+          targetStall[0],
+          targetStall[2]
+        )
         expect(path.length).toBeGreaterThan(0)
         const endNode = path[path.length - 1]
         expect(endNode[0]).toBeCloseTo(targetStall[0], 1)
@@ -137,7 +147,12 @@ describe('Phase K2: Wellness Wing, Departments & New Agents', () => {
     it('can route from every desk to the Grand Cafeteria', () => {
       const targetSeat = CAFETERIA_SEATS[0].approachTile
       for (const ws of allWorkstations) {
-        const path = findPath(ws.deskPos[0], ws.deskPos[2], targetSeat[0], targetSeat[2])
+        const path = findPath(
+          ws.deskPos[0],
+          ws.deskPos[2],
+          targetSeat[0],
+          targetSeat[2]
+        )
         expect(path.length).toBeGreaterThan(0)
         const endNode = path[path.length - 1]
         expect(endNode[0]).toBeCloseTo(targetSeat[0], 1)
@@ -148,7 +163,12 @@ describe('Phase K2: Wellness Wing, Departments & New Agents', () => {
     it('can route from every desk to the Facilities Room', () => {
       const targetFacilities = [-35, 0, 6]
       for (const ws of allWorkstations) {
-        const path = findPath(ws.deskPos[0], ws.deskPos[2], targetFacilities[0], targetFacilities[2])
+        const path = findPath(
+          ws.deskPos[0],
+          ws.deskPos[2],
+          targetFacilities[0],
+          targetFacilities[2]
+        )
         expect(path.length).toBeGreaterThan(0)
       }
     })
@@ -156,7 +176,12 @@ describe('Phase K2: Wellness Wing, Departments & New Agents', () => {
     it('can route from every desk to each Water Dispenser', () => {
       for (const disp of WATER_DISPENSERS) {
         const ws = allWorkstations[0] // Test with Josiah
-        const path = findPath(ws.deskPos[0], ws.deskPos[2], disp.position[0], disp.position[2])
+        const path = findPath(
+          ws.deskPos[0],
+          ws.deskPos[2],
+          disp.position[0],
+          disp.position[2]
+        )
         expect(path.length).toBeGreaterThan(0)
       }
     })

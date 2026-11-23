@@ -16,7 +16,9 @@ export interface BakedSpriteEntry {
 const spriteCache = new Map<string, BakedSpriteEntry>()
 
 export function buildSpriteCacheKey(input: BakedSpriteKeyInput): string {
-  const quantFacing = Math.round(((input.facing % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) * 100)
+  const quantFacing = Math.round(
+    (((input.facing % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) * 100
+  )
   return `${input.agentId}:${input.appearanceHash}:${input.pose}:f${quantFacing}:fr${input.frame}`
 }
 

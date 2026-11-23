@@ -1,6 +1,12 @@
 'use client'
 
-import React, { useState, useEffect, useRef, Suspense, useSyncExternalStore } from 'react'
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  Suspense,
+  useSyncExternalStore,
+} from 'react'
 import dynamic from 'next/dynamic'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Agent, Approval, AgentStatus } from '@/components/office/types'
@@ -107,13 +113,24 @@ function modeToRoomName(mode: DepartmentMode, defaultRoom: string): string {
   }
 }
 
-function deriveRouteOverrideFromAgent(agent: Agent): DepartmentMode | undefined {
+function deriveRouteOverrideFromAgent(
+  agent: Agent
+): DepartmentMode | undefined {
   const room = (agent.room || '').toLowerCase()
   const status = (agent.status || '').toLowerCase()
-  if (status === 'at_gym' || status === 'gym' || room.includes('gym') || room.includes('rec')) {
+  if (
+    status === 'at_gym' ||
+    status === 'gym' ||
+    room.includes('gym') ||
+    room.includes('rec')
+  ) {
     return 'GYM'
   }
-  if (status === 'on_break' || room.includes('pantry') || room.includes('canteen')) {
+  if (
+    status === 'on_break' ||
+    room.includes('pantry') ||
+    room.includes('canteen')
+  ) {
     return 'PANTRY'
   }
   if (status === 'in_meeting' || room.includes('brain')) {
@@ -123,19 +140,21 @@ function deriveRouteOverrideFromAgent(agent: Agent): DepartmentMode | undefined 
 }
 
 // Default baseline of all registered database agents for instant zero-latency mount
-const DEFAULT_AGENTS: Agent[] = Object.values(AGENT_WORKSTATIONS_3D).map((ws) => ({
-  id: ws.agentId,
-  name: ws.name,
-  role: ws.department,
-  room: ws.room,
-  department: ws.department,
-  status: 'available',
-  current_task: undefined,
-  current_file: undefined,
-  progress_pct: 0,
-  model: DEFAULT_AGENT_MODELS[ws.agentId] || 'gemini-2.0-flash',
-  updated_at: new Date().toISOString(),
-}))
+const DEFAULT_AGENTS: Agent[] = Object.values(AGENT_WORKSTATIONS_3D).map(
+  (ws) => ({
+    id: ws.agentId,
+    name: ws.name,
+    role: ws.department,
+    room: ws.room,
+    department: ws.department,
+    status: 'available',
+    current_task: undefined,
+    current_file: undefined,
+    progress_pct: 0,
+    model: DEFAULT_AGENT_MODELS[ws.agentId] || 'gemini-2.0-flash',
+    updated_at: new Date().toISOString(),
+  })
+)
 
 // Contextual non-looping engineering & operational milestones
 const CONTEXTUAL_EVENTS: {
@@ -232,10 +251,13 @@ function HQCommandPage() {
   const [approvals, setApprovals] = useState<Approval[]>([])
   const [logs, setLogs] = useState<string[]>([])
   const [, setSupabaseActive] = useState<boolean>(false)
-  const [selectedAgentState, setSelectedAgent] = useState<Agent | null>(DEFAULT_AGENTS[0])
+  const [selectedAgentState, setSelectedAgent] = useState<Agent | null>(
+    DEFAULT_AGENTS[0]
+  )
   const selectedAgent =
-    (selectedAgentState ? agents.find((a) => a.id === selectedAgentState.id) : null) ||
-    selectedAgentState
+    (selectedAgentState
+      ? agents.find((a) => a.id === selectedAgentState.id)
+      : null) || selectedAgentState
   const [currentMode, setCurrentMode] = useState<DepartmentMode>('OVERVIEW')
   const [agentRouteOverrides, setAgentRouteOverrides] = useState<
     Record<string, DepartmentMode>
@@ -246,24 +268,39 @@ function HQCommandPage() {
   const [rosterSearch, setRosterSearch] = useState<string>('')
   const [rosterDeptFilter, setRosterDeptFilter] = useState<string>('ALL')
   const [isAddDeptModalOpen, setIsAddDeptModalOpen] = useState<boolean>(false)
-  const [isAgentLogDrawerOpen, setIsAgentLogDrawerOpen] = useState<boolean>(false)
+  const [isAgentLogDrawerOpen, setIsAgentLogDrawerOpen] =
+    useState<boolean>(false)
   const [isBrainLogOpen, setIsBrainLogOpen] = useState<boolean>(false)
   const [isRemindersOpen, setIsRemindersOpen] = useState<boolean>(false)
   const [, setReminderTick] = useState<number>(0)
   const [, setFacilityTick] = useState<number>(0)
   const [rosterTab, setRosterTab] = useState<'roster' | 'wellness'>('roster')
-  const [wellnessSort, setWellnessSort] = useState<'lowest_energy' | 'lowest_morale' | 'name'>('lowest_energy')
+  const [wellnessSort, setWellnessSort] = useState<
+    'lowest_energy' | 'lowest_morale' | 'name'
+  >('lowest_energy')
   const [agentPins, setAgentPins] = useState<Record<string, AgentPinStatus>>({})
-  const [editingApprovalId, setEditingApprovalId] = useState<string | null>(null)
+  const [editingApprovalId, setEditingApprovalId] = useState<string | null>(
+    null
+  )
   const [approvalInstruction, setApprovalInstruction] = useState<string>('')
-  const [autonomyMode, setAutonomyMode] = useState<AutonomyMode>('STANDING_POLICY')
-  const [cleaningRoomSelection, setCleaningRoomSelection] = useState<string>('CAFETERIA')
-  const [cleaningKindSelection, setCleaningKindSelection] = useState<CleaningTaskKind>('wipe_tables')
+  const [autonomyMode, setAutonomyMode] =
+    useState<AutonomyMode>('STANDING_POLICY')
+  const [cleaningRoomSelection, setCleaningRoomSelection] =
+    useState<string>('CAFETERIA')
+  const [cleaningKindSelection, setCleaningKindSelection] =
+    useState<CleaningTaskKind>('wipe_tables')
   const [isNavMenuOpen, setIsNavMenuOpen] = useState<boolean>(false)
-  const [cameraViewMode, setCameraViewMode] = useState<'isometric' | 'walk'>('isometric')
-  const [lightingTheme, setLightingTheme] = useState<'auto' | 'day' | 'night'>('auto')
+  const [cameraViewMode, setCameraViewMode] = useState<'isometric' | 'walk'>(
+    'isometric'
+  )
+  const [lightingTheme, setLightingTheme] = useState<'auto' | 'day' | 'night'>(
+    'auto'
+  )
   const [isCanvasFullscreen, setIsCanvasFullscreen] = useState<boolean>(false)
-  const [zoomStep, setZoomStep] = useState<{ delta: number; nonce: number }>({ delta: 0, nonce: 0 })
+  const [zoomStep, setZoomStep] = useState<{ delta: number; nonce: number }>({
+    delta: 0,
+    nonce: 0,
+  })
   const navMenuRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -275,7 +312,9 @@ function HQCommandPage() {
         setIsCanvasFullscreen((prev) => !prev)
       } else if (e.key === 'v' || e.key === 'V') {
         e.preventDefault()
-        setCameraViewMode((prev) => (prev === 'isometric' ? 'walk' : 'isometric'))
+        setCameraViewMode((prev) =>
+          prev === 'isometric' ? 'walk' : 'isometric'
+        )
       } else if (e.key === 'Escape') {
         setIsCanvasFullscreen(false)
       }
@@ -286,7 +325,10 @@ function HQCommandPage() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (navMenuRef.current && !navMenuRef.current.contains(event.target as Node)) {
+      if (
+        navMenuRef.current &&
+        !navMenuRef.current.contains(event.target as Node)
+      ) {
         setIsNavMenuOpen(false)
       }
     }
@@ -303,8 +345,10 @@ function HQCommandPage() {
   )
 
   // JARVIS Orchestrator State & Cinematic Transition Phase
-  const [jarvisPhase, setJarvisPhase] = useState<JarvisTransitionPhase>('closed')
-  const [jarvisCoreState, setJarvisCoreState] = useState<JarvisCoreState>('idle')
+  const [jarvisPhase, setJarvisPhase] =
+    useState<JarvisTransitionPhase>('closed')
+  const [jarvisCoreState, setJarvisCoreState] =
+    useState<JarvisCoreState>('idle')
   const [officeVoiceSnippet, setOfficeVoiceSnippet] = useState<{
     text: string
     role: 'user' | 'jarvis'
@@ -396,13 +440,22 @@ function HQCommandPage() {
         tag === 'select' ||
         target?.isContentEditable
 
-      if (e.key === 'Escape' && (jarvisPhase === 'inside' || jarvisPhase === 'entering')) {
+      if (
+        e.key === 'Escape' &&
+        (jarvisPhase === 'inside' || jarvisPhase === 'entering')
+      ) {
         e.preventDefault()
         exitJarvis()
         return
       }
 
-      if (!isEditable && (e.key === 'j' || e.key === 'J') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (
+        !isEditable &&
+        (e.key === 'j' || e.key === 'J') &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey
+      ) {
         e.preventDefault()
         if (jarvisPhase === 'closed' || jarvisPhase === 'exiting') {
           enterJarvis()
@@ -478,7 +531,10 @@ function HQCommandPage() {
               ? json.data.logs
               : []
             setLogs((prev) =>
-              Array.from(new Set([bootLog, ...prev, ...remoteLogs])).slice(0, 45)
+              Array.from(new Set([bootLog, ...prev, ...remoteLogs])).slice(
+                0,
+                45
+              )
             )
           }
         }
@@ -531,10 +587,14 @@ function HQCommandPage() {
         const remoteMsgs = await officeSupabase.getMessages(15)
         if (isSubscribed && remoteMsgs.length > 0) {
           const formatted = remoteMsgs.map((m) => {
-            const ts = m.created_at ? formatPHTTime(new Date(m.created_at)) : formatPHTTime()
+            const ts = m.created_at
+              ? formatPHTTime(new Date(m.created_at))
+              : formatPHTTime()
             return `${ts} [COMM] ${m.sender_name} -> ${m.receiver_name || 'All'}: "${m.content}"`
           })
-          setLogs((prev) => Array.from(new Set([...prev, ...formatted])).slice(0, 50))
+          setLogs((prev) =>
+            Array.from(new Set([...prev, ...formatted])).slice(0, 50)
+          )
         }
       }
     }
@@ -543,14 +603,22 @@ function HQCommandPage() {
 
     const unsubscribe = officeSupabase.subscribeToRealtime({
       onMessage: (msg: OfficeMessageRecord) => {
-        const ts = msg.created_at ? formatPHTTime(new Date(msg.created_at)) : formatPHTTime()
+        const ts = msg.created_at
+          ? formatPHTTime(new Date(msg.created_at))
+          : formatPHTTime()
         const line = `${ts} [COMM] ${msg.sender_name} -> ${msg.receiver_name || 'All'}: "${msg.content}"`
-        setLogs((prev) => [line, ...prev.filter((p) => p !== line)].slice(0, 50))
+        setLogs((prev) =>
+          [line, ...prev.filter((p) => p !== line)].slice(0, 50)
+        )
       },
       onLog: (log: OfficeLogRecord) => {
-        const ts = log.created_at ? formatPHTTime(new Date(log.created_at)) : formatPHTTime()
+        const ts = log.created_at
+          ? formatPHTTime(new Date(log.created_at))
+          : formatPHTTime()
         const line = `${ts} [${(log.category || 'INFO').toUpperCase()}] ${log.agent_name ? `${log.agent_name}: ` : ''}${log.message}`
-        setLogs((prev) => [line, ...prev.filter((p) => p !== line)].slice(0, 50))
+        setLogs((prev) =>
+          [line, ...prev.filter((p) => p !== line)].slice(0, 50)
+        )
       },
       onAgentUpdate: (updatedAgent) => {
         // Never overwrite current_coord or sub_state from realtime while agent is walking in-memory
@@ -649,7 +717,8 @@ function HQCommandPage() {
           // Working is REAL: only advance agents who have an actual task assigned
           if (!isAgentActivelyWorking(ag)) return ag
 
-          const currentPct = typeof ag.progress_pct === 'number' ? ag.progress_pct : 0
+          const currentPct =
+            typeof ag.progress_pct === 'number' ? ag.progress_pct : 0
           const increment = 3
           const nextPct = currentPct + increment
 
@@ -661,7 +730,10 @@ function HQCommandPage() {
             // 100% Completion Milestone Event
             const completionLog = `${formatPHTTime()} [TASK_COMPLETE] ${ag.name} completed: "${completedTask}" (100% Milestone)`
             setLogs((prev) =>
-              [completionLog, ...prev.filter((p) => p !== completionLog)].slice(0, 50)
+              [completionLog, ...prev.filter((p) => p !== completionLog)].slice(
+                0,
+                50
+              )
             )
 
             // Log activity to Supabase
@@ -792,7 +864,10 @@ function HQCommandPage() {
     effectiveMode: DepartmentMode
   ) => {
     const ws = AGENT_WORKSTATIONS_3D[agentId]
-    const targetRoom = modeToRoomName(effectiveMode, ws?.room || 'Engineering Core')
+    const targetRoom = modeToRoomName(
+      effectiveMode,
+      ws?.room || 'Engineering Core'
+    )
     const finalSubState =
       effectiveMode === 'OVERVIEW' || effectiveMode === 'FOCUS_WORK'
         ? 'seated'
@@ -801,10 +876,10 @@ function HQCommandPage() {
       effectiveMode === 'GYM'
         ? 'at_gym'
         : effectiveMode === 'PANTRY'
-        ? 'on_break'
-        : effectiveMode === 'ALL_HANDS'
-        ? 'in_meeting'
-        : 'working'
+          ? 'on_break'
+          : effectiveMode === 'ALL_HANDS'
+            ? 'in_meeting'
+            : 'working'
 
     setAgents((prev) =>
       prev.map((ag) =>
@@ -841,15 +916,17 @@ function HQCommandPage() {
       newMode === 'GYM'
         ? 'at_gym'
         : newMode === 'PANTRY'
-        ? 'on_break'
-        : newMode === 'ALL_HANDS'
-        ? 'in_meeting'
-        : 'working'
+          ? 'on_break'
+          : newMode === 'ALL_HANDS'
+            ? 'in_meeting'
+            : 'working'
 
     setAgents((prev) =>
       prev.map((ag) => {
         const ws = AGENT_WORKSTATIONS_3D[ag.id]
-        const targetCoords = ws ? getAgentTargetPosition(ws, newMode) : [0, 0, 0]
+        const targetCoords = ws
+          ? getAgentTargetPosition(ws, newMode)
+          : [0, 0, 0]
         return {
           ...ag,
           status: modeStatus,
@@ -861,7 +938,9 @@ function HQCommandPage() {
     )
 
     const logLine = `${formatPHTTime()} [ROUTE] Global mode switched to ${newMode.replace('_', ' ')} — 24 agents unseating & walking via A* pathQueue.`
-    setLogs((prev) => [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50))
+    setLogs((prev) =>
+      [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50)
+    )
 
     void officeSupabase.setOfficeMode(newMode)
     void officeSupabase.logActivity(
@@ -883,7 +962,9 @@ function HQCommandPage() {
     sfx?.playTrigger?.()
     const ws = AGENT_WORKSTATIONS_3D[agent.id]
     const targetRoom = modeToRoomName(targetMode, ws?.room || agent.room)
-    const coords = ws ? getAgentTargetPosition(ws, currentMode, targetMode) : [0, 0, 0]
+    const coords = ws
+      ? getAgentTargetPosition(ws, currentMode, targetMode)
+      : [0, 0, 0]
 
     setAgentRouteOverrides((prev) => ({
       ...prev,
@@ -907,7 +988,9 @@ function HQCommandPage() {
     )
 
     const logLine = `${formatPHTTime()} [ROUTE] ${agent.name} standing up & walking via A* pathQueue to ${targetRoom} (${coords[0]}, ${coords[2]}): ${taskDescription}`
-    setLogs((prev) => [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50))
+    setLogs((prev) =>
+      [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50)
+    )
 
     void officeSupabase.logActivity(
       'AGENT_ROUTE',
@@ -937,13 +1020,23 @@ function HQCommandPage() {
     setAgents((prev) =>
       prev.map((a) =>
         a.id === selectedAgent.id
-          ? { ...a, status: 'working', room: homeRoom, current_task: promptText }
+          ? {
+              ...a,
+              status: 'working',
+              room: homeRoom,
+              current_task: promptText,
+            }
           : a
       )
     )
     setSelectedAgent((prev) =>
       prev
-        ? { ...prev, status: 'working', room: homeRoom, current_task: promptText }
+        ? {
+            ...prev,
+            status: 'working',
+            room: homeRoom,
+            current_task: promptText,
+          }
         : prev
     )
 
@@ -995,7 +1088,9 @@ function HQCommandPage() {
       `Manual directive from Josiah for ${ROOM_DISPLAY_NAMES[roomId] || roomId}`
     )
     const logLine = `${formatPHTTime()} [FACILITIES] Cleaners task dispatched: ${kind.replace('_', ' ').toUpperCase()} in ${ROOM_DISPLAY_NAMES[roomId] || roomId}`
-    setLogs((prev) => [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50))
+    setLogs((prev) =>
+      [logLine, ...prev.filter((p) => p !== logLine)].slice(0, 50)
+    )
     setFacilityTick((t) => t + 1)
   }
 
@@ -1023,7 +1118,9 @@ function HQCommandPage() {
       prev && prev.id === agentId ? { ...prev, model: newModel } : prev
     )
     const targetName =
-      agents.find((a) => a.id === agentId)?.name || selectedAgent?.name || agentId
+      agents.find((a) => a.id === agentId)?.name ||
+      selectedAgent?.name ||
+      agentId
     const logLine = `${formatPHTTime()} [AI ENGINE] ${targetName} switched AI model to "${newModel}".`
     setLogs((prev) => [logLine, ...prev].slice(0, 50))
     void officeSupabase.updateAgent(agentId, { model: newModel })
@@ -1093,17 +1190,29 @@ function HQCommandPage() {
       const isWorking = isAgentActivelyWorking(ag)
       const isCleaner = ag.id.startsWith('cleaner_')
 
-      if (isCleaner && (effMode === 'WELLNESS' || effMode === 'OVERVIEW' || isWorking)) {
+      if (
+        isCleaner &&
+        (effMode === 'WELLNESS' || effMode === 'OVERVIEW' || isWorking)
+      ) {
         cleaning++
       } else if (isWorking) {
         working++
-      } else if (effMode === 'CAFETERIA' || ag.status === 'eating' || taskLower.includes('eat') || taskLower.includes('lunch')) {
+      } else if (
+        effMode === 'CAFETERIA' ||
+        ag.status === 'eating' ||
+        taskLower.includes('eat') ||
+        taskLower.includes('lunch')
+      ) {
         eating++
       } else if (effMode === 'COMFORT_ROOM' || ag.status === 'in_cr') {
         inCr++
       } else if (effMode === 'NAP_ROOM' || ag.status === 'sleeping') {
         sleeping++
-      } else if (effMode === 'GYM' || ag.status === 'at_gym' || ag.status === 'gym') {
+      } else if (
+        effMode === 'GYM' ||
+        ag.status === 'at_gym' ||
+        ag.status === 'gym'
+      ) {
         inGym++
       } else if (effMode === 'ALL_HANDS' || ag.status === 'in_meeting') {
         inMeeting++
@@ -1139,26 +1248,26 @@ function HQCommandPage() {
   }, [agents, agentRouteOverrides, currentMode, approvals])
 
   return (
-    <main className="flex h-screen w-screen overflow-hidden bg-[#080b12] text-slate-100 font-sans select-none">
+    <main className="flex h-screen w-screen overflow-hidden bg-[#080b12] font-sans text-slate-100 select-none">
       {/* ========================================================================= */}
       {/* 1. LEFT NAVIGATION SIDEBAR (Reference Image 2 Workspace Architecture)     */}
       {/* ========================================================================= */}
       {!isCanvasFullscreen && (
         <aside
           data-testid="left-nav-sidebar"
-          className="hidden lg:flex w-52 shrink-0 flex-col justify-between border-r border-slate-800/80 bg-[#0a0d14] p-3 z-30"
+          className="z-30 hidden w-52 shrink-0 flex-col justify-between border-r border-slate-800/80 bg-[#0a0d14] p-3 lg:flex"
         >
           <div className="flex flex-col gap-4">
             {/* Brand Identity */}
             <div className="flex items-center gap-2.5 px-1.5 py-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/15 border border-cyan-500/30 shrink-0">
-                <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00e5ff]" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-500/30 bg-cyan-500/15">
+                <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_10px_#00e5ff]" />
               </div>
               <div className="min-w-0">
-                <div className="font-mono text-xs font-black tracking-wider text-slate-100 uppercase truncate">
+                <div className="truncate font-mono text-xs font-black tracking-wider text-slate-100 uppercase">
                   EasyUp HQ
                 </div>
-                <div className="font-mono text-[10px] text-cyan-400 truncate">
+                <div className="truncate font-mono text-[10px] text-cyan-400">
                   branch: office-v3
                 </div>
               </div>
@@ -1169,20 +1278,22 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => handleGlobalModeChange('OVERVIEW')}
-                className={`cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold transition-all whitespace-nowrap ${
+                className={`flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 font-bold whitespace-nowrap transition-all ${
                   currentMode === 'OVERVIEW'
-                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
-                    : 'text-slate-300 hover:bg-slate-900 hover:text-white border border-transparent'
+                    ? 'border border-cyan-500/30 bg-cyan-500/15 text-cyan-300'
+                    : 'border border-transparent text-slate-300 hover:bg-slate-900 hover:text-white'
                 }`}
               >
                 <span>Office / HQ</span>
-                <span className="text-[10px] text-emerald-400">{agents.length}</span>
+                <span className="text-[10px] text-emerald-400">
+                  {agents.length}
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={enterJarvis}
-                className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold text-slate-300 hover:bg-slate-900 hover:text-cyan-300 transition-all whitespace-nowrap"
+                className="flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 font-bold whitespace-nowrap text-slate-300 transition-all hover:bg-slate-900 hover:text-cyan-300"
               >
                 <span>Jarvis Core</span>
                 <span className="text-[10px] text-cyan-400">[J]</span>
@@ -1191,10 +1302,10 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => handleGlobalModeChange('ALL_HANDS')}
-                className={`cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold transition-all whitespace-nowrap ${
+                className={`flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 font-bold whitespace-nowrap transition-all ${
                   currentMode === 'ALL_HANDS'
-                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
-                    : 'text-slate-300 hover:bg-slate-900 hover:text-white border border-transparent'
+                    ? 'border border-cyan-500/30 bg-cyan-500/15 text-cyan-300'
+                    : 'border border-transparent text-slate-300 hover:bg-slate-900 hover:text-white'
                 }`}
               >
                 <span>Workflows / Plan</span>
@@ -1204,7 +1315,7 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => setIsAddDeptModalOpen(true)}
-                className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold text-slate-300 hover:bg-slate-900 hover:text-white transition-all whitespace-nowrap"
+                className="flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 font-bold whitespace-nowrap text-slate-300 transition-all hover:bg-slate-900 hover:text-white"
               >
                 <span>Departments</span>
                 <span className="text-[10px] text-cyan-400">+</span>
@@ -1213,10 +1324,10 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => handleGlobalModeChange('SERVER_ROOM')}
-                className={`cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold transition-all whitespace-nowrap ${
+                className={`flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 font-bold whitespace-nowrap transition-all ${
                   currentMode === 'SERVER_ROOM'
-                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
-                    : 'text-slate-300 hover:bg-slate-900 hover:text-white border border-transparent'
+                    ? 'border border-cyan-500/30 bg-cyan-500/15 text-cyan-300'
+                    : 'border border-transparent text-slate-300 hover:bg-slate-900 hover:text-white'
                 }`}
               >
                 <span>Server Room</span>
@@ -1226,7 +1337,7 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => setIsAgentLogDrawerOpen(true)}
-                className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold text-slate-300 hover:bg-slate-900 hover:text-amber-300 transition-all whitespace-nowrap"
+                className="flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 font-bold whitespace-nowrap text-slate-300 transition-all hover:bg-slate-900 hover:text-amber-300"
               >
                 <span>Agent Log</span>
                 <span className="text-[10px] text-slate-500">Live</span>
@@ -1235,7 +1346,7 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => setIsBrainLogOpen(true)}
-                className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold text-slate-300 hover:bg-slate-900 hover:text-cyan-300 transition-all whitespace-nowrap"
+                className="flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 font-bold whitespace-nowrap text-slate-300 transition-all hover:bg-slate-900 hover:text-cyan-300"
               >
                 <span>Brain Log</span>
                 <span className="text-[10px] text-cyan-500">AI</span>
@@ -1244,11 +1355,11 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => setIsRemindersOpen(true)}
-                className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold text-slate-300 hover:bg-slate-900 hover:text-amber-300 transition-all whitespace-nowrap"
+                className="flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 font-bold whitespace-nowrap text-slate-300 transition-all hover:bg-slate-900 hover:text-amber-300"
               >
                 <span>Reminders</span>
                 {reminderManager.getUnacknowledgedMissed().length > 0 ? (
-                  <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+                  <span className="h-2 w-2 animate-ping rounded-full bg-rose-500" />
                 ) : (
                   <span className="text-[10px] text-slate-500">PHT</span>
                 )}
@@ -1257,14 +1368,16 @@ function HQCommandPage() {
               <button
                 type="button"
                 onClick={() => setIsRosterOpen((prev) => !prev)}
-                className={`cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-2 font-bold transition-all whitespace-nowrap ${
+                className={`flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 font-bold whitespace-nowrap transition-all ${
                   isRosterOpen
-                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                    : 'text-slate-300 hover:bg-slate-900 hover:text-emerald-300 border border-transparent'
+                    ? 'border border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
+                    : 'border border-transparent text-slate-300 hover:bg-slate-900 hover:text-emerald-300'
                 }`}
               >
                 <span>Agent Roster</span>
-                <span className="text-[10px] text-emerald-400">{agents.length}</span>
+                <span className="text-[10px] text-emerald-400">
+                  {agents.length}
+                </span>
               </button>
             </nav>
           </div>
@@ -1272,7 +1385,7 @@ function HQCommandPage() {
           {/* Bottom Sidebar: Lighting Theme Switcher & Lead Architect Profile */}
           <div className="flex flex-col gap-3 border-t border-slate-800/80 pt-3">
             <div>
-              <div className="mb-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <div className="mb-1.5 font-mono text-[10px] font-bold tracking-wider text-slate-500 uppercase">
                 Office Lighting
               </div>
               <div className="grid grid-cols-3 gap-1 rounded-lg border border-slate-800 bg-slate-950 p-1 font-mono text-[10px]">
@@ -1282,7 +1395,7 @@ function HQCommandPage() {
                     type="button"
                     data-testid={`lighting-theme-${themeOpt}`}
                     onClick={() => setLightingTheme(themeOpt)}
-                    className={`cursor-pointer rounded-md py-1 font-bold capitalize transition-all whitespace-nowrap ${
+                    className={`cursor-pointer rounded-md py-1 font-bold whitespace-nowrap capitalize transition-all ${
                       lightingTheme === themeOpt
                         ? 'bg-cyan-500 text-slate-950 shadow-sm'
                         : 'text-slate-400 hover:text-slate-200'
@@ -1295,14 +1408,14 @@ function HQCommandPage() {
             </div>
 
             <div className="flex items-center gap-2.5 rounded-lg border border-slate-800/80 bg-slate-950/80 px-2.5 py-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-500/20 border border-cyan-400/40 font-mono text-[10px] font-black text-cyan-300 shrink-0">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-cyan-400/40 bg-cyan-500/20 font-mono text-[10px] font-black text-cyan-300">
                 JL
               </div>
               <div className="min-w-0">
-                <div className="font-mono text-[11px] font-bold text-slate-200 truncate">
+                <div className="truncate font-mono text-[11px] font-bold text-slate-200">
                   Josiah
                 </div>
-                <div className="font-mono text-[9px] text-slate-500 truncate">
+                <div className="truncate font-mono text-[9px] text-slate-500">
                   Lead Architect
                 </div>
               </div>
@@ -1314,57 +1427,72 @@ function HQCommandPage() {
       {/* ========================================================================= */}
       {/* 2. RIGHT WORKSPACE COLUMN (Top KPI Strip + Canvas + Right Agent Tree)     */}
       {/* ========================================================================= */}
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {!isCanvasFullscreen && (
-          <header className="flex h-14 w-full shrink-0 items-center justify-between gap-2 border-b border-slate-800/80 bg-[#0a0d14] px-3 shadow-2xl z-30">
+          <header className="z-30 flex h-14 w-full shrink-0 items-center justify-between gap-2 border-b border-slate-800/80 bg-[#0a0d14] px-3 shadow-2xl">
             {/* Left: Compact KPI Telemetry Strip */}
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex lg:hidden items-center gap-2 shrink-0">
-                <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-pulse" />
-                <span className="font-mono text-xs font-black text-slate-100 uppercase whitespace-nowrap">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex shrink-0 items-center gap-2 lg:hidden">
+                <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-400" />
+                <span className="font-mono text-xs font-black whitespace-nowrap text-slate-100 uppercase">
                   EASYUP HQ
                 </span>
               </div>
 
-              <div className="hidden md:flex items-center gap-3 font-mono text-[11px] whitespace-nowrap">
+              <div className="hidden items-center gap-3 font-mono text-[11px] whitespace-nowrap md:flex">
                 <div className="flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950/80 px-2.5 py-1">
-                  <span className="text-slate-500 font-bold">ACTIVE</span>
-                  <span className="font-black text-emerald-400">{campusCounters.working}</span>
-                </div>
-                <div className="flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950/80 px-2.5 py-1">
-                  <span className="text-slate-500 font-bold">AVAILABLE</span>
-                  <span className="font-black text-cyan-400">{campusCounters.available}</span>
-                </div>
-                <div className="hidden xl:flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950/80 px-2.5 py-1">
-                  <span className="text-slate-500 font-bold">WELLNESS</span>
-                  <span className="font-black text-amber-400">
-                    {campusCounters.eating + campusCounters.resting + campusCounters.inGym}
+                  <span className="font-bold text-slate-500">ACTIVE</span>
+                  <span className="font-black text-emerald-400">
+                    {campusCounters.working}
                   </span>
                 </div>
-                <div className="hidden xl:flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950/80 px-2.5 py-1">
-                  <span className="text-slate-500 font-bold">PHT</span>
-                  <span className="font-bold text-slate-200">{phtTime || '00:00 AM PHT'}</span>
+                <div className="flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950/80 px-2.5 py-1">
+                  <span className="font-bold text-slate-500">AVAILABLE</span>
+                  <span className="font-black text-cyan-400">
+                    {campusCounters.available}
+                  </span>
+                </div>
+                <div className="hidden items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950/80 px-2.5 py-1 xl:flex">
+                  <span className="font-bold text-slate-500">WELLNESS</span>
+                  <span className="font-black text-amber-400">
+                    {campusCounters.eating +
+                      campusCounters.resting +
+                      campusCounters.inGym}
+                  </span>
+                </div>
+                <div className="hidden items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950/80 px-2.5 py-1 xl:flex">
+                  <span className="font-bold text-slate-500">PHT</span>
+                  <span className="font-bold text-slate-200">
+                    {phtTime || '00:00 AM PHT'}
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Right: Menu, Zoom/Recenter, View Mode (3D / Walk 3D / 2D), Fullscreen */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex shrink-0 items-center gap-2">
               {/* Zoom & Recenter Group */}
-              <div className="hidden sm:flex items-center rounded-lg border border-slate-800 bg-slate-950/90 p-0.5 font-mono text-xs">
+              <div className="hidden items-center rounded-lg border border-slate-800 bg-slate-950/90 p-0.5 font-mono text-xs sm:flex">
                 <button
                   type="button"
                   title="Zoom In"
-                  onClick={() => setZoomStep((prev) => ({ delta: 3, nonce: prev.nonce + 1 }))}
-                  className="cursor-pointer rounded-md px-2 py-1 font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors whitespace-nowrap"
+                  onClick={() =>
+                    setZoomStep((prev) => ({ delta: 3, nonce: prev.nonce + 1 }))
+                  }
+                  className="cursor-pointer rounded-md px-2 py-1 font-bold whitespace-nowrap text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
                 >
                   +
                 </button>
                 <button
                   type="button"
                   title="Zoom Out"
-                  onClick={() => setZoomStep((prev) => ({ delta: -3, nonce: prev.nonce + 1 }))}
-                  className="cursor-pointer rounded-md px-2 py-1 font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors whitespace-nowrap"
+                  onClick={() =>
+                    setZoomStep((prev) => ({
+                      delta: -3,
+                      nonce: prev.nonce + 1,
+                    }))
+                  }
+                  className="cursor-pointer rounded-md px-2 py-1 font-bold whitespace-nowrap text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
                 >
                   −
                 </button>
@@ -1375,7 +1503,7 @@ function HQCommandPage() {
                     setCameraViewMode('isometric')
                     handleGlobalModeChange('OVERVIEW')
                   }}
-                  className="cursor-pointer rounded-md px-2 py-1 text-[11px] font-bold text-slate-300 hover:bg-slate-800 hover:text-cyan-300 transition-colors whitespace-nowrap"
+                  className="cursor-pointer rounded-md px-2 py-1 text-[11px] font-bold whitespace-nowrap text-slate-300 transition-colors hover:bg-slate-800 hover:text-cyan-300"
                 >
                   Recenter
                 </button>
@@ -1387,10 +1515,10 @@ function HQCommandPage() {
                   type="button"
                   data-testid="nav-menu-button"
                   onClick={() => setIsNavMenuOpen((prev) => !prev)}
-                  className={`cursor-pointer flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs font-bold tracking-tight transition-all whitespace-nowrap ${
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs font-bold tracking-tight whitespace-nowrap transition-all ${
                     isNavMenuOpen
                       ? 'border-cyan-400 bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                      : 'border-slate-800 bg-slate-950/80 text-slate-200 hover:bg-slate-900 hover:border-slate-700'
+                      : 'border-slate-800 bg-slate-950/80 text-slate-200 hover:border-slate-700 hover:bg-slate-900'
                   }`}
                 >
                   <span>☰</span>
@@ -1401,12 +1529,14 @@ function HQCommandPage() {
                 {isNavMenuOpen && (
                   <div
                     data-testid="nav-menu-popover"
-                    className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-slate-800 bg-[#0d121f] p-3 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 duration-100"
+                    className="animate-in fade-in zoom-in-95 absolute top-full right-0 z-50 mt-2 w-72 rounded-xl border border-slate-800 bg-[#0d121f] p-3 shadow-2xl backdrop-blur-xl duration-100"
                   >
-                    <div className="pb-2.5 mb-2.5 border-b border-slate-800/80">
-                      <div className="font-mono text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <div className="mb-2.5 border-b border-slate-800/80 pb-2.5">
+                      <div className="mb-1.5 flex items-center justify-between font-mono text-[10px] font-bold tracking-wider text-slate-400 uppercase">
                         <span>CAMERA & ROOMS</span>
-                        <span className="text-[9px] text-cyan-400 font-semibold">{currentMode}</span>
+                        <span className="text-[9px] font-semibold text-cyan-400">
+                          {currentMode}
+                        </span>
                       </div>
                       <div className="grid grid-cols-2 gap-1.5">
                         {modeButtons.map((btn) => {
@@ -1419,7 +1549,7 @@ function HQCommandPage() {
                                 handleGlobalModeChange(btn.mode)
                                 setIsNavMenuOpen(false)
                               }}
-                              className={`cursor-pointer rounded-lg px-2.5 py-1.5 font-mono text-[11px] font-bold tracking-tight text-left transition-all whitespace-nowrap ${
+                              className={`cursor-pointer rounded-lg px-2.5 py-1.5 text-left font-mono text-[11px] font-bold tracking-tight whitespace-nowrap transition-all ${
                                 isActive
                                   ? 'bg-cyan-500 text-slate-950 shadow-sm'
                                   : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
@@ -1433,7 +1563,7 @@ function HQCommandPage() {
                     </div>
 
                     <div>
-                      <div className="font-mono text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                      <div className="mb-1.5 font-mono text-[10px] font-bold tracking-wider text-slate-400 uppercase">
                         OPERATIONS & LOGS
                       </div>
                       <div className="flex flex-col gap-1.5">
@@ -1444,7 +1574,7 @@ function HQCommandPage() {
                             setIsAddDeptModalOpen(true)
                             setIsNavMenuOpen(false)
                           }}
-                          className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all whitespace-nowrap"
+                          className="flex cursor-pointer items-center justify-between rounded-lg border border-cyan-500/30 px-2.5 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-cyan-400 transition-all hover:bg-cyan-500/20"
                         >
                           <span>+ ADD DEPARTMENT</span>
                           <span className="text-[10px] text-cyan-500">NEW</span>
@@ -1456,7 +1586,7 @@ function HQCommandPage() {
                             setIsAgentLogDrawerOpen(true)
                             setIsNavMenuOpen(false)
                           }}
-                          className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all whitespace-nowrap"
+                          className="flex cursor-pointer items-center justify-between rounded-lg border border-amber-500/30 px-2.5 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-amber-400 transition-all hover:bg-amber-500/20"
                         >
                           <span>AGENT ACTIVITY LOG</span>
                           <span>📋</span>
@@ -1468,7 +1598,7 @@ function HQCommandPage() {
                             setIsBrainLogOpen(true)
                             setIsNavMenuOpen(false)
                           }}
-                          className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/20 transition-all whitespace-nowrap"
+                          className="flex cursor-pointer items-center justify-between rounded-lg border border-cyan-500/40 px-2.5 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-cyan-300 transition-all hover:bg-cyan-500/20"
                         >
                           <span>THE BRAIN LEARNING LOG</span>
                           <span>🧠</span>
@@ -1480,7 +1610,7 @@ function HQCommandPage() {
                             setIsRemindersOpen(true)
                             setIsNavMenuOpen(false)
                           }}
-                          className="cursor-pointer flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-amber-300 border border-amber-500/40 hover:bg-amber-500/20 transition-all whitespace-nowrap"
+                          className="flex cursor-pointer items-center justify-between rounded-lg border border-amber-500/40 px-2.5 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-amber-300 transition-all hover:bg-amber-500/20"
                         >
                           <span>OFFICE REMINDERS</span>
                           <span>⏰</span>
@@ -1499,7 +1629,7 @@ function HQCommandPage() {
                     setCameraViewMode('isometric')
                     if (is2DView) router.push('/')
                   }}
-                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all duration-200 ease-out whitespace-nowrap ${
+                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold whitespace-nowrap transition-all duration-200 ease-out ${
                     !is2DView && cameraViewMode === 'isometric'
                       ? 'bg-cyan-500 text-slate-950 shadow-sm'
                       : 'text-slate-400 hover:text-slate-200'
@@ -1514,7 +1644,7 @@ function HQCommandPage() {
                     setCameraViewMode('walk')
                     if (is2DView) router.push('/')
                   }}
-                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all duration-200 ease-out whitespace-nowrap ${
+                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold whitespace-nowrap transition-all duration-200 ease-out ${
                     !is2DView && cameraViewMode === 'walk'
                       ? 'bg-emerald-500 text-slate-950 shadow-sm'
                       : 'text-slate-400 hover:text-slate-200'
@@ -1525,7 +1655,7 @@ function HQCommandPage() {
                 <button
                   type="button"
                   onClick={() => router.push('/?v=2')}
-                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold transition-all duration-200 ease-out whitespace-nowrap ${
+                  className={`cursor-pointer rounded-md px-2.5 py-1 font-bold whitespace-nowrap transition-all duration-200 ease-out ${
                     is2DView
                       ? 'bg-cyan-500 text-slate-950 shadow-sm'
                       : 'text-slate-400 hover:text-slate-200'
@@ -1541,7 +1671,7 @@ function HQCommandPage() {
                 data-testid="fullscreen-toggle-btn"
                 onClick={() => setIsCanvasFullscreen(true)}
                 title="Fullscreen Office-Only Mode [F]"
-                className="cursor-pointer flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/90 px-2.5 py-1.5 font-mono text-xs font-bold text-slate-200 hover:border-cyan-400 hover:text-cyan-300 transition-all duration-200 ease-out whitespace-nowrap"
+                className="flex cursor-pointer items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/90 px-2.5 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-slate-200 transition-all duration-200 ease-out hover:border-cyan-400 hover:text-cyan-300"
               >
                 <span>⛶</span>
                 <span className="hidden sm:inline">Fullscreen</span>
@@ -1553,38 +1683,62 @@ function HQCommandPage() {
         {/* ======================================================================= */}
         {/* 3. MAIN COCKPIT BODY (Canvas + Wing Switcher + Right Agent Tree)        */}
         {/* ======================================================================= */}
-        <div className="relative flex flex-1 min-h-0 overflow-hidden">
-          <div className="relative flex flex-1 flex-col min-w-0 h-full overflow-hidden">
+        <div className="relative flex min-h-0 flex-1 overflow-hidden">
+          <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
             {/* Camera-Only Top Room-Tab Bar (Never mutates agent states) */}
             {!isCanvasFullscreen && (
               <nav
                 aria-label="Camera Room Tabs"
                 data-testid="top-room-tab-bar"
-                className="hidden lg:flex items-center gap-1 overflow-x-auto border-b border-slate-800/80 bg-[#0b0f18] px-3 py-1 font-mono text-xs shrink-0"
+                className="hidden shrink-0 items-center gap-1 overflow-x-auto border-b border-slate-800/80 bg-[#0b0f18] px-3 py-1 font-mono text-xs lg:flex"
               >
                 {[
                   { label: 'Overview', mode: 'OVERVIEW' as DepartmentMode },
-                  { label: 'Intelligence Lab', mode: 'FOCUS_WORK' as DepartmentMode },
+                  {
+                    label: 'Intelligence Lab',
+                    mode: 'FOCUS_WORK' as DepartmentMode,
+                  },
                   { label: 'Dev Studio', mode: 'FOCUS_WORK' as DepartmentMode },
-                  { label: 'Creative Studio', mode: 'FOCUS_WORK' as DepartmentMode },
-                  { label: 'Operations Hub', mode: 'ALL_HANDS' as DepartmentMode },
+                  {
+                    label: 'Creative Studio',
+                    mode: 'FOCUS_WORK' as DepartmentMode,
+                  },
+                  {
+                    label: 'Operations Hub',
+                    mode: 'ALL_HANDS' as DepartmentMode,
+                  },
                   { label: 'V-Suite', mode: 'ALL_HANDS' as DepartmentMode },
                   { label: 'Growth Lab', mode: 'FOCUS_WORK' as DepartmentMode },
-                  { label: 'Pantry & Game Lounge', mode: 'PANTRY' as DepartmentMode },
-                  { label: 'Social Peeps', mode: 'CAFETERIA' as DepartmentMode },
+                  {
+                    label: 'Pantry & Game Lounge',
+                    mode: 'PANTRY' as DepartmentMode,
+                  },
+                  {
+                    label: 'Social Peeps',
+                    mode: 'CAFETERIA' as DepartmentMode,
+                  },
                   { label: 'Gym', mode: 'GYM' as DepartmentMode },
-                  { label: 'Pickleball Court', mode: 'PICKLEBALL' as DepartmentMode },
+                  {
+                    label: 'Pickleball Court',
+                    mode: 'PICKLEBALL' as DepartmentMode,
+                  },
                 ].map((tab) => {
-                  const isActive = currentMode === tab.mode && (tab.label === 'Pickleball Court' || tab.label === 'Overview' || tab.label === 'Gym' || tab.label === 'Pantry & Game Lounge' || tab.label === 'Social Peeps')
+                  const isActive =
+                    currentMode === tab.mode &&
+                    (tab.label === 'Pickleball Court' ||
+                      tab.label === 'Overview' ||
+                      tab.label === 'Gym' ||
+                      tab.label === 'Pantry & Game Lounge' ||
+                      tab.label === 'Social Peeps')
                   return (
                     <button
                       key={tab.label}
                       type="button"
                       onClick={() => setCurrentMode(tab.mode)}
-                      className={`cursor-pointer rounded-md px-2 py-1 font-medium transition-all duration-200 ease-out whitespace-nowrap ${
+                      className={`cursor-pointer rounded-md px-2 py-1 font-medium whitespace-nowrap transition-all duration-200 ease-out ${
                         isActive
-                          ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/40'
-                          : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-100 border border-transparent'
+                          ? 'border border-cyan-400/40 bg-cyan-500/20 text-cyan-200'
+                          : 'border border-transparent text-slate-400 hover:bg-slate-800/60 hover:text-slate-100'
                       }`}
                     >
                       {tab.label}
@@ -1594,18 +1748,18 @@ function HQCommandPage() {
               </nav>
             )}
             {/* Synchronized 3D or 2D Isometric Viewport */}
-            <section className="relative flex-1 min-h-0 overflow-hidden">
+            <section className="relative min-h-0 flex-1 overflow-hidden">
               <div
                 key={`view-sweep-${is2DView ? '2d' : '3d'}-${cameraViewMode}`}
                 data-testid="view-mode-transition"
-                className="pointer-events-none absolute inset-0 z-30 bg-slate-950 animate-view-transition"
+                className="animate-view-transition pointer-events-none absolute inset-0 z-30 bg-slate-950"
               />
               {isCanvasFullscreen && (
                 <button
                   type="button"
                   data-testid="exit-fullscreen-btn"
                   onClick={() => setIsCanvasFullscreen(false)}
-                  className="cursor-pointer fixed top-4 right-4 z-50 flex items-center gap-2 rounded-full border border-cyan-400/70 bg-slate-950/90 px-3.5 py-1.5 font-mono text-xs font-bold text-cyan-200 shadow-2xl backdrop-blur-md hover:bg-cyan-500 hover:text-slate-950 transition-all duration-200 ease-out whitespace-nowrap"
+                  className="fixed top-4 right-4 z-50 flex cursor-pointer items-center gap-2 rounded-full border border-cyan-400/70 bg-slate-950/90 px-3.5 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-cyan-200 shadow-2xl backdrop-blur-md transition-all duration-200 ease-out hover:bg-cyan-500 hover:text-slate-950"
                 >
                   <span>Exit Fullscreen [F]</span>
                 </button>
@@ -1643,129 +1797,158 @@ function HQCommandPage() {
                   }
                   cameraViewMode={cameraViewMode}
                   onToggleWalkMode={() =>
-                    setCameraViewMode((prev) => (prev === 'isometric' ? 'walk' : 'isometric'))
+                    setCameraViewMode((prev) =>
+                      prev === 'isometric' ? 'walk' : 'isometric'
+                    )
                   }
                   lightingTheme={lightingTheme}
                   zoomStep={zoomStep}
                 />
               )}
 
-          {/* Cinematic 1.5s Fly-In / Fly-Out Bloom Transition Overlay (Skippable on Click) */}
-          {(jarvisPhase === 'entering' || jarvisPhase === 'exiting') && (
-            <div
-              data-testid="jarvis-transition-overlay"
-              onClick={skipJarvisTransition}
-              className="absolute inset-0 z-40 flex cursor-pointer flex-col items-center justify-center overflow-hidden backdrop-blur-xs transition-opacity duration-500"
-              style={{
-                background:
-                  jarvisPhase === 'entering'
-                    ? 'radial-gradient(circle at 50% 50%, rgba(224, 242, 254, 0.92) 0%, rgba(0, 229, 255, 0.65) 28%, rgba(3, 7, 17, 0.88) 72%)'
-                    : 'radial-gradient(circle at 50% 50%, rgba(0, 229, 255, 0.35) 0%, rgba(3, 7, 17, 0.45) 70%)',
-              }}
-            >
-              <div className="relative flex items-center justify-center">
-                <div className="h-56 w-56 animate-ping rounded-full border-2 border-cyan-300/80 shadow-[0_0_80px_#00e5ff]" />
-                <div className="absolute h-32 w-32 rounded-full bg-cyan-200/90 blur-md shadow-[0_0_120px_#ffffff]" />
-              </div>
-              <div className="mt-8 rounded-full border border-cyan-300/60 bg-slate-950/90 px-4 py-1.5 font-mono text-xs font-bold tracking-widest text-cyan-200 shadow-2xl">
-                {jarvisPhase === 'entering'
-                  ? 'ENTERING THE BRAIN CORE // INITIALIZING J.A.R.V.I.S. (CLICK TO SKIP)'
-                  : 'EXITING J.A.R.V.I.S. // RESTORING HQ CAMERA (CLICK TO SKIP)'}
-              </div>
-            </div>
-          )}
+              {/* Cinematic 1.5s Fly-In / Fly-Out Bloom Transition Overlay (Skippable on Click) */}
+              {(jarvisPhase === 'entering' || jarvisPhase === 'exiting') && (
+                <div
+                  data-testid="jarvis-transition-overlay"
+                  onClick={skipJarvisTransition}
+                  className="absolute inset-0 z-40 flex cursor-pointer flex-col items-center justify-center overflow-hidden backdrop-blur-xs transition-opacity duration-500"
+                  style={{
+                    background:
+                      jarvisPhase === 'entering'
+                        ? 'radial-gradient(circle at 50% 50%, rgba(224, 242, 254, 0.92) 0%, rgba(0, 229, 255, 0.65) 28%, rgba(3, 7, 17, 0.88) 72%)'
+                        : 'radial-gradient(circle at 50% 50%, rgba(0, 229, 255, 0.35) 0%, rgba(3, 7, 17, 0.45) 70%)',
+                  }}
+                >
+                  <div className="relative flex items-center justify-center">
+                    <div className="h-56 w-56 animate-ping rounded-full border-2 border-cyan-300/80 shadow-[0_0_80px_#00e5ff]" />
+                    <div className="absolute h-32 w-32 rounded-full bg-cyan-200/90 shadow-[0_0_120px_#ffffff] blur-md" />
+                  </div>
+                  <div className="mt-8 rounded-full border border-cyan-300/60 bg-slate-950/90 px-4 py-1.5 font-mono text-xs font-bold tracking-widest text-cyan-200 shadow-2xl">
+                    {jarvisPhase === 'entering'
+                      ? 'ENTERING THE BRAIN CORE // INITIALIZING J.A.R.V.I.S. (CLICK TO SKIP)'
+                      : 'EXITING J.A.R.V.I.S. // RESTORING HQ CAMERA (CLICK TO SKIP)'}
+                  </div>
+                </div>
+              )}
 
-          {/* Floating JARVIS Live Voice HUD for Office View (Always-On Speech in Office or Brain) */}
-          {jarvisPhase === 'closed' && (
-            <div
-              data-testid="office-jarvis-voice-hud"
-              className="pointer-events-auto absolute top-3 left-1/2 -translate-x-1/2 z-30 flex max-w-xl items-center gap-3 rounded-full border border-cyan-500/40 bg-slate-950/85 px-4 py-2 text-xs font-mono backdrop-blur-md shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all"
-            >
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="relative flex h-3 w-3">
-                  <span
-                    className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                      jarvisCoreState === 'speaking'
-                        ? 'bg-emerald-400 animate-ping'
-                        : jarvisCoreState === 'thinking'
-                          ? 'bg-amber-400 animate-ping'
-                          : jarvisCoreState === 'executing'
-                            ? 'bg-indigo-400 animate-ping'
-                            : jarvisCoreState === 'listening'
-                              ? 'bg-cyan-400 animate-pulse'
-                              : jarvisCoreState === 'error'
-                                ? 'bg-rose-500 animate-pulse'
-                                : 'bg-slate-400'
-                    }`}
-                  />
-                  <span
-                    className={`relative inline-flex h-3 w-3 rounded-full ${
-                      jarvisCoreState === 'speaking'
-                        ? 'bg-emerald-400'
-                        : jarvisCoreState === 'thinking'
-                          ? 'bg-amber-400'
-                          : jarvisCoreState === 'executing'
-                            ? 'bg-indigo-400'
-                            : jarvisCoreState === 'listening'
-                              ? 'bg-cyan-400'
-                              : jarvisCoreState === 'error'
-                                ? 'bg-rose-500'
-                                : 'bg-slate-400'
-                    }`}
-                  />
-                </span>
-                <span className="font-bold text-cyan-300 tracking-wider">
-                  JARVIS {jarvisCoreState.toUpperCase()}
-                </span>
-              </div>
+              {/* Floating JARVIS Live Voice HUD for Office View (Always-On Speech in Office or Brain) */}
+              {jarvisPhase === 'closed' && (
+                <div
+                  data-testid="office-jarvis-voice-hud"
+                  className="pointer-events-auto absolute top-3 left-1/2 z-30 flex max-w-xl -translate-x-1/2 items-center gap-3 rounded-full border border-cyan-500/40 bg-slate-950/85 px-4 py-2 font-mono text-xs shadow-[0_0_24px_rgba(0,229,255,0.2)] backdrop-blur-md transition-all"
+                >
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="relative flex h-3 w-3">
+                      <span
+                        className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                          jarvisCoreState === 'speaking'
+                            ? 'animate-ping bg-emerald-400'
+                            : jarvisCoreState === 'thinking'
+                              ? 'animate-ping bg-amber-400'
+                              : jarvisCoreState === 'executing'
+                                ? 'animate-ping bg-indigo-400'
+                                : jarvisCoreState === 'listening'
+                                  ? 'animate-pulse bg-cyan-400'
+                                  : jarvisCoreState === 'error'
+                                    ? 'animate-pulse bg-rose-500'
+                                    : 'bg-slate-400'
+                        }`}
+                      />
+                      <span
+                        className={`relative inline-flex h-3 w-3 rounded-full ${
+                          jarvisCoreState === 'speaking'
+                            ? 'bg-emerald-400'
+                            : jarvisCoreState === 'thinking'
+                              ? 'bg-amber-400'
+                              : jarvisCoreState === 'executing'
+                                ? 'bg-indigo-400'
+                                : jarvisCoreState === 'listening'
+                                  ? 'bg-cyan-400'
+                                  : jarvisCoreState === 'error'
+                                    ? 'bg-rose-500'
+                                    : 'bg-slate-400'
+                        }`}
+                      />
+                    </span>
+                    <span className="font-bold tracking-wider text-cyan-300">
+                      JARVIS {jarvisCoreState.toUpperCase()}
+                    </span>
+                  </div>
 
-              <div className="h-3 w-px bg-slate-800 shrink-0" />
+                  <div className="h-3 w-px shrink-0 bg-slate-800" />
 
-              <div className="truncate text-slate-300 min-w-0 max-w-xs sm:max-w-md">
-                {officeVoiceSnippet ? (
-                  <span>
-                    <strong
-                      className={
-                        officeVoiceSnippet.role === 'user'
-                          ? 'text-amber-300'
-                          : 'text-cyan-300'
-                      }
-                    >
-                      {officeVoiceSnippet.role === 'user' ? 'You: ' : 'JARVIS: '}
-                    </strong>
-                    {officeVoiceSnippet.text}
-                  </span>
-                ) : (
-                  <span className="text-slate-500 italic">
-                    Say &quot;send Josiah to gym&quot; or &quot;what models are agents using?&quot;
-                  </span>
-                )}
-              </div>
+                  <div className="max-w-xs min-w-0 truncate text-slate-300 sm:max-w-md">
+                    {officeVoiceSnippet ? (
+                      <span>
+                        <strong
+                          className={
+                            officeVoiceSnippet.role === 'user'
+                              ? 'text-amber-300'
+                              : 'text-cyan-300'
+                          }
+                        >
+                          {officeVoiceSnippet.role === 'user'
+                            ? 'You: '
+                            : 'JARVIS: '}
+                        </strong>
+                        {officeVoiceSnippet.text}
+                      </span>
+                    ) : (
+                      <span className="text-slate-500 italic">
+                        Say &quot;send Josiah to gym&quot; or &quot;what models
+                        are agents using?&quot;
+                      </span>
+                    )}
+                  </div>
 
-              <button
-                type="button"
-                onClick={enterJarvis}
-                className="cursor-pointer ml-auto shrink-0 rounded-full border border-cyan-400/50 bg-cyan-950/80 px-2.5 py-1 text-[10px] font-bold text-cyan-200 transition hover:bg-cyan-500 hover:text-slate-950 whitespace-nowrap"
-              >
-                OPEN CORE [J]
-              </button>
-            </div>
-          )}
-        </section>
+                  <button
+                    type="button"
+                    onClick={enterJarvis}
+                    className="ml-auto shrink-0 cursor-pointer rounded-full border border-cyan-400/50 bg-cyan-950/80 px-2.5 py-1 text-[10px] font-bold whitespace-nowrap text-cyan-200 transition hover:bg-cyan-500 hover:text-slate-950"
+                  >
+                    OPEN CORE [J]
+                  </button>
+                </div>
+              )}
+            </section>
 
             {/* Wing & Floor Quick-Switcher Bar (Reference Image 2 bottom wing cards) */}
             {!isCanvasFullscreen && (
               <div
                 data-testid="wing-quick-switcher"
-                className="hidden md:flex flex-wrap items-center gap-1.5 border-t border-slate-800/80 bg-[#0a0d14] px-3 py-1.5 shrink-0"
+                className="hidden shrink-0 flex-wrap items-center gap-1.5 border-t border-slate-800/80 bg-[#0a0d14] px-3 py-1.5 md:flex"
               >
                 {[
-                  { mode: 'OVERVIEW' as DepartmentMode, label: 'Main Campus', sub: `${agents.length} agents` },
-                  { mode: 'ALL_HANDS' as DepartmentMode, label: 'The Brain', sub: 'Core' },
-                  { mode: 'SERVER_ROOM' as DepartmentMode, label: 'Server Room', sub: 'NOC' },
-                  { mode: 'CAFETERIA' as DepartmentMode, label: 'Cafeteria & CR', sub: 'West Wing' },
-                  { mode: 'GYM' as DepartmentMode, label: 'Gym & Pantry', sub: 'Wellness' },
-                  { mode: 'PICKLEBALL' as DepartmentMode, label: 'Pickleball Court', sub: 'Outdoor 2v2' },
+                  {
+                    mode: 'OVERVIEW' as DepartmentMode,
+                    label: 'Main Campus',
+                    sub: `${agents.length} agents`,
+                  },
+                  {
+                    mode: 'ALL_HANDS' as DepartmentMode,
+                    label: 'The Brain',
+                    sub: 'Core',
+                  },
+                  {
+                    mode: 'SERVER_ROOM' as DepartmentMode,
+                    label: 'Server Room',
+                    sub: 'NOC',
+                  },
+                  {
+                    mode: 'CAFETERIA' as DepartmentMode,
+                    label: 'Cafeteria & CR',
+                    sub: 'West Wing',
+                  },
+                  {
+                    mode: 'GYM' as DepartmentMode,
+                    label: 'Gym & Pantry',
+                    sub: 'Wellness',
+                  },
+                  {
+                    mode: 'PICKLEBALL' as DepartmentMode,
+                    label: 'Pickleball Court',
+                    sub: 'Outdoor 2v2',
+                  },
                 ].map((wing) => {
                   const isActive = currentMode === wing.mode
                   return (
@@ -1773,19 +1956,23 @@ function HQCommandPage() {
                       key={wing.mode}
                       type="button"
                       onClick={() => handleGlobalModeChange(wing.mode)}
-                      className={`cursor-pointer flex items-center gap-1.5 rounded-lg border px-2.5 py-1 font-mono text-left transition-all whitespace-nowrap ${
+                      className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-left font-mono whitespace-nowrap transition-all ${
                         isActive
                           ? 'border-cyan-400/60 bg-cyan-500/15 text-cyan-200 shadow-sm'
                           : 'border-slate-800 bg-slate-950/70 text-slate-300 hover:border-slate-700 hover:bg-slate-900'
                       }`}
                     >
                       <span
-                        className={`h-2 w-2 rounded-full shrink-0 ${
+                        className={`h-2 w-2 shrink-0 rounded-full ${
                           isActive ? 'bg-cyan-400' : 'bg-slate-600'
                         }`}
                       />
-                      <span className="text-[11px] font-bold">{wing.label}</span>
-                      <span className="hidden 2xl:inline text-[10px] text-slate-500">{wing.sub}</span>
+                      <span className="text-[11px] font-bold">
+                        {wing.label}
+                      </span>
+                      <span className="hidden text-[10px] text-slate-500 2xl:inline">
+                        {wing.sub}
+                      </span>
                     </button>
                   )
                 })}
@@ -1793,124 +1980,134 @@ function HQCommandPage() {
             )}
           </div>
 
-        {/* Full-Screen Jarvis Holographic Interior Chamber (Persistently mounted so Always-On Voice works seamlessly across entering & exiting JARVIS) */}
-        <JarvisInterior
-          agents={agents}
-          approvals={approvals}
-          logs={logs}
-          currentMode={currentMode}
-          agentRouteOverrides={agentRouteOverrides}
-          is2DDefault={is2DView}
-          coreState={jarvisCoreState}
-          isOpen={jarvisPhase === 'inside'}
-          onVoiceTranscription={(transcript, role) =>
-            setOfficeVoiceSnippet({ text: transcript, role, timestamp: Date.now() })
-          }
-          onCoreStateChange={setJarvisCoreState}
-          onExit={exitJarvis}
-          onSelectAgentAndExit={(ag) => {
-            setSelectedAgent(ag)
-            exitJarvis()
-          }}
-          onGlobalModeChange={handleGlobalModeChange}
-          onRouteIndividualAgent={(agentId, destination, description) => {
-            const found = agents.find(
-              (a) =>
-                a.id.toLowerCase() === agentId.toLowerCase() ||
-                a.name.toLowerCase() === agentId.toLowerCase()
-            )
-            if (!found) return
-            const targetMode: DepartmentMode =
-              destination === 'pantry'
-                ? 'PANTRY'
-                : destination === 'gym'
-                  ? 'GYM'
-                  : destination === 'meeting'
-                    ? 'ALL_HANDS'
-                    : 'FOCUS_WORK'
-            const newStatus: Agent['status'] =
-              destination === 'pantry'
-                ? 'on_break'
-                : destination === 'gym'
-                  ? 'at_gym'
-                  : destination === 'meeting'
-                    ? 'in_meeting'
-                    : 'working'
-            handleRouteIndividualAgent(
-              found,
-              targetMode,
-              newStatus,
-              description
-            )
-          }}
-          onApprove={(approvalId, decision) =>
-            void handleGoSignal(
-              approvalId,
-              decision === 'approved' ? 'approve' : 'reject'
-            )
-          }
-        />
+          {/* Full-Screen Jarvis Holographic Interior Chamber (Persistently mounted so Always-On Voice works seamlessly across entering & exiting JARVIS) */}
+          <JarvisInterior
+            agents={agents}
+            approvals={approvals}
+            logs={logs}
+            currentMode={currentMode}
+            agentRouteOverrides={agentRouteOverrides}
+            is2DDefault={is2DView}
+            coreState={jarvisCoreState}
+            isOpen={jarvisPhase === 'inside'}
+            onVoiceTranscription={(transcript, role) =>
+              setOfficeVoiceSnippet({
+                text: transcript,
+                role,
+                timestamp: Date.now(),
+              })
+            }
+            onCoreStateChange={setJarvisCoreState}
+            onExit={exitJarvis}
+            onSelectAgentAndExit={(ag) => {
+              setSelectedAgent(ag)
+              exitJarvis()
+            }}
+            onGlobalModeChange={handleGlobalModeChange}
+            onRouteIndividualAgent={(agentId, destination, description) => {
+              const found = agents.find(
+                (a) =>
+                  a.id.toLowerCase() === agentId.toLowerCase() ||
+                  a.name.toLowerCase() === agentId.toLowerCase()
+              )
+              if (!found) return
+              const targetMode: DepartmentMode =
+                destination === 'pantry'
+                  ? 'PANTRY'
+                  : destination === 'gym'
+                    ? 'GYM'
+                    : destination === 'meeting'
+                      ? 'ALL_HANDS'
+                      : 'FOCUS_WORK'
+              const newStatus: Agent['status'] =
+                destination === 'pantry'
+                  ? 'on_break'
+                  : destination === 'gym'
+                    ? 'at_gym'
+                    : destination === 'meeting'
+                      ? 'in_meeting'
+                      : 'working'
+              handleRouteIndividualAgent(
+                found,
+                targetMode,
+                newStatus,
+                description
+              )
+            }}
+            onApprove={(approvalId, decision) =>
+              void handleGoSignal(
+                approvalId,
+                decision === 'approved' ? 'approve' : 'reject'
+              )
+            }
+          />
 
-        {/* ===================================================================== */}
-        {/* SLIDE-OVER FULL AI AGENT ROSTER DRAWER (Search, Filter & Quick Route) */}
-        {/* ===================================================================== */}
-        {isRosterOpen && (
-          <div className="absolute inset-y-0 right-0 md:right-[390px] lg:right-[430px] w-full max-w-md bg-[#0a0e17]/95 backdrop-blur-xl border-l border-slate-800 shadow-2xl z-40 flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="font-mono text-xs font-black tracking-wider text-slate-100 uppercase">
-                  AI AGENT ROSTER ({agents.length} ONLINE)
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsRosterOpen(false)}
-                className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-[11px] font-bold text-slate-300 hover:bg-slate-800 hover:text-white whitespace-nowrap"
-              >
-                Close ✕
-              </button>
-            </div>
-
-            {/* Tab Selector: Roster vs Wellness */}
-            <div className="flex border-b border-slate-800 bg-slate-950/90 font-mono text-xs shrink-0">
-              <button
-                type="button"
-                onClick={() => setRosterTab('roster')}
-                className={`flex-1 py-2 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${
-                  rosterTab === 'roster'
-                    ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                ROSTER DIRECTORY
-              </button>
-              <button
-                type="button"
-                onClick={() => setRosterTab('wellness')}
-                className={`flex-1 py-2 font-bold text-center border-b-2 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap ${
-                  rosterTab === 'wellness'
-                    ? 'border-emerald-400 text-emerald-300 bg-emerald-950/20'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>WELLNESS &amp; VITALS</span>
-                <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
-                  SIMULATED
-                </span>
-              </button>
-            </div>
-
-            {/* Department Team Averages & Heat Strip (Visible in Wellness Tab) */}
-            {rosterTab === 'wellness' && (
-              <div className="border-b border-slate-800/80 bg-slate-950/70 p-3 space-y-2 shrink-0">
-                <div className="flex items-center justify-between text-[10px] font-mono font-bold text-slate-300">
-                  <span>DEPARTMENT VITALS HEAT STRIP</span>
-                  <span className="text-emerald-400">HQ AVERAGE</span>
+          {/* ===================================================================== */}
+          {/* SLIDE-OVER FULL AI AGENT ROSTER DRAWER (Search, Filter & Quick Route) */}
+          {/* ===================================================================== */}
+          {isRosterOpen && (
+            <div className="absolute inset-y-0 right-0 z-40 flex w-full max-w-md flex-col border-l border-slate-800 bg-[#0a0e17]/95 shadow-2xl backdrop-blur-xl md:right-[390px] lg:right-[430px]">
+              <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400" />
+                  <span className="font-mono text-xs font-black tracking-wider text-slate-100 uppercase">
+                    AI AGENT ROSTER ({agents.length} ONLINE)
+                  </span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 font-mono text-[9px]">
-                  {['ENGINEERING', 'QA', 'GROWTH', 'INTELLIGENCE', 'OPERATIONS', 'COMMAND'].map(
-                    (dept) => {
+                <button
+                  type="button"
+                  onClick={() => setIsRosterOpen(false)}
+                  className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 font-mono text-[11px] font-bold whitespace-nowrap text-slate-300 hover:bg-slate-800 hover:text-white"
+                >
+                  Close ✕
+                </button>
+              </div>
+
+              {/* Tab Selector: Roster vs Wellness */}
+              <div className="flex shrink-0 border-b border-slate-800 bg-slate-950/90 font-mono text-xs">
+                <button
+                  type="button"
+                  onClick={() => setRosterTab('roster')}
+                  className={`flex-1 border-b-2 py-2 text-center font-bold whitespace-nowrap transition-colors ${
+                    rosterTab === 'roster'
+                      ? 'border-cyan-400 bg-cyan-950/20 text-cyan-300'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  ROSTER DIRECTORY
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRosterTab('wellness')}
+                  className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 py-2 text-center font-bold whitespace-nowrap transition-colors ${
+                    rosterTab === 'wellness'
+                      ? 'border-emerald-400 bg-emerald-950/20 text-emerald-300'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <span>WELLNESS &amp; VITALS</span>
+                  <span className="rounded border border-amber-500/30 bg-amber-500/20 px-1 text-[9px] font-semibold text-amber-300">
+                    SIMULATED
+                  </span>
+                </button>
+              </div>
+
+              {/* Department Team Averages & Heat Strip (Visible in Wellness Tab) */}
+              {rosterTab === 'wellness' && (
+                <div className="shrink-0 space-y-2 border-b border-slate-800/80 bg-slate-950/70 p-3">
+                  <div className="flex items-center justify-between font-mono text-[10px] font-bold text-slate-300">
+                    <span>DEPARTMENT VITALS HEAT STRIP</span>
+                    <span className="text-emerald-400">HQ AVERAGE</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 font-mono text-[9px]">
+                    {[
+                      'ENGINEERING',
+                      'QA',
+                      'GROWTH',
+                      'INTELLIGENCE',
+                      'OPERATIONS',
+                      'COMMAND',
+                    ].map((dept) => {
                       const deptAgents = agents.filter(
                         (a) => (a.department || '').toUpperCase() === dept
                       )
@@ -1919,7 +2116,8 @@ function HQCommandPage() {
                           ? Math.round(
                               deptAgents.reduce(
                                 (acc, ag) =>
-                                  acc + needsManager.getAgentNeeds(ag.id).energy,
+                                  acc +
+                                  needsManager.getAgentNeeds(ag.id).energy,
                                 0
                               ) / deptAgents.length
                             )
@@ -1929,13 +2127,13 @@ function HQCommandPage() {
                           key={dept}
                           className="rounded border border-slate-800 bg-slate-900/60 p-1.5"
                         >
-                          <div className="flex justify-between text-slate-400 pb-0.5">
+                          <div className="flex justify-between pb-0.5 text-slate-400">
                             <span className="truncate">{dept}</span>
                             <span className="font-bold text-slate-200">
                               {avgEnergy}%
                             </span>
                           </div>
-                          <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
+                          <div className="h-1 w-full overflow-hidden rounded-full bg-slate-950">
                             <div
                               className={`h-full rounded-full ${
                                 avgEnergy > 60
@@ -1949,86 +2147,92 @@ function HQCommandPage() {
                           </div>
                         </div>
                       )
-                    }
-                  )}
-                </div>
+                    })}
+                  </div>
 
-                {/* Autonomy Policy Selector */}
-                <div className="flex items-center justify-between pb-1 border-b border-slate-800 font-mono text-[10px]">
-                  <span className="text-slate-400">Jarvis Autonomy:</span>
-                  <div className="flex items-center gap-1">
-                    {(
-                      [
-                        { id: 'STANDING_POLICY', label: 'Standing Policy' },
-                        { id: 'ASK_FOR_ALL', label: 'Ask for All' },
-                        { id: 'OFF', label: 'Off' },
-                      ] as const
-                    ).map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => {
-                          setAutonomyMode(m.id)
-                          jarvisWellnessManager.updatePolicy({ mode: m.id })
-                        }}
-                        className={`rounded px-1.5 py-0.5 font-bold transition-colors whitespace-nowrap ${
-                          autonomyMode === m.id
-                            ? 'bg-cyan-500 text-slate-950'
-                            : 'bg-slate-900 text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        {m.label}
-                      </button>
-                    ))}
+                  {/* Autonomy Policy Selector */}
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-1 font-mono text-[10px]">
+                    <span className="text-slate-400">Jarvis Autonomy:</span>
+                    <div className="flex items-center gap-1">
+                      {(
+                        [
+                          { id: 'STANDING_POLICY', label: 'Standing Policy' },
+                          { id: 'ASK_FOR_ALL', label: 'Ask for All' },
+                          { id: 'OFF', label: 'Off' },
+                        ] as const
+                      ).map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => {
+                            setAutonomyMode(m.id)
+                            jarvisWellnessManager.updatePolicy({ mode: m.id })
+                          }}
+                          className={`rounded px-1.5 py-0.5 font-bold whitespace-nowrap transition-colors ${
+                            autonomyMode === m.id
+                              ? 'bg-cyan-500 text-slate-950'
+                              : 'bg-slate-900 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Wellness Sort Selector */}
+                  <div className="flex items-center justify-between pt-1 font-mono text-[10px]">
+                    <span className="text-slate-400">Sort By:</span>
+                    <div className="flex items-center gap-1">
+                      {(
+                        [
+                          { id: 'lowest_energy', label: 'Lowest Energy ⚡' },
+                          { id: 'lowest_morale', label: 'Lowest Morale 🧠' },
+                          { id: 'name', label: 'Name (A-Z)' },
+                        ] as const
+                      ).map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setWellnessSort(s.id)}
+                          className={`rounded px-1.5 py-0.5 font-bold whitespace-nowrap transition-colors ${
+                            wellnessSort === s.id
+                              ? 'bg-emerald-500 text-slate-950'
+                              : 'bg-slate-900 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
+              )}
 
-                {/* Wellness Sort Selector */}
-                <div className="flex items-center justify-between pt-1 font-mono text-[10px]">
-                  <span className="text-slate-400">Sort By:</span>
-                  <div className="flex items-center gap-1">
-                    {(
-                      [
-                        { id: 'lowest_energy', label: 'Lowest Energy ⚡' },
-                        { id: 'lowest_morale', label: 'Lowest Morale 🧠' },
-                        { id: 'name', label: 'Name (A-Z)' },
-                      ] as const
-                    ).map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => setWellnessSort(s.id)}
-                        className={`rounded px-1.5 py-0.5 font-bold transition-colors whitespace-nowrap ${
-                          wellnessSort === s.id
-                            ? 'bg-emerald-500 text-slate-950'
-                            : 'bg-slate-900 text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Search & Department Filter Bar */}
-            <div className="border-b border-slate-800/80 p-3 space-y-2 bg-slate-950/60 shrink-0">
-              <input
-                type="text"
-                value={rosterSearch}
-                onChange={(e) => setRosterSearch(e.target.value)}
-                placeholder="Search agent by name, role, or room..."
-                className="w-full rounded-lg border border-slate-800 bg-slate-900/90 px-3 py-1.5 font-mono text-xs text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
-              />
-              <div className="flex items-center gap-1 overflow-x-auto pb-1">
-                {['ALL', 'ENGINEERING', 'QA', 'GROWTH', 'INTELLIGENCE', 'OPERATIONS', 'COMMAND'].map(
-                  (dept) => (
+              {/* Search & Department Filter Bar */}
+              <div className="shrink-0 space-y-2 border-b border-slate-800/80 bg-slate-950/60 p-3">
+                <input
+                  type="text"
+                  value={rosterSearch}
+                  onChange={(e) => setRosterSearch(e.target.value)}
+                  placeholder="Search agent by name, role, or room..."
+                  className="w-full rounded-lg border border-slate-800 bg-slate-900/90 px-3 py-1.5 font-mono text-xs text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
+                />
+                <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                  {[
+                    'ALL',
+                    'ENGINEERING',
+                    'QA',
+                    'GROWTH',
+                    'INTELLIGENCE',
+                    'OPERATIONS',
+                    'COMMAND',
+                  ].map((dept) => (
                     <button
                       key={dept}
                       type="button"
                       onClick={() => setRosterDeptFilter(dept)}
-                      className={`cursor-pointer rounded-md px-2 py-0.5 font-mono text-[10px] font-bold transition-colors whitespace-nowrap ${
+                      className={`cursor-pointer rounded-md px-2 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap transition-colors ${
                         rosterDeptFilter === dept
                           ? 'bg-cyan-500 text-slate-950'
                           : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
@@ -2036,1382 +2240,1657 @@ function HQCommandPage() {
                     >
                       {dept}
                     </button>
-                  )
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Scrollable List of All 24 Agents */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {agents
-                .filter((ag) => {
-                  const q = rosterSearch.trim().toLowerCase()
-                  const matchesSearch =
-                    !q ||
-                    ag.name.toLowerCase().includes(q) ||
-                    (ag.role || '').toLowerCase().includes(q) ||
-                    (ag.room || '').toLowerCase().includes(q) ||
-                    (ag.department || '').toLowerCase().includes(q)
-                  const deptStr = `${ag.department || ''} ${ag.room || ''} ${ag.role || ''}`.toUpperCase()
-                  const matchesDept =
-                    rosterDeptFilter === 'ALL' || deptStr.includes(rosterDeptFilter)
-                  return matchesSearch && matchesDept
-                })
-                .map((ag) => {
-                  const effMode = agentRouteOverrides[ag.id] || currentMode
-                  const stStyle = getCharacterStyle(ag.id, ag.name)
-                  const stBadge = getAgentStatusBadge(ag.status, effMode)
-                  const isSel = selectedAgent?.id === ag.id
-                  return (
-                    <div
-                      key={ag.id}
-                      onClick={() => setSelectedAgent(ag)}
-                      className={`cursor-pointer rounded-xl border p-2.5 transition-all ${
-                        isSel
-                          ? 'border-cyan-500/80 bg-cyan-950/30 shadow-md'
-                          : 'border-slate-800/80 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className="relative flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-lg border border-slate-700/80 overflow-hidden"
-                            style={{ backgroundColor: '#0f172a' }}
-                          >
+              {/* Scrollable List of All 24 Agents */}
+              <div className="flex-1 space-y-2 overflow-y-auto p-3">
+                {agents
+                  .filter((ag) => {
+                    const q = rosterSearch.trim().toLowerCase()
+                    const matchesSearch =
+                      !q ||
+                      ag.name.toLowerCase().includes(q) ||
+                      (ag.role || '').toLowerCase().includes(q) ||
+                      (ag.room || '').toLowerCase().includes(q) ||
+                      (ag.department || '').toLowerCase().includes(q)
+                    const deptStr =
+                      `${ag.department || ''} ${ag.room || ''} ${ag.role || ''}`.toUpperCase()
+                    const matchesDept =
+                      rosterDeptFilter === 'ALL' ||
+                      deptStr.includes(rosterDeptFilter)
+                    return matchesSearch && matchesDept
+                  })
+                  .map((ag) => {
+                    const effMode = agentRouteOverrides[ag.id] || currentMode
+                    const stStyle = getCharacterStyle(ag.id, ag.name)
+                    const stBadge = getAgentStatusBadge(ag.status, effMode)
+                    const isSel = selectedAgent?.id === ag.id
+                    return (
+                      <div
+                        key={ag.id}
+                        onClick={() => setSelectedAgent(ag)}
+                        className={`cursor-pointer rounded-xl border p-2.5 transition-all ${
+                          isSel
+                            ? 'border-cyan-500/80 bg-cyan-950/30 shadow-md'
+                            : 'border-slate-800/80 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex min-w-0 items-center gap-2.5">
                             <div
-                              className="h-1.5 w-4 rounded-t-sm"
-                              style={{ backgroundColor: stStyle.hairColor }}
-                            />
-                            <div
-                              className="h-2 w-3.5"
-                              style={{ backgroundColor: stStyle.skinColor }}
-                            />
-                            <div
-                              className="h-2.5 w-5 rounded-t-sm"
-                              style={{ backgroundColor: stStyle.outfitColor }}
-                            />
+                              className="relative flex h-8 w-8 shrink-0 flex-col items-center justify-center overflow-hidden rounded-lg border border-slate-700/80"
+                              style={{ backgroundColor: '#0f172a' }}
+                            >
+                              <div
+                                className="h-1.5 w-4 rounded-t-sm"
+                                style={{ backgroundColor: stStyle.hairColor }}
+                              />
+                              <div
+                                className="h-2 w-3.5"
+                                style={{ backgroundColor: stStyle.skinColor }}
+                              />
+                              <div
+                                className="h-2.5 w-5 rounded-t-sm"
+                                style={{ backgroundColor: stStyle.outfitColor }}
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="truncate font-mono text-xs font-bold text-slate-100">
+                                  {ag.name}
+                                </span>
+                                <span className="rounded bg-slate-800 px-1 py-0.5 font-mono text-[9px] whitespace-nowrap text-slate-400 uppercase">
+                                  {stStyle.gender === 'female' ? '♀' : '♂'}
+                                </span>
+                              </div>
+                              <div className="truncate font-mono text-[10px] text-slate-400">
+                                {ag.role} •{' '}
+                                <span className="text-cyan-400">{ag.room}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-mono text-xs font-bold text-slate-100 truncate">
-                                {ag.name}
-                              </span>
-                              <span className="rounded bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-400 uppercase whitespace-nowrap">
-                                {stStyle.gender === 'female' ? '♀' : '♂'}
-                              </span>
-                            </div>
-                            <div className="font-mono text-[10px] text-slate-400 truncate">
-                              {ag.role} • <span className="text-cyan-400">{ag.room}</span>
-                            </div>
+
+                          <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-2 py-0.5">
+                            <span
+                              className={`h-2 w-2 rounded-full ${stBadge.dotTailwind}`}
+                            />
+                            <span className="font-mono text-[9px] font-semibold whitespace-nowrap text-slate-200">
+                              {stBadge.label}
+                            </span>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 rounded-full bg-slate-950 px-2 py-0.5 border border-slate-800 shrink-0">
-                          <span className={`h-2 w-2 rounded-full ${stBadge.dotTailwind}`} />
-                          <span className="font-mono text-[9px] font-semibold text-slate-200 whitespace-nowrap">
-                            {stBadge.label}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Wellness Tab Details (Vitals bars, next action, pin controls) */}
-                      {rosterTab === 'wellness' && (() => {
-                        const needs = needsManager.getAgentNeeds(ag.id)
-                        const nextAction = needsManager.evaluateNextAction(ag.id)
-                        const currentPin = agentPins[ag.id] || 'NORMAL'
-                        return (
-                          <div className="mt-2 space-y-2 border-t border-slate-800/80 pt-2 font-mono text-[9px]">
-                            {/* Pin Status & Current Activity */}
-                            <div className="flex items-center justify-between text-slate-300">
-                              <span className="text-slate-400">STATE: <strong className="text-cyan-300 uppercase">{needs.state}</strong></span>
-                              <span className={`px-1.5 py-0.2 rounded font-bold uppercase ${
-                                currentPin === 'NEVER_REST'
-                                  ? 'bg-rose-950/80 text-rose-300 border border-rose-600/40'
-                                  : currentPin === 'MUST_REST'
-                                    ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-600/40'
-                                    : 'bg-slate-900 text-slate-400 border border-slate-800'
-                              }`}>
-                                PIN: {currentPin}
-                              </span>
-                            </div>
-
-                            {/* 6 Vitals Bars */}
-                            <div className="grid grid-cols-3 gap-1.5">
-                              <div>
-                                <div className="flex justify-between text-[8px] text-slate-400">
-                                  <span>ENERGY</span>
-                                  <span className="font-bold text-slate-200">{Math.round(needs.energy)}%</span>
-                                </div>
-                                <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full ${
-                                      needs.energy > 60 ? 'bg-emerald-400' : needs.energy > 30 ? 'bg-yellow-400' : 'bg-rose-400'
+                        {/* Wellness Tab Details (Vitals bars, next action, pin controls) */}
+                        {rosterTab === 'wellness' &&
+                          (() => {
+                            const needs = needsManager.getAgentNeeds(ag.id)
+                            const nextAction = needsManager.evaluateNextAction(
+                              ag.id
+                            )
+                            const currentPin = agentPins[ag.id] || 'NORMAL'
+                            return (
+                              <div className="mt-2 space-y-2 border-t border-slate-800/80 pt-2 font-mono text-[9px]">
+                                {/* Pin Status & Current Activity */}
+                                <div className="flex items-center justify-between text-slate-300">
+                                  <span className="text-slate-400">
+                                    STATE:{' '}
+                                    <strong className="text-cyan-300 uppercase">
+                                      {needs.state}
+                                    </strong>
+                                  </span>
+                                  <span
+                                    className={`py-0.2 rounded px-1.5 font-bold uppercase ${
+                                      currentPin === 'NEVER_REST'
+                                        ? 'border border-rose-600/40 bg-rose-950/80 text-rose-300'
+                                        : currentPin === 'MUST_REST'
+                                          ? 'border border-emerald-600/40 bg-emerald-950/80 text-emerald-300'
+                                          : 'border border-slate-800 bg-slate-900 text-slate-400'
                                     }`}
-                                    style={{ width: `${needs.energy}%` }}
-                                  />
+                                  >
+                                    PIN: {currentPin}
+                                  </span>
                                 </div>
-                              </div>
-                              <div>
-                                <div className="flex justify-between text-[8px] text-slate-400">
-                                  <span>HUNGER</span>
-                                  <span className="font-bold text-slate-200">{Math.round(needs.hunger)}%</span>
-                                </div>
-                                <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
-                                  <div className="h-full rounded-full bg-amber-400" style={{ width: `${needs.hunger}%` }} />
-                                </div>
-                              </div>
-                              <div>
-                                <div className="flex justify-between text-[8px] text-slate-400">
-                                  <span>THIRST</span>
-                                  <span className="font-bold text-slate-200">{Math.round(needs.thirst)}%</span>
-                                </div>
-                                <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
-                                  <div className="h-full rounded-full bg-cyan-400" style={{ width: `${needs.thirst}%` }} />
-                                </div>
-                              </div>
-                              <div>
-                                <div className="flex justify-between text-[8px] text-slate-400">
-                                  <span>BLADDER</span>
-                                  <span className="font-bold text-slate-200">{Math.round(needs.bladder)}%</span>
-                                </div>
-                                <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
-                                  <div className="h-full rounded-full bg-purple-400" style={{ width: `${needs.bladder}%` }} />
-                                </div>
-                              </div>
-                              <div>
-                                <div className="flex justify-between text-[8px] text-slate-400">
-                                  <span>HEALTH</span>
-                                  <span className="font-bold text-slate-200">{Math.round(needs.health)}%</span>
-                                </div>
-                                <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
-                                  <div className="h-full rounded-full bg-emerald-400" style={{ width: `${needs.health}%` }} />
-                                </div>
-                              </div>
-                              <div>
-                                <div className="flex justify-between text-[8px] text-slate-400">
-                                  <span>MORALE</span>
-                                  <span className="font-bold text-slate-200">{Math.round(needs.morale)}%</span>
-                                </div>
-                                <div className="h-1 w-full rounded-full bg-slate-950 overflow-hidden">
-                                  <div className="h-full rounded-full bg-pink-400" style={{ width: `${needs.morale}%` }} />
-                                </div>
-                              </div>
-                            </div>
 
-                            {/* NEXT Action */}
-                            <div className="rounded bg-slate-950/80 p-1 text-[9px] text-slate-300">
-                              <span className="text-slate-400 font-bold uppercase">NEXT: </span>
-                              <span className="text-emerald-300 font-bold">{nextAction.kind.toUpperCase()}</span>
-                              <span className="text-slate-400"> — {nextAction.reason}</span>
-                            </div>
+                                {/* 6 Vitals Bars */}
+                                <div className="grid grid-cols-3 gap-1.5">
+                                  <div>
+                                    <div className="flex justify-between text-[8px] text-slate-400">
+                                      <span>ENERGY</span>
+                                      <span className="font-bold text-slate-200">
+                                        {Math.round(needs.energy)}%
+                                      </span>
+                                    </div>
+                                    <div className="h-1 w-full overflow-hidden rounded-full bg-slate-950">
+                                      <div
+                                        className={`h-full rounded-full ${
+                                          needs.energy > 60
+                                            ? 'bg-emerald-400'
+                                            : needs.energy > 30
+                                              ? 'bg-yellow-400'
+                                              : 'bg-rose-400'
+                                        }`}
+                                        style={{ width: `${needs.energy}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="flex justify-between text-[8px] text-slate-400">
+                                      <span>HUNGER</span>
+                                      <span className="font-bold text-slate-200">
+                                        {Math.round(needs.hunger)}%
+                                      </span>
+                                    </div>
+                                    <div className="h-1 w-full overflow-hidden rounded-full bg-slate-950">
+                                      <div
+                                        className="h-full rounded-full bg-amber-400"
+                                        style={{ width: `${needs.hunger}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="flex justify-between text-[8px] text-slate-400">
+                                      <span>THIRST</span>
+                                      <span className="font-bold text-slate-200">
+                                        {Math.round(needs.thirst)}%
+                                      </span>
+                                    </div>
+                                    <div className="h-1 w-full overflow-hidden rounded-full bg-slate-950">
+                                      <div
+                                        className="h-full rounded-full bg-cyan-400"
+                                        style={{ width: `${needs.thirst}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="flex justify-between text-[8px] text-slate-400">
+                                      <span>BLADDER</span>
+                                      <span className="font-bold text-slate-200">
+                                        {Math.round(needs.bladder)}%
+                                      </span>
+                                    </div>
+                                    <div className="h-1 w-full overflow-hidden rounded-full bg-slate-950">
+                                      <div
+                                        className="h-full rounded-full bg-purple-400"
+                                        style={{ width: `${needs.bladder}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="flex justify-between text-[8px] text-slate-400">
+                                      <span>HEALTH</span>
+                                      <span className="font-bold text-slate-200">
+                                        {Math.round(needs.health)}%
+                                      </span>
+                                    </div>
+                                    <div className="h-1 w-full overflow-hidden rounded-full bg-slate-950">
+                                      <div
+                                        className="h-full rounded-full bg-emerald-400"
+                                        style={{ width: `${needs.health}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="flex justify-between text-[8px] text-slate-400">
+                                      <span>MORALE</span>
+                                      <span className="font-bold text-slate-200">
+                                        {Math.round(needs.morale)}%
+                                      </span>
+                                    </div>
+                                    <div className="h-1 w-full overflow-hidden rounded-full bg-slate-950">
+                                      <div
+                                        className="h-full rounded-full bg-pink-400"
+                                        style={{ width: `${needs.morale}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
 
-                            {/* Wellness Quick Action Buttons */}
-                            <div className="flex flex-wrap items-center gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedAgent(ag)
-                                  handleRouteIndividualAgent(ag, 'NAP_ROOM', 'resting', 'Scheduled recovery rest in Nap Room')
-                                }}
-                                className="cursor-pointer rounded bg-cyan-950/60 border border-cyan-500/40 px-2 py-0.5 font-bold text-cyan-200 hover:bg-cyan-900 whitespace-nowrap"
-                              >
-                                Send to Rest 💤
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedAgent(ag)
-                                  handleRouteIndividualAgent(ag, 'FOCUS_WORK', 'working', 'Returned to workstation')
-                                }}
-                                className="cursor-pointer rounded bg-slate-900 border border-slate-700 px-2 py-0.5 font-bold text-slate-300 hover:bg-slate-800 whitespace-nowrap"
-                              >
-                                Wake Up ☀️
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const nextPin: AgentPinStatus = currentPin === 'NEVER_REST' ? 'NORMAL' : 'NEVER_REST'
-                                  setAgentPins((prev) => ({ ...prev, [ag.id]: nextPin }))
-                                  jarvisWellnessManager.setAgentPin(ag.id, nextPin)
-                                }}
-                                className={`cursor-pointer rounded px-2 py-0.5 font-bold whitespace-nowrap ${
-                                  currentPin === 'NEVER_REST'
-                                    ? 'bg-rose-500 text-slate-950'
-                                    : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
-                                }`}
-                              >
-                                {currentPin === 'NEVER_REST' ? 'Locked Never Rest 🔒' : 'Pin Never Rest'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const nextPin: AgentPinStatus = currentPin === 'MUST_REST' ? 'NORMAL' : 'MUST_REST'
-                                  setAgentPins((prev) => ({ ...prev, [ag.id]: nextPin }))
-                                  jarvisWellnessManager.setAgentPin(ag.id, nextPin)
-                                }}
-                                className={`cursor-pointer rounded px-2 py-0.5 font-bold whitespace-nowrap ${
-                                  currentPin === 'MUST_REST'
-                                    ? 'bg-emerald-500 text-slate-950'
-                                    : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
-                                }`}
-                              >
-                                {currentPin === 'MUST_REST' ? 'Locked Must Rest 🛡️' : 'Pin Must Rest'}
-                              </button>
-                            </div>
+                                {/* NEXT Action */}
+                                <div className="rounded bg-slate-950/80 p-1 text-[9px] text-slate-300">
+                                  <span className="font-bold text-slate-400 uppercase">
+                                    NEXT:{' '}
+                                  </span>
+                                  <span className="font-bold text-emerald-300">
+                                    {nextAction.kind.toUpperCase()}
+                                  </span>
+                                  <span className="text-slate-400">
+                                    {' '}
+                                    — {nextAction.reason}
+                                  </span>
+                                </div>
+
+                                {/* Wellness Quick Action Buttons */}
+                                <div
+                                  className="flex flex-wrap items-center gap-1 pt-1"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedAgent(ag)
+                                      handleRouteIndividualAgent(
+                                        ag,
+                                        'NAP_ROOM',
+                                        'resting',
+                                        'Scheduled recovery rest in Nap Room'
+                                      )
+                                    }}
+                                    className="cursor-pointer rounded border border-cyan-500/40 bg-cyan-950/60 px-2 py-0.5 font-bold whitespace-nowrap text-cyan-200 hover:bg-cyan-900"
+                                  >
+                                    Send to Rest 💤
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedAgent(ag)
+                                      handleRouteIndividualAgent(
+                                        ag,
+                                        'FOCUS_WORK',
+                                        'working',
+                                        'Returned to workstation'
+                                      )
+                                    }}
+                                    className="cursor-pointer rounded border border-slate-700 bg-slate-900 px-2 py-0.5 font-bold whitespace-nowrap text-slate-300 hover:bg-slate-800"
+                                  >
+                                    Wake Up ☀️
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const nextPin: AgentPinStatus =
+                                        currentPin === 'NEVER_REST'
+                                          ? 'NORMAL'
+                                          : 'NEVER_REST'
+                                      setAgentPins((prev) => ({
+                                        ...prev,
+                                        [ag.id]: nextPin,
+                                      }))
+                                      jarvisWellnessManager.setAgentPin(
+                                        ag.id,
+                                        nextPin
+                                      )
+                                    }}
+                                    className={`cursor-pointer rounded px-2 py-0.5 font-bold whitespace-nowrap ${
+                                      currentPin === 'NEVER_REST'
+                                        ? 'bg-rose-500 text-slate-950'
+                                        : 'border border-slate-700 bg-slate-900 text-slate-400 hover:text-white'
+                                    }`}
+                                  >
+                                    {currentPin === 'NEVER_REST'
+                                      ? 'Locked Never Rest 🔒'
+                                      : 'Pin Never Rest'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const nextPin: AgentPinStatus =
+                                        currentPin === 'MUST_REST'
+                                          ? 'NORMAL'
+                                          : 'MUST_REST'
+                                      setAgentPins((prev) => ({
+                                        ...prev,
+                                        [ag.id]: nextPin,
+                                      }))
+                                      jarvisWellnessManager.setAgentPin(
+                                        ag.id,
+                                        nextPin
+                                      )
+                                    }}
+                                    className={`cursor-pointer rounded px-2 py-0.5 font-bold whitespace-nowrap ${
+                                      currentPin === 'MUST_REST'
+                                        ? 'bg-emerald-500 text-slate-950'
+                                        : 'border border-slate-700 bg-slate-900 text-slate-400 hover:text-white'
+                                    }`}
+                                  >
+                                    {currentPin === 'MUST_REST'
+                                      ? 'Locked Must Rest 🛡️'
+                                      : 'Pin Must Rest'}
+                                  </button>
+                                </div>
+                              </div>
+                            )
+                          })()}
+
+                        {/* Quick 1-Click Route Buttons inside Roster Card */}
+                        {rosterTab === 'roster' && (
+                          <div
+                            className="mt-2 grid grid-cols-4 gap-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAgent(ag)
+                                handleRouteIndividualAgent(
+                                  ag,
+                                  'FOCUS_WORK',
+                                  'working',
+                                  `Executing sprint tasks at ${ag.room || 'Workstation'}`
+                                )
+                              }}
+                              className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold whitespace-nowrap transition-colors ${
+                                effMode === 'FOCUS_WORK' ||
+                                effMode === 'OVERVIEW'
+                                  ? 'border-emerald-500/60 bg-emerald-950/60 text-emerald-300'
+                                  : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                              }`}
+                            >
+                              💻 Desk
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAgent(ag)
+                                handleRouteIndividualAgent(
+                                  ag,
+                                  'PANTRY',
+                                  'on_break',
+                                  'Recharging at Espresso Bar & Pantry Lounge'
+                                )
+                              }}
+                              className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold whitespace-nowrap transition-colors ${
+                                effMode === 'PANTRY'
+                                  ? 'border-yellow-500/60 bg-yellow-950/60 text-yellow-300'
+                                  : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                              }`}
+                            >
+                              ☕ Pantry
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAgent(ag)
+                                handleRouteIndividualAgent(
+                                  ag,
+                                  'GYM',
+                                  'at_gym',
+                                  'Active recovery workout in Rec & Gym'
+                                )
+                              }}
+                              className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold whitespace-nowrap transition-colors ${
+                                effMode === 'GYM'
+                                  ? 'border-pink-500/60 bg-pink-950/60 text-pink-300'
+                                  : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                              }`}
+                            >
+                              🏋️ Gym
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAgent(ag)
+                                handleRouteIndividualAgent(
+                                  ag,
+                                  'ALL_HANDS',
+                                  'in_meeting',
+                                  'Joining Architecture Standup at The Brain'
+                                )
+                              }}
+                              className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold whitespace-nowrap transition-colors ${
+                                effMode === 'ALL_HANDS'
+                                  ? 'border-blue-500/60 bg-blue-950/60 text-blue-300'
+                                  : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                              }`}
+                            >
+                              🧠 Brain
+                            </button>
                           </div>
-                        )
-                      })()}
+                        )}
+                      </div>
+                    )
+                  })}
+              </div>
+            </div>
+          )}
 
-                      {/* Quick 1-Click Route Buttons inside Roster Card */}
-                      {rosterTab === 'roster' && (
-                        <div
-                          className="mt-2 grid grid-cols-4 gap-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedAgent(ag)
-                              handleRouteIndividualAgent(
-                                ag,
-                                'FOCUS_WORK',
-                                'working',
-                                `Executing sprint tasks at ${ag.room || 'Workstation'}`
-                              )
-                            }}
-                            className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
-                              effMode === 'FOCUS_WORK' || effMode === 'OVERVIEW'
-                                ? 'border-emerald-500/60 bg-emerald-950/60 text-emerald-300'
-                                : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                            }`}
-                          >
-                            💻 Desk
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedAgent(ag)
-                              handleRouteIndividualAgent(
-                                ag,
-                                'PANTRY',
-                                'on_break',
-                                'Recharging at Espresso Bar & Pantry Lounge'
-                              )
-                            }}
-                            className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
-                              effMode === 'PANTRY'
-                                ? 'border-yellow-500/60 bg-yellow-950/60 text-yellow-300'
-                                : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                            }`}
-                          >
-                            ☕ Pantry
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedAgent(ag)
-                              handleRouteIndividualAgent(
-                                ag,
-                                'GYM',
-                                'at_gym',
-                                'Active recovery workout in Rec & Gym'
-                              )
-                            }}
-                            className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
-                              effMode === 'GYM'
-                                ? 'border-pink-500/60 bg-pink-950/60 text-pink-300'
-                                : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                            }`}
-                          >
-                            🏋️ Gym
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedAgent(ag)
-                              handleRouteIndividualAgent(
-                                ag,
-                                'ALL_HANDS',
-                                'in_meeting',
-                                'Joining Architecture Standup at The Brain'
-                              )
-                            }}
-                            className={`cursor-pointer rounded border px-1.5 py-1 font-mono text-[9px] font-bold transition-colors whitespace-nowrap ${
-                              effMode === 'ALL_HANDS'
-                                ? 'border-blue-500/60 bg-blue-950/60 text-blue-300'
-                                : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                            }`}
-                          >
-                            🧠 Brain
-                          </button>
-                        </div>
-                      )}
+          {/* Right: Agent Hierarchy & Operations Console */}
+          {!isCanvasFullscreen && (
+            <aside className="z-20 flex w-full shrink-0 flex-col overflow-y-auto border-l border-slate-800/80 bg-[#0d111c] shadow-2xl md:w-88 lg:w-96 xl:w-104">
+              {/* Section 0: CAMPUS LIVE COUNTER (Real-Time Activity & Telemetry Breakdown) */}
+              <div className="shrink-0 border-b border-slate-800/80 bg-slate-950/50 p-3.5">
+                <div className="flex items-center justify-between border-b border-slate-800/70 pb-2">
+                  <span className="font-mono text-[11px] font-black tracking-widest text-slate-300 uppercase">
+                    CAMPUS LIVE COUNTER
+                  </span>
+                  <span className="font-mono text-[10px] font-bold text-emerald-400">
+                    {agents.length} ONLINE
+                  </span>
+                </div>
+
+                <div className="mt-2.5 flex flex-col gap-1.5 font-mono text-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleGlobalModeChange('FOCUS_WORK')}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 transition-colors hover:bg-slate-800/60"
+                  >
+                    <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: '#10b981',
+                          boxShadow: '0 0 8px #10b981',
+                        }}
+                      />
+                      WORKING
+                    </span>
+                    <span className="font-black" style={{ color: '#10b981' }}>
+                      {campusCounters.working}
+                    </span>
+                  </button>
+
+                  <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
+                    <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: '#06b6d4',
+                          boxShadow: '0 0 8px #06b6d4',
+                        }}
+                      />
+                      AVAILABLE
+                    </span>
+                    <span className="font-black" style={{ color: '#06b6d4' }}>
+                      {campusCounters.available}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleGlobalModeChange('CAFETERIA')}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 transition-colors hover:bg-slate-800/60"
+                  >
+                    <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: '#f97316',
+                          boxShadow: '0 0 8px #f97316',
+                        }}
+                      />
+                      EATING
+                    </span>
+                    <span className="font-black" style={{ color: '#f97316' }}>
+                      {campusCounters.eating}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleGlobalModeChange('NAP_ROOM')}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 transition-colors hover:bg-slate-800/60"
+                  >
+                    <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: '#a855f7',
+                          boxShadow: '0 0 8px #a855f7',
+                        }}
+                      />
+                      RESTING & SLEEPING
+                    </span>
+                    <span className="font-black" style={{ color: '#a855f7' }}>
+                      {campusCounters.resting + campusCounters.sleeping}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleGlobalModeChange('COMFORT_ROOM')}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 transition-colors hover:bg-slate-800/60"
+                  >
+                    <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: '#f43f5e',
+                          boxShadow: '0 0 8px #f43f5e',
+                        }}
+                      />
+                      IN CR
+                    </span>
+                    <span className="font-black" style={{ color: '#f43f5e' }}>
+                      {campusCounters.inCr}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleGlobalModeChange('GYM')}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 transition-colors hover:bg-slate-800/60"
+                  >
+                    <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: '#06b6d4',
+                          boxShadow: '0 0 8px #06b6d4',
+                        }}
+                      />
+                      IN THE GYM
+                    </span>
+                    <span className="font-black" style={{ color: '#06b6d4' }}>
+                      {campusCounters.inGym}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleGlobalModeChange('ALL_HANDS')}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 transition-colors hover:bg-slate-800/60"
+                  >
+                    <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: '#d946ef',
+                          boxShadow: '0 0 8px #d946ef',
+                        }}
+                      />
+                      IN MEETING
+                    </span>
+                    <span className="font-black" style={{ color: '#d946ef' }}>
+                      {campusCounters.inMeeting}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleGlobalModeChange('PANTRY')}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 transition-colors hover:bg-slate-800/60"
+                  >
+                    <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: '#eab308',
+                          boxShadow: '0 0 8px #eab308',
+                        }}
+                      />
+                      ON BREAK
+                    </span>
+                    <span className="font-black" style={{ color: '#eab308' }}>
+                      {campusCounters.onBreak}
+                    </span>
+                  </button>
+
+                  <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
+                    <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: '#10b981',
+                          boxShadow: '0 0 8px #10b981',
+                        }}
+                      />
+                      CLEANING
+                    </span>
+                    <span className="font-black" style={{ color: '#10b981' }}>
+                      {campusCounters.cleaning}
+                    </span>
+                  </div>
+
+                  <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
+                    <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: '#0ea5e9',
+                          boxShadow: '0 0 8px #0ea5e9',
+                        }}
+                      />
+                      ARRIVING
+                    </span>
+                    <span className="font-black" style={{ color: '#0ea5e9' }}>
+                      {campusCounters.arriving}
+                    </span>
+                  </div>
+
+                  <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
+                    <span className="flex items-center gap-2.5 font-bold tracking-wide whitespace-nowrap text-slate-200">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: '#ef4444',
+                          boxShadow: '0 0 8px #ef4444',
+                        }}
+                      />
+                      WAITING ON YOU
+                    </span>
+                    <span className="font-black" style={{ color: '#ef4444' }}>
+                      {campusCounters.waitingOnYou}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-2.5 flex flex-col gap-1.5 border-t border-slate-800/70 pt-2.5 font-mono text-xs">
+                  <div className="flex items-center justify-between px-2">
+                    <span className="font-semibold tracking-wide whitespace-nowrap text-slate-400">
+                      OPEN TASKS
+                    </span>
+                    <span className="font-black text-slate-100">
+                      {campusCounters.openTasks}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between px-2">
+                    <span className="font-semibold tracking-wide whitespace-nowrap text-slate-400">
+                      ACCESSORIES
+                    </span>
+                    <span className="font-black" style={{ color: '#10b981' }}>
+                      {campusCounters.accessories}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section A: The Boss Desk (Approvals Gate) */}
+              <div className="shrink-0 border-b border-slate-800/80 p-3">
+                <div className="flex items-center justify-between pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+                    <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
+                      THE BOSS DESK // APPROVALS
+                    </span>
+                  </div>
+                  <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-400">
+                    {approvals.length} PENDING
+                  </span>
+                </div>
+
+                {/* The Brain Latest Insight Hover Chip */}
+                {(() => {
+                  const last = brainLearningManager.getLastLearnedInsight()
+                  if (!last) return null
+                  return (
+                    <div
+                      title={`Latest Learned: ${last.text}`}
+                      onClick={() => setIsBrainLogOpen(true)}
+                      className="mb-2 flex cursor-pointer items-center justify-between gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-950/20 px-2 py-1 font-mono text-[10px] text-cyan-300 transition-colors hover:bg-cyan-900/30"
+                    >
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span>🧠</span>
+                        <span className="truncate">
+                          LAST LEARNED: {last.text}
+                        </span>
+                      </div>
+                      <span className="shrink-0 text-[8px] font-bold text-cyan-400 hover:underline">
+                        VIEW LOG →
+                      </span>
                     </div>
                   )
-                })}
-            </div>
-          </div>
-        )}
+                })()}
 
-        {/* Right: Agent Hierarchy & Operations Console */}
-        {!isCanvasFullscreen && (
-          <aside className="w-full md:w-88 lg:w-96 xl:w-104 shrink-0 border-l border-slate-800/80 bg-[#0d111c] flex flex-col overflow-y-auto shadow-2xl z-20">
-          {/* Section 0: CAMPUS LIVE COUNTER (Real-Time Activity & Telemetry Breakdown) */}
-          <div className="border-b border-slate-800/80 p-3.5 shrink-0 bg-slate-950/50">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800/70">
-              <span className="font-mono text-[11px] font-black tracking-widest text-slate-300 uppercase">
-                CAMPUS LIVE COUNTER
-              </span>
-              <span className="font-mono text-[10px] font-bold text-emerald-400">
-                {agents.length} ONLINE
-              </span>
-            </div>
-
-            <div className="mt-2.5 flex flex-col gap-1.5 font-mono text-xs">
-              <button
-                type="button"
-                onClick={() => handleGlobalModeChange('FOCUS_WORK')}
-                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
-              >
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#10b981', boxShadow: '0 0 8px #10b981' }}
-                  />
-                  WORKING
-                </span>
-                <span className="font-black" style={{ color: '#10b981' }}>
-                  {campusCounters.working}
-                </span>
-              </button>
-
-              <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#06b6d4', boxShadow: '0 0 8px #06b6d4' }}
-                  />
-                  AVAILABLE
-                </span>
-                <span className="font-black" style={{ color: '#06b6d4' }}>
-                  {campusCounters.available}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleGlobalModeChange('CAFETERIA')}
-                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
-              >
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#f97316', boxShadow: '0 0 8px #f97316' }}
-                  />
-                  EATING
-                </span>
-                <span className="font-black" style={{ color: '#f97316' }}>
-                  {campusCounters.eating}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleGlobalModeChange('NAP_ROOM')}
-                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
-              >
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#a855f7', boxShadow: '0 0 8px #a855f7' }}
-                  />
-                  RESTING & SLEEPING
-                </span>
-                <span className="font-black" style={{ color: '#a855f7' }}>
-                  {campusCounters.resting + campusCounters.sleeping}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleGlobalModeChange('COMFORT_ROOM')}
-                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
-              >
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#f43f5e', boxShadow: '0 0 8px #f43f5e' }}
-                  />
-                  IN CR
-                </span>
-                <span className="font-black" style={{ color: '#f43f5e' }}>
-                  {campusCounters.inCr}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleGlobalModeChange('GYM')}
-                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
-              >
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#06b6d4', boxShadow: '0 0 8px #06b6d4' }}
-                  />
-                  IN THE GYM
-                </span>
-                <span className="font-black" style={{ color: '#06b6d4' }}>
-                  {campusCounters.inGym}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleGlobalModeChange('ALL_HANDS')}
-                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
-              >
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#d946ef', boxShadow: '0 0 8px #d946ef' }}
-                  />
-                  IN MEETING
-                </span>
-                <span className="font-black" style={{ color: '#d946ef' }}>
-                  {campusCounters.inMeeting}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleGlobalModeChange('PANTRY')}
-                className="cursor-pointer flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-800/60 transition-colors"
-              >
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#eab308', boxShadow: '0 0 8px #eab308' }}
-                  />
-                  ON BREAK
-                </span>
-                <span className="font-black" style={{ color: '#eab308' }}>
-                  {campusCounters.onBreak}
-                </span>
-              </button>
-
-              <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#10b981', boxShadow: '0 0 8px #10b981' }}
-                  />
-                  CLEANING
-                </span>
-                <span className="font-black" style={{ color: '#10b981' }}>
-                  {campusCounters.cleaning}
-                </span>
-              </div>
-
-              <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#0ea5e9', boxShadow: '0 0 8px #0ea5e9' }}
-                  />
-                  ARRIVING
-                </span>
-                <span className="font-black" style={{ color: '#0ea5e9' }}>
-                  {campusCounters.arriving}
-                </span>
-              </div>
-
-              <div className="flex w-full items-center justify-between rounded-md px-2 py-1">
-                <span className="flex items-center gap-2.5 text-slate-200 font-bold tracking-wide whitespace-nowrap">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#ef4444', boxShadow: '0 0 8px #ef4444' }}
-                  />
-                  WAITING ON YOU
-                </span>
-                <span className="font-black" style={{ color: '#ef4444' }}>
-                  {campusCounters.waitingOnYou}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-2.5 pt-2.5 border-t border-slate-800/70 flex flex-col gap-1.5 font-mono text-xs">
-              <div className="flex items-center justify-between px-2">
-                <span className="text-slate-400 font-semibold tracking-wide whitespace-nowrap">
-                  OPEN TASKS
-                </span>
-                <span className="font-black text-slate-100">{campusCounters.openTasks}</span>
-              </div>
-              <div className="flex items-center justify-between px-2">
-                <span className="text-slate-400 font-semibold tracking-wide whitespace-nowrap">
-                  ACCESSORIES
-                </span>
-                <span className="font-black" style={{ color: '#10b981' }}>
-                  {campusCounters.accessories}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Section A: The Boss Desk (Approvals Gate) */}
-          <div className="border-b border-slate-800/80 p-3 shrink-0">
-            <div className="flex items-center justify-between pb-2">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
-                  THE BOSS DESK // APPROVALS
-                </span>
-              </div>
-              <span className="rounded-full bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-400 border border-amber-500/20">
-                {approvals.length} PENDING
-              </span>
-            </div>
-
-            {/* The Brain Latest Insight Hover Chip */}
-            {(() => {
-              const last = brainLearningManager.getLastLearnedInsight()
-              if (!last) return null
-              return (
-                <div
-                  title={`Latest Learned: ${last.text}`}
-                  onClick={() => setIsBrainLogOpen(true)}
-                  className="cursor-pointer mb-2 flex items-center justify-between gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-950/20 px-2 py-1 text-[10px] font-mono text-cyan-300 hover:bg-cyan-900/30 transition-colors"
-                >
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span>🧠</span>
-                    <span className="truncate">LAST LEARNED: {last.text}</span>
-                  </div>
-                  <span className="shrink-0 text-[8px] text-cyan-400 font-bold hover:underline">
-                    VIEW LOG →
-                  </span>
-                </div>
-              )
-            })()}
-
-            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-              {approvals.length === 0 ? (
-                <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-2.5 text-center">
-                  <span className="font-mono text-[11px] text-slate-500">
-                    All Go-Signals cleared. Operations running nominal.
-                  </span>
-                </div>
-              ) : (
-                approvals.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-2.5 shadow-md"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[11px] font-bold text-amber-300">
-                        {item.agent_name}
-                      </span>
-                      <span className="rounded bg-amber-500/20 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-amber-200 uppercase">
-                        {item.type}
+                <div className="max-h-36 space-y-2 overflow-y-auto pr-1">
+                  {approvals.length === 0 ? (
+                    <div className="rounded-lg border border-slate-800/60 bg-slate-900/40 p-2.5 text-center">
+                      <span className="font-mono text-[11px] text-slate-500">
+                        All Go-Signals cleared. Operations running nominal.
                       </span>
                     </div>
-                    <p className="mt-1 font-mono text-xs font-semibold text-slate-200 line-clamp-1">
-                      {item.title}
-                    </p>
-                    <p className="font-mono text-[11px] text-slate-400 line-clamp-2 mt-0.5">
-                      {item.summary}
-                    </p>
-                    <div className="mt-2 flex flex-col gap-1.5">
-                      {editingApprovalId === item.id ? (
-                        <div className="flex flex-col gap-1.5 bg-slate-950/80 p-2 rounded border border-amber-500/40">
-                          <input
-                            type="text"
-                            placeholder="Add custom instructions or edit..."
-                            value={approvalInstruction}
-                            onChange={(e) => setApprovalInstruction(e.target.value)}
-                            className="w-full rounded bg-slate-900 border border-slate-700 px-2 py-1 font-mono text-[10px] text-slate-100 focus:outline-none focus:border-amber-400"
-                          />
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingApprovalId(null)
-                                setApprovalInstruction('')
-                              }}
-                              className="rounded border border-slate-700 px-2 py-0.5 font-mono text-[9px] text-slate-400 hover:text-white"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleGoSignal(item.id, 'instruct', approvalInstruction)
-                                setEditingApprovalId(null)
-                                setApprovalInstruction('')
-                              }}
-                              className="rounded bg-amber-500 px-2 py-0.5 font-mono text-[9px] font-bold text-slate-950 hover:bg-amber-400"
-                            >
-                              Submit Edit ✓
-                            </button>
-                          </div>
+                  ) : (
+                    approvals.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-2.5 shadow-md"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-[11px] font-bold text-amber-300">
+                            {item.agent_name}
+                          </span>
+                          <span className="rounded bg-amber-500/20 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-amber-200 uppercase">
+                            {item.type}
+                          </span>
                         </div>
-                      ) : (
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingApprovalId(item.id)
-                              setApprovalInstruction(item.summary || '')
-                            }}
-                            className="cursor-pointer rounded bg-slate-900 border border-slate-700 px-2 py-1 font-mono text-[10px] font-bold text-slate-300 hover:bg-slate-800 transition-colors whitespace-nowrap"
-                            title="Edit or add custom instructions"
-                          >
-                            Edit ✎
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleGoSignal(item.id, 'hold')}
-                            className="cursor-pointer rounded bg-amber-950/60 border border-amber-600/40 px-2 py-1 font-mono text-[10px] font-bold text-amber-300 hover:bg-amber-900 transition-colors whitespace-nowrap"
-                            title="Hold approval for later"
-                          >
-                            Hold ⏸
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleGoSignal(item.id, 'reject')}
-                            className="cursor-pointer rounded bg-rose-950/60 border border-rose-600/40 px-2 py-1 font-mono text-[10px] font-bold text-rose-300 hover:bg-rose-900 transition-colors whitespace-nowrap"
-                          >
-                            Deny ✕
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleGoSignal(item.id, 'approve')}
-                            className="cursor-pointer rounded bg-emerald-500 px-2.5 py-1 font-mono text-[10px] font-bold text-slate-950 hover:bg-emerald-400 transition-colors shadow-sm shadow-emerald-500/30 whitespace-nowrap"
-                          >
-                            Approve ✓
-                          </button>
+                        <p className="mt-1 line-clamp-1 font-mono text-xs font-semibold text-slate-200">
+                          {item.title}
+                        </p>
+                        <p className="mt-0.5 line-clamp-2 font-mono text-[11px] text-slate-400">
+                          {item.summary}
+                        </p>
+                        <div className="mt-2 flex flex-col gap-1.5">
+                          {editingApprovalId === item.id ? (
+                            <div className="flex flex-col gap-1.5 rounded border border-amber-500/40 bg-slate-950/80 p-2">
+                              <input
+                                type="text"
+                                placeholder="Add custom instructions or edit..."
+                                value={approvalInstruction}
+                                onChange={(e) =>
+                                  setApprovalInstruction(e.target.value)
+                                }
+                                className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-[10px] text-slate-100 focus:border-amber-400 focus:outline-none"
+                              />
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingApprovalId(null)
+                                    setApprovalInstruction('')
+                                  }}
+                                  className="rounded border border-slate-700 px-2 py-0.5 font-mono text-[9px] text-slate-400 hover:text-white"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleGoSignal(
+                                      item.id,
+                                      'instruct',
+                                      approvalInstruction
+                                    )
+                                    setEditingApprovalId(null)
+                                    setApprovalInstruction('')
+                                  }}
+                                  className="rounded bg-amber-500 px-2 py-0.5 font-mono text-[9px] font-bold text-slate-950 hover:bg-amber-400"
+                                >
+                                  Submit Edit ✓
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingApprovalId(item.id)
+                                  setApprovalInstruction(item.summary || '')
+                                }}
+                                className="cursor-pointer rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-[10px] font-bold whitespace-nowrap text-slate-300 transition-colors hover:bg-slate-800"
+                                title="Edit or add custom instructions"
+                              >
+                                Edit ✎
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleGoSignal(item.id, 'hold')}
+                                className="cursor-pointer rounded border border-amber-600/40 bg-amber-950/60 px-2 py-1 font-mono text-[10px] font-bold whitespace-nowrap text-amber-300 transition-colors hover:bg-amber-900"
+                                title="Hold approval for later"
+                              >
+                                Hold ⏸
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleGoSignal(item.id, 'reject')
+                                }
+                                className="cursor-pointer rounded border border-rose-600/40 bg-rose-950/60 px-2 py-1 font-mono text-[10px] font-bold whitespace-nowrap text-rose-300 transition-colors hover:bg-rose-900"
+                              >
+                                Deny ✕
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleGoSignal(item.id, 'approve')
+                                }
+                                className="cursor-pointer rounded bg-emerald-500 px-2.5 py-1 font-mono text-[10px] font-bold whitespace-nowrap text-slate-950 shadow-sm shadow-emerald-500/30 transition-colors hover:bg-emerald-400"
+                              >
+                                Approve ✓
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Section: HQ Facilities & Cleanliness (Phase K6) */}
-          <div className="border-b border-slate-800/80 p-3 shrink-0 bg-slate-900/20">
-            {(() => {
-              const hqScore = facilitiesManager.getHQCleanlinessAverage()
-              const roomReports = facilitiesManager.getAllRoomReports()
-              const pendingTasks = facilitiesManager.getPendingTasks()
-              const dispensers = facilitiesManager
-                .getRecords()
-                .filter((r) => r.kind === 'water_jug')
-              const lowDispensers = dispensers.filter((d) => d.suppliesLevel <= 20)
-              const wetRooms = roomReports.filter((r) => r.isWetFloor)
-
-              const getScoreColor = (sc: number) =>
-                sc >= 80 ? 'text-emerald-400' : sc >= 60 ? 'text-amber-400' : 'text-rose-400'
-              const getScoreBarColor = (sc: number) =>
-                sc >= 80 ? 'bg-emerald-400' : sc >= 60 ? 'bg-amber-400' : 'bg-rose-500'
-
-              return (
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
-                        FACILITIES & CLEANLINESS
-                      </span>
-                      <span className="rounded bg-cyan-950/80 border border-cyan-500/40 px-1 py-0.5 font-mono text-[8px] font-bold text-cyan-300">
-                        SIMULATED
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 font-mono text-xs font-black">
-                      <span className="text-slate-400 text-[10px]">HQ AVG:</span>
-                      <span className={getScoreColor(hqScore)}>{hqScore}%</span>
-                    </div>
-                  </div>
-
-                  {/* Active Alerts (Wet Floor & Depleted Water Jugs) */}
-                  {wetRooms.length > 0 && (
-                    <div className="flex items-center gap-1.5 rounded border border-amber-500/40 bg-amber-950/30 px-2 py-1 text-[10px] font-mono text-amber-300">
-                      <span className="animate-pulse">⚠️</span>
-                      <span>
-                        WET FLOOR: Mopping in {wetRooms.map((w) => w.roomName).join(', ')}
-                      </span>
-                    </div>
+                      </div>
+                    ))
                   )}
-
-                  {lowDispensers.length > 0 && (
-                    <div className="flex items-center gap-1.5 rounded border border-cyan-500/40 bg-cyan-950/30 px-2 py-1 text-[10px] font-mono text-cyan-300">
-                      <span>💧</span>
-                      <span>
-                        WATER DEPLETION: {lowDispensers.length} jug(s) require replacement
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Top Rooms Cleanliness Metrics */}
-                  <div className="space-y-1.5 rounded-lg border border-slate-800/80 bg-slate-950/60 p-2">
-                    <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 pb-0.5">
-                      <span>ROOM / SECTOR</span>
-                      <span>CLEANLINESS</span>
-                    </div>
-                    {roomReports.slice(0, 4).map((r) => (
-                      <div key={r.roomId} className="space-y-0.5">
-                        <div className="flex items-center justify-between text-[10px] font-mono">
-                          <span className="text-slate-300 truncate max-w-[140px]">{r.roomName}</span>
-                          <span className={`font-bold ${getScoreColor(r.score)}`}>{r.score}%</span>
-                        </div>
-                        <div className="h-1.5 w-full rounded-full bg-slate-800/80 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-300 ${getScoreBarColor(r.score)}`}
-                            style={{ width: `${r.score}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Water Dispensers Quick Status */}
-                  <div className="flex items-center justify-between rounded border border-slate-800/80 bg-slate-950/50 px-2 py-1 font-mono text-[9px] text-slate-300">
-                    <span className="flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-                      <span>6 Dispensers (5-gal Jugs)</span>
-                    </span>
-                    <span className="text-cyan-400 font-bold">
-                      {dispensers.length - lowDispensers.length}/{dispensers.length} NOMINAL
-                    </span>
-                  </div>
-
-                  {/* Manual Cleaning Directive Controls */}
-                  <div className="rounded border border-slate-800/70 bg-slate-950/40 p-2 space-y-1.5">
-                    <span className="block font-mono text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                      DIRECT CLEANING DISPATCH
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <select
-                        aria-label="Select facility room"
-                        value={cleaningRoomSelection}
-                        onChange={(e) => setCleaningRoomSelection(e.target.value)}
-                        className="w-1/2 rounded border border-slate-700 bg-slate-900 px-1.5 py-1 font-mono text-[10px] text-slate-200 focus:outline-none"
-                      >
-                        <option value="CAFETERIA">Cafeteria</option>
-                        <option value="COMFORT_ROOM">Comfort Room</option>
-                        <option value="GYM">Rec & Gym</option>
-                        <option value="PANTRY">Pantry</option>
-                        <option value="CORRIDORS">Corridors</option>
-                        <option value="ENGINEERING">Engineering</option>
-                        <option value="QA">QA NOC</option>
-                      </select>
-                      <select
-                        aria-label="Select cleaning task"
-                        value={cleaningKindSelection}
-                        onChange={(e) => setCleaningKindSelection(e.target.value as CleaningTaskKind)}
-                        className="w-1/2 rounded border border-slate-700 bg-slate-900 px-1.5 py-1 font-mono text-[10px] text-slate-200 focus:outline-none"
-                      >
-                        <option value="wipe_tables">Wipe Tables</option>
-                        <option value="mop">Mop Floor</option>
-                        <option value="clean_cr">Sanitize CR</option>
-                        <option value="replace_water_jug">Replace Jug</option>
-                        <option value="empty_bins">Empty Bins</option>
-                        <option value="restock_pantry">Restock Supplies</option>
-                      </select>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRequestCleaning(cleaningRoomSelection, cleaningKindSelection)}
-                      className="cursor-pointer w-full flex items-center justify-center gap-1.5 rounded border border-emerald-500/50 bg-emerald-950/40 px-2 py-1 font-mono text-[10px] font-bold text-emerald-300 hover:bg-emerald-900/60 transition-colors whitespace-nowrap"
-                    >
-                      <span>Dispatch Cleaner 🧹</span>
-                      {pendingTasks.length > 0 && (
-                        <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 font-mono text-[8px] text-emerald-300">
-                          {pendingTasks.length} queued
-                        </span>
-                      )}
-                    </button>
-                  </div>
                 </div>
-              )
-            })()}
-          </div>
+              </div>
 
-          {/* Section B: Interactive Individual Agent Dispatch Drawer */}
-          <div className="border-b border-slate-800/80 p-3 shrink-0 bg-slate-900/30">
-            <div className="flex items-center justify-between pb-2">
-              <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
-                AGENT INSPECTOR & ROUTING
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsRosterOpen((prev) => !prev)}
-                className="cursor-pointer rounded-md border border-cyan-500/40 bg-cyan-950/40 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-300 hover:bg-cyan-900/60 transition-colors whitespace-nowrap"
-              >
-                {isRosterOpen ? 'Hide Roster ✕' : `All Agents (${agents.length}) ☰`}
-              </button>
-            </div>
-
-            {/* Quick Horizontal Agent Switcher Strip */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-2 mb-2 border-b border-slate-800/60">
-              {agents.map((ag) => {
-                const eff = agentRouteOverrides[ag.id] || currentMode
-                const bdg = getAgentStatusBadge(ag.status, eff)
-                const active = selectedAgent?.id === ag.id
-                return (
-                  <button
-                    key={ag.id}
-                    type="button"
-                    onClick={() => setSelectedAgent(ag)}
-                    className={`cursor-pointer flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap shrink-0 ${
-                      active
-                        ? 'border-cyan-400 bg-cyan-500/20 text-cyan-200'
-                        : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                    }`}
-                  >
-                    <span className={`h-1.5 w-1.5 rounded-full ${bdg.dotTailwind}`} />
-                    <span>{ag.name}</span>
-                  </button>
-                )
-              })}
-            </div>
-
-            {selectedAgent && selectedStyle && selectedBadge ? (
-              <div className="space-y-2.5">
-                {/* Profile Card with Distinct Gender/Outfit Avatar Preview */}
-                <div className="flex items-center justify-between rounded-lg bg-slate-950/70 p-2.5 border border-slate-800/70">
-                  <div className="flex items-center gap-2.5">
-                    {/* Distinct Styled Pixel-Agent Avatar Swatch */}
-                    <div
-                      className="relative flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-lg border border-slate-700/80 shadow-inner overflow-hidden"
-                      style={{ backgroundColor: '#0f172a' }}
-                    >
-                      {/* Hair */}
-                      <div
-                        className="h-2 w-5 rounded-t-sm"
-                        style={{ backgroundColor: selectedStyle.hairColor }}
-                      />
-                      {/* Face */}
-                      <div
-                        className="h-2.5 w-4"
-                        style={{ backgroundColor: selectedStyle.skinColor }}
-                      />
-                      {/* Outfit */}
-                      <div
-                        className="h-3 w-6 rounded-t-sm"
-                        style={{ backgroundColor: selectedStyle.outfitColor }}
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-xs font-bold text-slate-100">
-                          {selectedAgent.name}
-                        </span>
-                        <span className="rounded bg-slate-800/90 px-1.5 py-0.5 font-mono text-[9px] text-slate-400 uppercase">
-                          {selectedStyle.gender === 'female' ? '♀' : '♂'}{' '}
-                          {selectedStyle.hairStyle}
-                        </span>
-                      </div>
-                      <div className="font-mono text-[10px] text-slate-400">
-                        {selectedAgent.role}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 rounded-full bg-slate-900 px-2.5 py-1 border border-slate-800">
-                    <span className={`h-2 w-2 rounded-full ${selectedBadge.dotTailwind}`} />
-                    <span className="font-mono text-[10px] font-semibold text-slate-200 whitespace-nowrap">
-                      {selectedBadge.label}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Agent AI Model Selector (Gemini / Hugging Face / JARVIS Local SLM) */}
-                <div className="rounded-lg border border-cyan-500/30 bg-slate-950/75 p-2 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[9px] font-bold tracking-wider text-cyan-300 uppercase">
-                      AGENT AI MODEL (GEMINI / HUGGING FACE / SLM):
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleUpdateAgentModel(
-                          selectedAgent.id,
-                          selectedAgent.model ||
-                            DEFAULT_AGENT_MODELS[selectedAgent.id] ||
-                            'gemini-2.0-flash',
-                          true
-                        )
-                      }
-                      className="cursor-pointer rounded border border-cyan-500/40 bg-cyan-950/50 px-1.5 py-0.5 font-mono text-[9px] font-bold text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 transition whitespace-nowrap"
-                    >
-                      Apply to All 24 Agents
-                    </button>
-                  </div>
-                  <select
-                    data-testid="agent-model-selector"
-                    aria-label="Select Agent AI Model"
-                    value={
-                      selectedAgent.model ||
-                      DEFAULT_AGENT_MODELS[selectedAgent.id] ||
-                      'gemini-2.0-flash'
-                    }
-                    onChange={(e) =>
-                      handleUpdateAgentModel(selectedAgent.id, e.target.value)
-                    }
-                    className="w-full cursor-pointer rounded-md border border-slate-800 bg-slate-900 px-2 py-1 font-mono text-[10px] font-bold text-cyan-200 focus:border-cyan-400 focus:outline-none"
-                  >
-                    {AVAILABLE_MODELS.map((m) => (
-                      <option
-                        key={m.id}
-                        value={m.id}
-                        className="bg-slate-950 text-slate-100"
-                      >
-                        {m.name} — {m.tier}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Individual Action Buttons (Direct A* Pathfinding Routing) */}
-                <div>
-                  <div className="font-mono text-[9px] font-bold tracking-wider text-slate-400 uppercase pb-1">
-                    DIRECT INDIVIDUAL ROUTING (A* WALKING):
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleRouteIndividualAgent(
-                          selectedAgent,
-                          'FOCUS_WORK',
-                          'working',
-                          `Executing sprint tasks at ${selectedAgent.room || 'Workstation'}`
-                        )
-                      }
-                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap ${
-                        selectedEffectiveMode === 'FOCUS_WORK' ||
-                        selectedEffectiveMode === 'OVERVIEW'
-                          ? 'border-emerald-500/60 bg-emerald-950/50 text-emerald-300'
-                          : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
-                      }`}
-                    >
-                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                      <span>Send to Work Desk</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleRouteIndividualAgent(
-                          selectedAgent,
-                          'PANTRY',
-                          'on_break',
-                          'Recharging at Espresso Bar & Pantry Lounge'
-                        )
-                      }
-                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap ${
-                        selectedEffectiveMode === 'PANTRY'
-                          ? 'border-yellow-500/60 bg-yellow-950/50 text-yellow-300'
-                          : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
-                      }`}
-                    >
-                      <span className="h-2 w-2 rounded-full bg-yellow-400" />
-                      <span>Send to Pantry / Coffee</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleRouteIndividualAgent(
-                          selectedAgent,
-                          'GYM',
-                          'at_gym',
-                          'Active recovery workout in Rec & Gym'
-                        )
-                      }
-                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap ${
-                        selectedEffectiveMode === 'GYM'
-                          ? 'border-pink-500/60 bg-pink-950/50 text-pink-300'
-                          : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
-                      }`}
-                    >
-                      <span className="h-2 w-2 rounded-full bg-pink-400" />
-                      <span>Send to Gym / Rec</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleRouteIndividualAgent(
-                          selectedAgent,
-                          'ALL_HANDS',
-                          'in_meeting',
-                          'Joining Architecture Standup at The Brain'
-                        )
-                      }
-                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold transition-all whitespace-nowrap ${
-                        selectedEffectiveMode === 'ALL_HANDS'
-                          ? 'border-blue-500/60 bg-blue-950/50 text-blue-300'
-                          : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
-                      }`}
-                    >
-                      <span className="h-2 w-2 rounded-full bg-blue-400" />
-                      <span>Call to Brain (Scrum)</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Specialized Cleaner Patrol & Direct Servicing Controls */}
-                {selectedAgent.id.startsWith('cleaner_') && (
-                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-2 space-y-1.5">
-                    <div className="flex items-center justify-between text-[10px] font-mono font-bold text-emerald-300">
-                      <span>CLEANER DIRECT DISPATCH</span>
-                      <span className="text-[9px] text-emerald-400/80">FACILITIES</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-1.5 font-mono text-[9px]">
-                      <button
-                        type="button"
-                        onClick={() => handleRequestCleaning('CAFETERIA', 'wipe_tables')}
-                        className="cursor-pointer flex items-center justify-center gap-1 rounded border border-emerald-500/40 bg-emerald-950/50 px-2 py-1 text-emerald-200 hover:bg-emerald-900/60 whitespace-nowrap"
-                      >
-                        <span>🍽️ Clean Cafeteria</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRequestCleaning('COMFORT_ROOM', 'clean_cr')}
-                        className="cursor-pointer flex items-center justify-center gap-1 rounded border border-emerald-500/40 bg-emerald-950/50 px-2 py-1 text-emerald-200 hover:bg-emerald-900/60 whitespace-nowrap"
-                      >
-                        <span>🚻 Sanitize CR</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRequestCleaning('CORRIDORS', 'replace_water_jug')}
-                        className="cursor-pointer flex items-center justify-center gap-1 rounded border border-cyan-500/40 bg-cyan-950/50 px-2 py-1 text-cyan-200 hover:bg-cyan-900/60 whitespace-nowrap"
-                      >
-                        <span>💧 Replace Water Jug</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRequestCleaning('GYM', 'mop')}
-                        className="cursor-pointer flex items-center justify-center gap-1 rounded border border-amber-500/40 bg-amber-950/50 px-2 py-1 text-amber-200 hover:bg-amber-900/60 whitespace-nowrap"
-                      >
-                        <span>🧹 Mop Rec & Gym</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Human-Like Agent Needs & Next Plan (Simulated Layer) */}
+              {/* Section: HQ Facilities & Cleanliness (Phase K6) */}
+              <div className="shrink-0 border-b border-slate-800/80 bg-slate-900/20 p-3">
                 {(() => {
-                  const needs = hasMounted
-                    ? needsManager.getCurrentNeeds(selectedAgent.id)
-                    : needsManager.getDeterministicNeeds(selectedAgent.id)
-                  const plan = needsManager.getPlan(selectedAgent.id)
-                  const tiredness = getTirednessVisualState(needs)
-                  const nextAction = evaluateNextAction(selectedAgent.id, needs, plan)
+                  const hqScore = facilitiesManager.getHQCleanlinessAverage()
+                  const roomReports = facilitiesManager.getAllRoomReports()
+                  const pendingTasks = facilitiesManager.getPendingTasks()
+                  const dispensers = facilitiesManager
+                    .getRecords()
+                    .filter((r) => r.kind === 'water_jug')
+                  const lowDispensers = dispensers.filter(
+                    (d) => d.suppliesLevel <= 20
+                  )
+                  const wetRooms = roomReports.filter((r) => r.isWetFloor)
 
-                  const getBarColor = (val: number, isUrgency = false) => {
-                    if (isUrgency) {
-                      return val < 25 ? 'bg-rose-500' : val < 50 ? 'bg-amber-500' : 'bg-cyan-500'
-                    }
-                    return val < 25 ? 'bg-rose-500' : val < 45 ? 'bg-amber-500' : 'bg-emerald-400'
-                  }
+                  const getScoreColor = (sc: number) =>
+                    sc >= 80
+                      ? 'text-emerald-400'
+                      : sc >= 60
+                        ? 'text-amber-400'
+                        : 'text-rose-400'
+                  const getScoreBarColor = (sc: number) =>
+                    sc >= 80
+                      ? 'bg-emerald-400'
+                      : sc >= 60
+                        ? 'bg-amber-400'
+                        : 'bg-rose-500'
 
                   return (
-                    <div className="rounded-lg bg-slate-950/70 p-2.5 border border-slate-800/80 space-y-2">
+                    <div className="space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-[9px] font-bold text-slate-300 tracking-wider uppercase">
-                            AGENT VITALS & PLAN
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
+                            FACILITIES & CLEANLINESS
                           </span>
-                          <span className="rounded bg-cyan-950/80 border border-cyan-500/40 px-1 py-0.5 font-mono text-[8px] font-bold text-cyan-300">
+                          <span className="rounded border border-cyan-500/40 bg-cyan-950/80 px-1 py-0.5 font-mono text-[8px] font-bold text-cyan-300">
                             SIMULATED
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setIsAgentLogDrawerOpen(true)}
-                          className="cursor-pointer font-mono text-[9px] text-cyan-400 hover:underline hover:text-cyan-300"
-                        >
-                          View Full Log →
-                        </button>
-                      </div>
-
-                      {/* Next Plan Banner */}
-                      <div className="rounded-md border border-cyan-500/30 bg-cyan-950/20 p-1.5">
-                        <div className="flex items-center justify-between text-[9px] font-mono">
-                          <span className="font-bold text-cyan-400 uppercase">
-                            NEXT: {plan?.kind?.toUpperCase() || nextAction.nextKind.toUpperCase()}
+                        <div className="flex items-center gap-1.5 font-mono text-xs font-black">
+                          <span className="text-[10px] text-slate-400">
+                            HQ AVG:
                           </span>
-                          <span className="text-slate-400">
-                            {tiredness.description}
+                          <span className={getScoreColor(hqScore)}>
+                            {hqScore}%
                           </span>
                         </div>
-                        <p className="font-sans text-[10px] text-slate-300 pt-0.5 truncate">
-                          {plan?.reason || nextAction.reason}
-                        </p>
                       </div>
 
-                      {/* Vitals Progress Grid */}
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 font-mono text-[9px]">
-                        <div>
-                          <div className="flex justify-between text-slate-400 pb-0.5">
-                            <span>ENERGY</span>
-                            <span suppressHydrationWarning className="font-bold text-slate-200">{Math.round(needs.energy)}%</span>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-300 ${getBarColor(needs.energy)}`}
-                              style={{ width: `${needs.energy}%` }}
-                            />
-                          </div>
+                      {/* Active Alerts (Wet Floor & Depleted Water Jugs) */}
+                      {wetRooms.length > 0 && (
+                        <div className="flex items-center gap-1.5 rounded border border-amber-500/40 bg-amber-950/30 px-2 py-1 font-mono text-[10px] text-amber-300">
+                          <span className="animate-pulse">⚠️</span>
+                          <span>
+                            WET FLOOR: Mopping in{' '}
+                            {wetRooms.map((w) => w.roomName).join(', ')}
+                          </span>
                         </div>
+                      )}
 
-                        <div>
-                          <div className="flex justify-between text-slate-400 pb-0.5">
-                            <span>HUNGER</span>
-                            <span suppressHydrationWarning className="font-bold text-slate-200">{Math.round(needs.hunger)}%</span>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-300 ${getBarColor(needs.hunger)}`}
-                              style={{ width: `${needs.hunger}%` }}
-                            />
-                          </div>
+                      {lowDispensers.length > 0 && (
+                        <div className="flex items-center gap-1.5 rounded border border-cyan-500/40 bg-cyan-950/30 px-2 py-1 font-mono text-[10px] text-cyan-300">
+                          <span>💧</span>
+                          <span>
+                            WATER DEPLETION: {lowDispensers.length} jug(s)
+                            require replacement
+                          </span>
                         </div>
+                      )}
 
-                        <div>
-                          <div className="flex justify-between text-slate-400 pb-0.5">
-                            <span>THIRST</span>
-                            <span suppressHydrationWarning className="font-bold text-slate-200">{Math.round(needs.thirst)}%</span>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-300 ${getBarColor(needs.thirst)}`}
-                              style={{ width: `${needs.thirst}%` }}
-                            />
-                          </div>
+                      {/* Top Rooms Cleanliness Metrics */}
+                      <div className="space-y-1.5 rounded-lg border border-slate-800/80 bg-slate-950/60 p-2">
+                        <div className="flex items-center justify-between pb-0.5 font-mono text-[9px] text-slate-400">
+                          <span>ROOM / SECTOR</span>
+                          <span>CLEANLINESS</span>
                         </div>
-
-                        <div>
-                          <div className="flex justify-between text-slate-400 pb-0.5">
-                            <span>BLADDER</span>
-                            <span suppressHydrationWarning className="font-bold text-slate-200">{Math.round(needs.bladder)}%</span>
+                        {roomReports.slice(0, 4).map((r) => (
+                          <div key={r.roomId} className="space-y-0.5">
+                            <div className="flex items-center justify-between font-mono text-[10px]">
+                              <span className="max-w-[140px] truncate text-slate-300">
+                                {r.roomName}
+                              </span>
+                              <span
+                                className={`font-bold ${getScoreColor(r.score)}`}
+                              >
+                                {r.score}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800/80">
+                              <div
+                                className={`h-full rounded-full transition-all duration-300 ${getScoreBarColor(r.score)}`}
+                                style={{ width: `${r.score}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-300 ${getBarColor(needs.bladder, true)}`}
-                              style={{ width: `${needs.bladder}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="flex justify-between text-slate-400 pb-0.5">
-                            <span>HEALTH</span>
-                            <span suppressHydrationWarning className="font-bold text-slate-200">{Math.round(needs.health)}%</span>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-emerald-400 transition-all duration-300"
-                              style={{ width: `${needs.health}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="flex justify-between text-slate-400 pb-0.5">
-                            <span>MORALE</span>
-                            <span suppressHydrationWarning className="font-bold text-slate-200">{Math.round(needs.morale)}%</span>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-purple-400 transition-all duration-300"
-                              style={{ width: `${needs.morale}%` }}
-                            />
-                          </div>
-                        </div>
+                        ))}
                       </div>
 
-                      {/* Hidden stats: Caffeine & Sleep Debt */}
-                      <div className="flex items-center justify-between font-mono text-[8px] text-slate-500 pt-0.5 border-t border-slate-900">
-                        <span suppressHydrationWarning>Caffeine: {needs.caffeine}%</span>
-                        <span suppressHydrationWarning>Sleep Debt: {needs.sleepDebt}%</span>
-                        <span suppressHydrationWarning>Speed: {tiredness.walkSpeedMultiplier}x</span>
+                      {/* Water Dispensers Quick Status */}
+                      <div className="flex items-center justify-between rounded border border-slate-800/80 bg-slate-950/50 px-2 py-1 font-mono text-[9px] text-slate-300">
+                        <span className="flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                          <span>6 Dispensers (5-gal Jugs)</span>
+                        </span>
+                        <span className="font-bold text-cyan-400">
+                          {dispensers.length - lowDispensers.length}/
+                          {dispensers.length} NOMINAL
+                        </span>
                       </div>
 
-                      {/* Quick Wellness & Pin Control Buttons */}
-                      <div className="flex flex-wrap items-center gap-1 pt-1.5 border-t border-slate-800/80 font-mono text-[9px]">
+                      {/* Manual Cleaning Directive Controls */}
+                      <div className="space-y-1.5 rounded border border-slate-800/70 bg-slate-950/40 p-2">
+                        <span className="block font-mono text-[9px] font-bold tracking-wider text-slate-400 uppercase">
+                          DIRECT CLEANING DISPATCH
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            aria-label="Select facility room"
+                            value={cleaningRoomSelection}
+                            onChange={(e) =>
+                              setCleaningRoomSelection(e.target.value)
+                            }
+                            className="w-1/2 rounded border border-slate-700 bg-slate-900 px-1.5 py-1 font-mono text-[10px] text-slate-200 focus:outline-none"
+                          >
+                            <option value="CAFETERIA">Cafeteria</option>
+                            <option value="COMFORT_ROOM">Comfort Room</option>
+                            <option value="GYM">Rec & Gym</option>
+                            <option value="PANTRY">Pantry</option>
+                            <option value="CORRIDORS">Corridors</option>
+                            <option value="ENGINEERING">Engineering</option>
+                            <option value="QA">QA NOC</option>
+                          </select>
+                          <select
+                            aria-label="Select cleaning task"
+                            value={cleaningKindSelection}
+                            onChange={(e) =>
+                              setCleaningKindSelection(
+                                e.target.value as CleaningTaskKind
+                              )
+                            }
+                            className="w-1/2 rounded border border-slate-700 bg-slate-900 px-1.5 py-1 font-mono text-[10px] text-slate-200 focus:outline-none"
+                          >
+                            <option value="wipe_tables">Wipe Tables</option>
+                            <option value="mop">Mop Floor</option>
+                            <option value="clean_cr">Sanitize CR</option>
+                            <option value="replace_water_jug">
+                              Replace Jug
+                            </option>
+                            <option value="empty_bins">Empty Bins</option>
+                            <option value="restock_pantry">
+                              Restock Supplies
+                            </option>
+                          </select>
+                        </div>
                         <button
                           type="button"
-                          onClick={() => {
-                            handleRouteIndividualAgent(
-                              selectedAgent,
-                              'NAP_ROOM',
-                              'resting',
-                              'Scheduled recovery rest in Nap Room'
+                          onClick={() =>
+                            handleRequestCleaning(
+                              cleaningRoomSelection,
+                              cleaningKindSelection
                             )
-                          }}
-                          className="cursor-pointer rounded bg-cyan-950/60 border border-cyan-500/40 px-2 py-0.5 font-bold text-cyan-200 hover:bg-cyan-900 whitespace-nowrap"
+                          }
+                          className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded border border-emerald-500/50 bg-emerald-950/40 px-2 py-1 font-mono text-[10px] font-bold whitespace-nowrap text-emerald-300 transition-colors hover:bg-emerald-900/60"
                         >
-                          Send to Rest 💤
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleRouteIndividualAgent(
-                              selectedAgent,
-                              'FOCUS_WORK',
-                              'working',
-                              'Returned to workstation'
-                            )
-                          }}
-                          className="cursor-pointer rounded bg-slate-900 border border-slate-700 px-2 py-0.5 font-bold text-slate-300 hover:bg-slate-800 whitespace-nowrap"
-                        >
-                          Wake Up ☀️
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cur = agentPins[selectedAgent.id] || 'NORMAL'
-                            const nextPin: AgentPinStatus = cur === 'NEVER_REST' ? 'NORMAL' : 'NEVER_REST'
-                            setAgentPins((prev) => ({ ...prev, [selectedAgent.id]: nextPin }))
-                            jarvisWellnessManager.setAgentPin(selectedAgent.id, nextPin)
-                          }}
-                          className={`cursor-pointer rounded px-2 py-0.5 font-bold whitespace-nowrap ${
-                            agentPins[selectedAgent.id] === 'NEVER_REST'
-                              ? 'bg-rose-500 text-slate-950'
-                              : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
-                          }`}
-                        >
-                          {agentPins[selectedAgent.id] === 'NEVER_REST' ? 'Locked Never Rest 🔒' : 'Pin Never Rest'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cur = agentPins[selectedAgent.id] || 'NORMAL'
-                            const nextPin: AgentPinStatus = cur === 'MUST_REST' ? 'NORMAL' : 'MUST_REST'
-                            setAgentPins((prev) => ({ ...prev, [selectedAgent.id]: nextPin }))
-                            jarvisWellnessManager.setAgentPin(selectedAgent.id, nextPin)
-                          }}
-                          className={`cursor-pointer rounded px-2 py-0.5 font-bold whitespace-nowrap ${
-                            agentPins[selectedAgent.id] === 'MUST_REST'
-                              ? 'bg-emerald-500 text-slate-950'
-                              : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
-                          }`}
-                        >
-                          {agentPins[selectedAgent.id] === 'MUST_REST' ? 'Locked Must Rest 🛡️' : 'Pin Must Rest'}
+                          <span>Dispatch Cleaner 🧹</span>
+                          {pendingTasks.length > 0 && (
+                            <span className="py-0.2 rounded-full bg-emerald-500/20 px-1.5 font-mono text-[8px] text-emerald-300">
+                              {pendingTasks.length} queued
+                            </span>
+                          )}
                         </button>
                       </div>
                     </div>
                   )
                 })()}
+              </div>
 
-                {/* Live Task & File */}
-                <div className="rounded-lg bg-slate-950/40 p-2 border border-slate-800/40 space-y-1">
-                  <div className="flex items-center justify-between font-mono text-[10px] text-slate-400">
-                    <span>CURRENT TASK:</span>
-                    <span className="text-slate-200 truncate max-w-[210px]">
-                      {selectedAgent.current_task || 'Architecting High-Throughput Pipelines'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between font-mono text-[10px] text-slate-400">
-                    <span>ACTIVE FILE:</span>
-                    <span className="text-cyan-400 font-mono truncate max-w-[210px]">
-                      {selectedAgent.current_file || 'src/components/office/OfficeCanvas3D.tsx'}
-                    </span>
-                  </div>
-                  <div className="pt-1">
-                    <div className="flex justify-between font-mono text-[9px] text-slate-400 pb-0.5">
-                      <span>PROGRESS</span>
-                      <span>{selectedAgent.progress_pct ?? 0}%</span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full transition-all duration-500"
-                        style={{ width: `${selectedAgent.progress_pct ?? 0}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Custom Directive Dispatch Input */}
-                <div className="flex gap-1.5 pt-0.5">
-                  <input
-                    type="text"
-                    value={directiveInput}
-                    onChange={(e) => setDirectiveInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && void handleDispatchDirective()}
-                    placeholder={`Directive for ${selectedAgent.name}...`}
-                    disabled={isDispatching}
-                    className="flex-1 rounded-lg border border-slate-800 bg-slate-950/80 px-2.5 py-1.5 font-mono text-xs text-slate-200 placeholder-slate-600 focus:border-cyan-500 focus:outline-none"
-                  />
+              {/* Section B: Interactive Individual Agent Dispatch Drawer */}
+              <div className="shrink-0 border-b border-slate-800/80 bg-slate-900/30 p-3">
+                <div className="flex items-center justify-between pb-2">
+                  <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
+                    AGENT INSPECTOR & ROUTING
+                  </span>
                   <button
                     type="button"
-                    onClick={() => void handleDispatchDirective()}
-                    disabled={isDispatching || !directiveInput.trim()}
-                    className="cursor-pointer rounded-lg bg-cyan-500 px-3 py-1.5 font-mono text-xs font-bold text-slate-950 hover:bg-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                    onClick={() => setIsRosterOpen((prev) => !prev)}
+                    className="cursor-pointer rounded-md border border-cyan-500/40 bg-cyan-950/40 px-2 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap text-cyan-300 transition-colors hover:bg-cyan-900/60"
                   >
-                    {isDispatching ? '...' : 'Dispatch Directive'}
+                    {isRosterOpen
+                      ? 'Hide Roster ✕'
+                      : `All Agents (${agents.length}) ☰`}
                   </button>
                 </div>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-4 text-center font-mono text-xs text-slate-500">
-                Click any agent in the office to inspect live runtime telemetry and route them.
-              </div>
-            )}
-          </div>
 
-          {/* Section C: Live Telemetry Stream (Monospaced Terminal Feed) */}
-          <div className="shrink-0 flex flex-col p-3 pb-6">
-            <div className="flex items-center justify-between pb-2 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-                <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
-                  LIVE TELEMETRY STREAM
-                </span>
-              </div>
-              <span className="font-mono text-[10px] font-semibold text-cyan-400">
-                {logs.length} EVENTS
-              </span>
-            </div>
-
-            <div className="h-64 overflow-y-auto rounded-lg border border-slate-800/80 bg-slate-950/90 p-2.5 font-mono text-[11px] space-y-1.5 shadow-inner">
-              {logs.length === 0 ? (
-                <div className="text-slate-600 text-center py-4">
-                  Listening for inter-agent messages and system logs...
+                {/* Quick Horizontal Agent Switcher Strip */}
+                <div className="mb-2 flex items-center gap-1 overflow-x-auto border-b border-slate-800/60 pb-2">
+                  {agents.map((ag) => {
+                    const eff = agentRouteOverrides[ag.id] || currentMode
+                    const bdg = getAgentStatusBadge(ag.status, eff)
+                    const active = selectedAgent?.id === ag.id
+                    return (
+                      <button
+                        key={ag.id}
+                        type="button"
+                        onClick={() => setSelectedAgent(ag)}
+                        className={`flex shrink-0 cursor-pointer items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap transition-all ${
+                          active
+                            ? 'border-cyan-400 bg-cyan-500/20 text-cyan-200'
+                            : 'border-slate-800 bg-slate-950/70 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                        }`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${bdg.dotTailwind}`}
+                        />
+                        <span>{ag.name}</span>
+                      </button>
+                    )
+                  })}
                 </div>
-              ) : (
-                logs.map((line, idx) => {
-                  const isComm = line.includes('[COMM]') || line.includes('[DIRECTIVE]')
-                  const isRoute = line.includes('[ROUTE]') || line.includes('AGENT_ROUTE')
-                  const isGo = line.includes('HUMAN_GO')
-                  const isErr = line.includes('ERROR') || line.includes('WARN')
-                  return (
-                    <div
-                      key={`log-${idx}`}
-                      className={`break-words leading-relaxed border-b border-slate-900/80 pb-1 last:border-0 ${
-                        isGo
-                          ? 'text-amber-400 font-semibold'
-                          : isErr
-                          ? 'text-rose-400 font-semibold'
-                          : isRoute
-                          ? 'text-emerald-300 font-medium'
-                          : isComm
-                          ? 'text-cyan-300'
-                          : 'text-slate-300'
-                      }`}
-                    >
-                      {line}
+
+                {selectedAgent && selectedStyle && selectedBadge ? (
+                  <div className="space-y-2.5">
+                    {/* Profile Card with Distinct Gender/Outfit Avatar Preview */}
+                    <div className="flex items-center justify-between rounded-lg border border-slate-800/70 bg-slate-950/70 p-2.5">
+                      <div className="flex items-center gap-2.5">
+                        {/* Distinct Styled Pixel-Agent Avatar Swatch */}
+                        <div
+                          className="relative flex h-9 w-9 shrink-0 flex-col items-center justify-center overflow-hidden rounded-lg border border-slate-700/80 shadow-inner"
+                          style={{ backgroundColor: '#0f172a' }}
+                        >
+                          {/* Hair */}
+                          <div
+                            className="h-2 w-5 rounded-t-sm"
+                            style={{ backgroundColor: selectedStyle.hairColor }}
+                          />
+                          {/* Face */}
+                          <div
+                            className="h-2.5 w-4"
+                            style={{ backgroundColor: selectedStyle.skinColor }}
+                          />
+                          {/* Outfit */}
+                          <div
+                            className="h-3 w-6 rounded-t-sm"
+                            style={{
+                              backgroundColor: selectedStyle.outfitColor,
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs font-bold text-slate-100">
+                              {selectedAgent.name}
+                            </span>
+                            <span className="rounded bg-slate-800/90 px-1.5 py-0.5 font-mono text-[9px] text-slate-400 uppercase">
+                              {selectedStyle.gender === 'female' ? '♀' : '♂'}{' '}
+                              {selectedStyle.hairStyle}
+                            </span>
+                          </div>
+                          <div className="font-mono text-[10px] text-slate-400">
+                            {selectedAgent.role}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900 px-2.5 py-1">
+                        <span
+                          className={`h-2 w-2 rounded-full ${selectedBadge.dotTailwind}`}
+                        />
+                        <span className="font-mono text-[10px] font-semibold whitespace-nowrap text-slate-200">
+                          {selectedBadge.label}
+                        </span>
+                      </div>
                     </div>
-                  )
-                })
-              )}
-            </div>
-          </div>
-        </aside>
-        )}
-      </div>
+
+                    {/* Agent AI Model Selector (Gemini / Hugging Face / JARVIS Local SLM) */}
+                    <div className="space-y-1.5 rounded-lg border border-cyan-500/30 bg-slate-950/75 p-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[9px] font-bold tracking-wider text-cyan-300 uppercase">
+                          AGENT AI MODEL (GEMINI / HUGGING FACE / SLM):
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleUpdateAgentModel(
+                              selectedAgent.id,
+                              selectedAgent.model ||
+                                DEFAULT_AGENT_MODELS[selectedAgent.id] ||
+                                'gemini-2.0-flash',
+                              true
+                            )
+                          }
+                          className="cursor-pointer rounded border border-cyan-500/40 bg-cyan-950/50 px-1.5 py-0.5 font-mono text-[9px] font-bold whitespace-nowrap text-cyan-300 transition hover:bg-cyan-500 hover:text-slate-950"
+                        >
+                          Apply to All 24 Agents
+                        </button>
+                      </div>
+                      <select
+                        data-testid="agent-model-selector"
+                        aria-label="Select Agent AI Model"
+                        value={
+                          selectedAgent.model ||
+                          DEFAULT_AGENT_MODELS[selectedAgent.id] ||
+                          'gemini-2.0-flash'
+                        }
+                        onChange={(e) =>
+                          handleUpdateAgentModel(
+                            selectedAgent.id,
+                            e.target.value
+                          )
+                        }
+                        className="w-full cursor-pointer rounded-md border border-slate-800 bg-slate-900 px-2 py-1 font-mono text-[10px] font-bold text-cyan-200 focus:border-cyan-400 focus:outline-none"
+                      >
+                        {AVAILABLE_MODELS.map((m) => (
+                          <option
+                            key={m.id}
+                            value={m.id}
+                            className="bg-slate-950 text-slate-100"
+                          >
+                            {m.name} — {m.tier}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Individual Action Buttons (Direct A* Pathfinding Routing) */}
+                    <div>
+                      <div className="pb-1 font-mono text-[9px] font-bold tracking-wider text-slate-400 uppercase">
+                        DIRECT INDIVIDUAL ROUTING (A* WALKING):
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRouteIndividualAgent(
+                              selectedAgent,
+                              'FOCUS_WORK',
+                              'working',
+                              `Executing sprint tasks at ${selectedAgent.room || 'Workstation'}`
+                            )
+                          }
+                          className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold whitespace-nowrap transition-all ${
+                            selectedEffectiveMode === 'FOCUS_WORK' ||
+                            selectedEffectiveMode === 'OVERVIEW'
+                              ? 'border-emerald-500/60 bg-emerald-950/50 text-emerald-300'
+                              : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
+                          }`}
+                        >
+                          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                          <span>Send to Work Desk</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRouteIndividualAgent(
+                              selectedAgent,
+                              'PANTRY',
+                              'on_break',
+                              'Recharging at Espresso Bar & Pantry Lounge'
+                            )
+                          }
+                          className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold whitespace-nowrap transition-all ${
+                            selectedEffectiveMode === 'PANTRY'
+                              ? 'border-yellow-500/60 bg-yellow-950/50 text-yellow-300'
+                              : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
+                          }`}
+                        >
+                          <span className="h-2 w-2 rounded-full bg-yellow-400" />
+                          <span>Send to Pantry / Coffee</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRouteIndividualAgent(
+                              selectedAgent,
+                              'GYM',
+                              'at_gym',
+                              'Active recovery workout in Rec & Gym'
+                            )
+                          }
+                          className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold whitespace-nowrap transition-all ${
+                            selectedEffectiveMode === 'GYM'
+                              ? 'border-pink-500/60 bg-pink-950/50 text-pink-300'
+                              : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
+                          }`}
+                        >
+                          <span className="h-2 w-2 rounded-full bg-pink-400" />
+                          <span>Send to Gym / Rec</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRouteIndividualAgent(
+                              selectedAgent,
+                              'ALL_HANDS',
+                              'in_meeting',
+                              'Joining Architecture Standup at The Brain'
+                            )
+                          }
+                          className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold whitespace-nowrap transition-all ${
+                            selectedEffectiveMode === 'ALL_HANDS'
+                              ? 'border-blue-500/60 bg-blue-950/50 text-blue-300'
+                              : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800'
+                          }`}
+                        >
+                          <span className="h-2 w-2 rounded-full bg-blue-400" />
+                          <span>Call to Brain (Scrum)</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Specialized Cleaner Patrol & Direct Servicing Controls */}
+                    {selectedAgent.id.startsWith('cleaner_') && (
+                      <div className="space-y-1.5 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-2">
+                        <div className="flex items-center justify-between font-mono text-[10px] font-bold text-emerald-300">
+                          <span>CLEANER DIRECT DISPATCH</span>
+                          <span className="text-[9px] text-emerald-400/80">
+                            FACILITIES
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5 font-mono text-[9px]">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleRequestCleaning('CAFETERIA', 'wipe_tables')
+                            }
+                            className="flex cursor-pointer items-center justify-center gap-1 rounded border border-emerald-500/40 bg-emerald-950/50 px-2 py-1 whitespace-nowrap text-emerald-200 hover:bg-emerald-900/60"
+                          >
+                            <span>🍽️ Clean Cafeteria</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleRequestCleaning('COMFORT_ROOM', 'clean_cr')
+                            }
+                            className="flex cursor-pointer items-center justify-center gap-1 rounded border border-emerald-500/40 bg-emerald-950/50 px-2 py-1 whitespace-nowrap text-emerald-200 hover:bg-emerald-900/60"
+                          >
+                            <span>🚻 Sanitize CR</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleRequestCleaning(
+                                'CORRIDORS',
+                                'replace_water_jug'
+                              )
+                            }
+                            className="flex cursor-pointer items-center justify-center gap-1 rounded border border-cyan-500/40 bg-cyan-950/50 px-2 py-1 whitespace-nowrap text-cyan-200 hover:bg-cyan-900/60"
+                          >
+                            <span>💧 Replace Water Jug</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRequestCleaning('GYM', 'mop')}
+                            className="flex cursor-pointer items-center justify-center gap-1 rounded border border-amber-500/40 bg-amber-950/50 px-2 py-1 whitespace-nowrap text-amber-200 hover:bg-amber-900/60"
+                          >
+                            <span>🧹 Mop Rec & Gym</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Human-Like Agent Needs & Next Plan (Simulated Layer) */}
+                    {(() => {
+                      const needs = hasMounted
+                        ? needsManager.getCurrentNeeds(selectedAgent.id)
+                        : needsManager.getDeterministicNeeds(selectedAgent.id)
+                      const plan = needsManager.getPlan(selectedAgent.id)
+                      const tiredness = getTirednessVisualState(needs)
+                      const nextAction = evaluateNextAction(
+                        selectedAgent.id,
+                        needs,
+                        plan
+                      )
+
+                      const getBarColor = (val: number, isUrgency = false) => {
+                        if (isUrgency) {
+                          return val < 25
+                            ? 'bg-rose-500'
+                            : val < 50
+                              ? 'bg-amber-500'
+                              : 'bg-cyan-500'
+                        }
+                        return val < 25
+                          ? 'bg-rose-500'
+                          : val < 45
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-400'
+                      }
+
+                      return (
+                        <div className="space-y-2 rounded-lg border border-slate-800/80 bg-slate-950/70 p-2.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-[9px] font-bold tracking-wider text-slate-300 uppercase">
+                                AGENT VITALS & PLAN
+                              </span>
+                              <span className="rounded border border-cyan-500/40 bg-cyan-950/80 px-1 py-0.5 font-mono text-[8px] font-bold text-cyan-300">
+                                SIMULATED
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setIsAgentLogDrawerOpen(true)}
+                              className="cursor-pointer font-mono text-[9px] text-cyan-400 hover:text-cyan-300 hover:underline"
+                            >
+                              View Full Log →
+                            </button>
+                          </div>
+
+                          {/* Next Plan Banner */}
+                          <div className="rounded-md border border-cyan-500/30 bg-cyan-950/20 p-1.5">
+                            <div className="flex items-center justify-between font-mono text-[9px]">
+                              <span className="font-bold text-cyan-400 uppercase">
+                                NEXT:{' '}
+                                {plan?.kind?.toUpperCase() ||
+                                  nextAction.nextKind.toUpperCase()}
+                              </span>
+                              <span className="text-slate-400">
+                                {tiredness.description}
+                              </span>
+                            </div>
+                            <p className="truncate pt-0.5 font-sans text-[10px] text-slate-300">
+                              {plan?.reason || nextAction.reason}
+                            </p>
+                          </div>
+
+                          {/* Vitals Progress Grid */}
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 font-mono text-[9px]">
+                            <div>
+                              <div className="flex justify-between pb-0.5 text-slate-400">
+                                <span>ENERGY</span>
+                                <span
+                                  suppressHydrationWarning
+                                  className="font-bold text-slate-200"
+                                >
+                                  {Math.round(needs.energy)}%
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-900">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${getBarColor(needs.energy)}`}
+                                  style={{ width: `${needs.energy}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between pb-0.5 text-slate-400">
+                                <span>HUNGER</span>
+                                <span
+                                  suppressHydrationWarning
+                                  className="font-bold text-slate-200"
+                                >
+                                  {Math.round(needs.hunger)}%
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-900">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${getBarColor(needs.hunger)}`}
+                                  style={{ width: `${needs.hunger}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between pb-0.5 text-slate-400">
+                                <span>THIRST</span>
+                                <span
+                                  suppressHydrationWarning
+                                  className="font-bold text-slate-200"
+                                >
+                                  {Math.round(needs.thirst)}%
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-900">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${getBarColor(needs.thirst)}`}
+                                  style={{ width: `${needs.thirst}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between pb-0.5 text-slate-400">
+                                <span>BLADDER</span>
+                                <span
+                                  suppressHydrationWarning
+                                  className="font-bold text-slate-200"
+                                >
+                                  {Math.round(needs.bladder)}%
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-900">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${getBarColor(needs.bladder, true)}`}
+                                  style={{ width: `${needs.bladder}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between pb-0.5 text-slate-400">
+                                <span>HEALTH</span>
+                                <span
+                                  suppressHydrationWarning
+                                  className="font-bold text-slate-200"
+                                >
+                                  {Math.round(needs.health)}%
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-900">
+                                <div
+                                  className="h-full rounded-full bg-emerald-400 transition-all duration-300"
+                                  style={{ width: `${needs.health}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between pb-0.5 text-slate-400">
+                                <span>MORALE</span>
+                                <span
+                                  suppressHydrationWarning
+                                  className="font-bold text-slate-200"
+                                >
+                                  {Math.round(needs.morale)}%
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-900">
+                                <div
+                                  className="h-full rounded-full bg-purple-400 transition-all duration-300"
+                                  style={{ width: `${needs.morale}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Hidden stats: Caffeine & Sleep Debt */}
+                          <div className="flex items-center justify-between border-t border-slate-900 pt-0.5 font-mono text-[8px] text-slate-500">
+                            <span suppressHydrationWarning>
+                              Caffeine: {needs.caffeine}%
+                            </span>
+                            <span suppressHydrationWarning>
+                              Sleep Debt: {needs.sleepDebt}%
+                            </span>
+                            <span suppressHydrationWarning>
+                              Speed: {tiredness.walkSpeedMultiplier}x
+                            </span>
+                          </div>
+
+                          {/* Quick Wellness & Pin Control Buttons */}
+                          <div className="flex flex-wrap items-center gap-1 border-t border-slate-800/80 pt-1.5 font-mono text-[9px]">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleRouteIndividualAgent(
+                                  selectedAgent,
+                                  'NAP_ROOM',
+                                  'resting',
+                                  'Scheduled recovery rest in Nap Room'
+                                )
+                              }}
+                              className="cursor-pointer rounded border border-cyan-500/40 bg-cyan-950/60 px-2 py-0.5 font-bold whitespace-nowrap text-cyan-200 hover:bg-cyan-900"
+                            >
+                              Send to Rest 💤
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleRouteIndividualAgent(
+                                  selectedAgent,
+                                  'FOCUS_WORK',
+                                  'working',
+                                  'Returned to workstation'
+                                )
+                              }}
+                              className="cursor-pointer rounded border border-slate-700 bg-slate-900 px-2 py-0.5 font-bold whitespace-nowrap text-slate-300 hover:bg-slate-800"
+                            >
+                              Wake Up ☀️
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const cur =
+                                  agentPins[selectedAgent.id] || 'NORMAL'
+                                const nextPin: AgentPinStatus =
+                                  cur === 'NEVER_REST' ? 'NORMAL' : 'NEVER_REST'
+                                setAgentPins((prev) => ({
+                                  ...prev,
+                                  [selectedAgent.id]: nextPin,
+                                }))
+                                jarvisWellnessManager.setAgentPin(
+                                  selectedAgent.id,
+                                  nextPin
+                                )
+                              }}
+                              className={`cursor-pointer rounded px-2 py-0.5 font-bold whitespace-nowrap ${
+                                agentPins[selectedAgent.id] === 'NEVER_REST'
+                                  ? 'bg-rose-500 text-slate-950'
+                                  : 'border border-slate-700 bg-slate-900 text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              {agentPins[selectedAgent.id] === 'NEVER_REST'
+                                ? 'Locked Never Rest 🔒'
+                                : 'Pin Never Rest'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const cur =
+                                  agentPins[selectedAgent.id] || 'NORMAL'
+                                const nextPin: AgentPinStatus =
+                                  cur === 'MUST_REST' ? 'NORMAL' : 'MUST_REST'
+                                setAgentPins((prev) => ({
+                                  ...prev,
+                                  [selectedAgent.id]: nextPin,
+                                }))
+                                jarvisWellnessManager.setAgentPin(
+                                  selectedAgent.id,
+                                  nextPin
+                                )
+                              }}
+                              className={`cursor-pointer rounded px-2 py-0.5 font-bold whitespace-nowrap ${
+                                agentPins[selectedAgent.id] === 'MUST_REST'
+                                  ? 'bg-emerald-500 text-slate-950'
+                                  : 'border border-slate-700 bg-slate-900 text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              {agentPins[selectedAgent.id] === 'MUST_REST'
+                                ? 'Locked Must Rest 🛡️'
+                                : 'Pin Must Rest'}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })()}
+
+                    {/* Live Task & File */}
+                    <div className="space-y-1 rounded-lg border border-slate-800/40 bg-slate-950/40 p-2">
+                      <div className="flex items-center justify-between font-mono text-[10px] text-slate-400">
+                        <span>CURRENT TASK:</span>
+                        <span className="max-w-[210px] truncate text-slate-200">
+                          {selectedAgent.current_task ||
+                            'Architecting High-Throughput Pipelines'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[10px] text-slate-400">
+                        <span>ACTIVE FILE:</span>
+                        <span className="max-w-[210px] truncate font-mono text-cyan-400">
+                          {selectedAgent.current_file ||
+                            'src/components/office/OfficeCanvas3D.tsx'}
+                        </span>
+                      </div>
+                      <div className="pt-1">
+                        <div className="flex justify-between pb-0.5 font-mono text-[9px] text-slate-400">
+                          <span>PROGRESS</span>
+                          <span>{selectedAgent.progress_pct ?? 0}%</span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-500"
+                            style={{
+                              width: `${selectedAgent.progress_pct ?? 0}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Custom Directive Dispatch Input */}
+                    <div className="flex gap-1.5 pt-0.5">
+                      <input
+                        type="text"
+                        value={directiveInput}
+                        onChange={(e) => setDirectiveInput(e.target.value)}
+                        onKeyDown={(e) =>
+                          e.key === 'Enter' && void handleDispatchDirective()
+                        }
+                        placeholder={`Directive for ${selectedAgent.name}...`}
+                        disabled={isDispatching}
+                        className="flex-1 rounded-lg border border-slate-800 bg-slate-950/80 px-2.5 py-1.5 font-mono text-xs text-slate-200 placeholder-slate-600 focus:border-cyan-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void handleDispatchDirective()}
+                        disabled={isDispatching || !directiveInput.trim()}
+                        className="cursor-pointer rounded-lg bg-cyan-500 px-3 py-1.5 font-mono text-xs font-bold whitespace-nowrap text-slate-950 transition-all hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {isDispatching ? '...' : 'Dispatch Directive'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-4 text-center font-mono text-xs text-slate-500">
+                    Click any agent in the office to inspect live runtime
+                    telemetry and route them.
+                  </div>
+                )}
+              </div>
+
+              {/* Section C: Live Telemetry Stream (Monospaced Terminal Feed) */}
+              <div className="flex shrink-0 flex-col p-3 pb-6">
+                <div className="flex shrink-0 items-center justify-between pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
+                    <span className="font-mono text-xs font-bold tracking-wider text-slate-200 uppercase">
+                      LIVE TELEMETRY STREAM
+                    </span>
+                  </div>
+                  <span className="font-mono text-[10px] font-semibold text-cyan-400">
+                    {logs.length} EVENTS
+                  </span>
+                </div>
+
+                <div className="h-64 space-y-1.5 overflow-y-auto rounded-lg border border-slate-800/80 bg-slate-950/90 p-2.5 font-mono text-[11px] shadow-inner">
+                  {logs.length === 0 ? (
+                    <div className="py-4 text-center text-slate-600">
+                      Listening for inter-agent messages and system logs...
+                    </div>
+                  ) : (
+                    logs.map((line, idx) => {
+                      const isComm =
+                        line.includes('[COMM]') || line.includes('[DIRECTIVE]')
+                      const isRoute =
+                        line.includes('[ROUTE]') || line.includes('AGENT_ROUTE')
+                      const isGo = line.includes('HUMAN_GO')
+                      const isErr =
+                        line.includes('ERROR') || line.includes('WARN')
+                      return (
+                        <div
+                          key={`log-${idx}`}
+                          className={`border-b border-slate-900/80 pb-1 leading-relaxed break-words last:border-0 ${
+                            isGo
+                              ? 'font-semibold text-amber-400'
+                              : isErr
+                                ? 'font-semibold text-rose-400'
+                                : isRoute
+                                  ? 'font-medium text-emerald-300'
+                                  : isComm
+                                    ? 'text-cyan-300'
+                                    : 'text-slate-300'
+                          }`}
+                        >
+                          {line}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            </aside>
+          )}
+        </div>
       </div>
 
       {/* Add Department Wizard Modal */}

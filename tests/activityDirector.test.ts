@@ -25,15 +25,35 @@ const MOCK_APPROVALS: Approval[] = [
 ]
 
 const MOCK_TASKS: OfficeTask[] = [
-  { id: 'task-1', title: 'Task 1', department: 'Engineering Core', status: 'working' },
-  { id: 'task-2', title: 'Task 2', department: 'Engineering Core', status: 'queued' },
-  { id: 'task-3', title: 'Task 3', department: 'Operations', status: 'needs_approval' },
+  {
+    id: 'task-1',
+    title: 'Task 1',
+    department: 'Engineering Core',
+    status: 'working',
+  },
+  {
+    id: 'task-2',
+    title: 'Task 2',
+    department: 'Engineering Core',
+    status: 'queued',
+  },
+  {
+    id: 'task-3',
+    title: 'Task 3',
+    department: 'Operations',
+    status: 'needs_approval',
+  },
   { id: 'task-4', title: 'Task 4', department: 'QA', status: 'done' },
 ]
 
 describe('Activity Director & Counter Parity Suite (Phase 16)', () => {
   it('guarantees 100% mathematical parity: sum of visible activities equals total agents', () => {
-    const { stats } = computeAgentActivities(MOCK_AGENTS, 'FOCUS_WORK', MOCK_APPROVALS, MOCK_TASKS)
+    const { stats } = computeAgentActivities(
+      MOCK_AGENTS,
+      'FOCUS_WORK',
+      MOCK_APPROVALS,
+      MOCK_TASKS
+    )
     const sum =
       stats.working +
       stats.eating +
@@ -59,7 +79,12 @@ describe('Activity Director & Counter Parity Suite (Phase 16)', () => {
   })
 
   it('enforces sane leisure limits: no more than 30% of team in gym or canteen during focus work', () => {
-    const { stats } = computeAgentActivities(MOCK_AGENTS, 'FOCUS_WORK', [], MOCK_TASKS)
+    const { stats } = computeAgentActivities(
+      MOCK_AGENTS,
+      'FOCUS_WORK',
+      [],
+      MOCK_TASKS
+    )
     const maxAllowed = Math.floor(MOCK_AGENTS.length * 0.3)
 
     expect(stats.gym).toBeLessThanOrEqual(maxAllowed)
@@ -67,7 +92,12 @@ describe('Activity Director & Counter Parity Suite (Phase 16)', () => {
   })
 
   it('switches all agents to meeting when in ALL_HANDS mode', () => {
-    const { stats } = computeAgentActivities(MOCK_AGENTS, 'ALL_HANDS', [], MOCK_TASKS)
+    const { stats } = computeAgentActivities(
+      MOCK_AGENTS,
+      'ALL_HANDS',
+      [],
+      MOCK_TASKS
+    )
 
     expect(stats.meeting).toBe(MOCK_AGENTS.length)
     expect(stats.working).toBe(0)
@@ -76,7 +106,12 @@ describe('Activity Director & Counter Parity Suite (Phase 16)', () => {
   })
 
   it('switches all agents to eating when in COFFEE_BREAK mode', () => {
-    const { stats } = computeAgentActivities(MOCK_AGENTS, 'COFFEE_BREAK', [], MOCK_TASKS)
+    const { stats } = computeAgentActivities(
+      MOCK_AGENTS,
+      'COFFEE_BREAK',
+      [],
+      MOCK_TASKS
+    )
 
     expect(stats.eating).toBe(MOCK_AGENTS.length)
     expect(stats.working).toBe(0)

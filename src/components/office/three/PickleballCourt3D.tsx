@@ -50,7 +50,11 @@ export function PickleballCourt3D({
     }
     if (ballShadowRef.current) {
       ballShadowRef.current.visible = state.ballVisible
-      ballShadowRef.current.position.set(state.ballPos[0], 0.055, state.ballPos[2])
+      ballShadowRef.current.position.set(
+        state.ballPos[0],
+        0.055,
+        state.ballPos[2]
+      )
       const scale = Math.max(0.45, 1.15 - state.ballPos[1] * 0.25)
       ballShadowRef.current.scale.set(scale, scale, 1)
     }
@@ -78,7 +82,7 @@ export function PickleballCourt3D({
           <meshStandardMaterial color="#2563eb" roughness={0.65} />
         </mesh>
 
-      {/* Green Non-Volley ("Kitchen") Strips beside the Net (p02, p05 reference) */}
+        {/* Green Non-Volley ("Kitchen") Strips beside the Net (p02, p05 reference) */}
         <mesh position={[0, 0.072, 0]} receiveShadow>
           <boxGeometry args={[4.26, 0.008, 6.06]} />
           <meshStandardMaterial
@@ -146,7 +150,12 @@ export function PickleballCourt3D({
           {/* Net Mesh */}
           <mesh position={[0, 0.46, 0]} castShadow>
             <boxGeometry args={[0.04, 0.84, 6.45]} />
-            <meshStandardMaterial color="#1e293b" transparent opacity={0.78} roughness={0.9} />
+            <meshStandardMaterial
+              color="#1e293b"
+              transparent
+              opacity={0.78}
+              roughness={0.9}
+            />
           </mesh>
           {/* White Top Net Tape */}
           <mesh position={[0, 0.9, 0]} castShadow>
@@ -185,7 +194,11 @@ export function PickleballCourt3D({
             </mesh>
             <mesh position={[0, 0.78, 0]}>
               <boxGeometry args={[0.28, 0.22, 0.28]} />
-              <meshStandardMaterial color="#4ade80" emissive="#22c55e" emissiveIntensity={1.4} />
+              <meshStandardMaterial
+                color="#4ade80"
+                emissive="#22c55e"
+                emissiveIntensity={1.4}
+              />
             </mesh>
           </group>
         ))}
@@ -194,7 +207,11 @@ export function PickleballCourt3D({
         <group position={[-5.5, 0, 5.4]}>
           <mesh position={[0, 0.22, 0]} castShadow>
             <cylinderGeometry args={[0.26, 0.2, 0.42, 12]} />
-            <meshStandardMaterial color="#334155" metalness={0.6} roughness={0.4} />
+            <meshStandardMaterial
+              color="#334155"
+              metalness={0.6}
+              roughness={0.4}
+            />
           </mesh>
           <mesh position={[0, 0.44, 0]}>
             <sphereGeometry args={[0.08, 8, 8]} />
@@ -216,7 +233,11 @@ export function PickleballCourt3D({
           <meshStandardMaterial color="#f8fafc" roughness={0.3} />
         </mesh>
         {[-4.75, 4.75].map((sx, idx) => (
-          <mesh key={`pb-south-rail-${idx}`} position={[sx, 0.55, 5.95]} castShadow>
+          <mesh
+            key={`pb-south-rail-${idx}`}
+            position={[sx, 0.55, 5.95]}
+            castShadow
+          >
             <boxGeometry args={[6.3, 0.12, 0.1]} />
             <meshStandardMaterial color="#f8fafc" roughness={0.3} />
           </mesh>
@@ -233,7 +254,11 @@ export function PickleballCourt3D({
           roughness={0.35}
         />
       </mesh>
-      <mesh ref={ballShadowRef} position={[-20, 0.055, -34.8]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh
+        ref={ballShadowRef}
+        position={[-20, 0.055, -34.8]}
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
         <circleGeometry args={[0.14, 16]} />
         <meshBasicMaterial color="#090d16" transparent opacity={0.35} />
       </mesh>

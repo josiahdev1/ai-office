@@ -3,15 +3,15 @@
 import * as THREE from 'three'
 
 export type MonitorRoleTheme =
-  | 'engineering'
-  | 'server_admin'
-  | 'design'
-  | 'operations'
-  | 'executive'
+  'engineering' | 'server_admin' | 'design' | 'operations' | 'executive'
 
 const textureCache = new Map<MonitorRoleTheme, THREE.CanvasTexture>()
 
-function drawEngineeringScreen(ctx: CanvasRenderingContext2D, w: number, h: number) {
+function drawEngineeringScreen(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number
+) {
   // VS Code dark theme IDE + terminal
   ctx.fillStyle = '#0d1117'
   ctx.fillRect(0, 0, w, h)
@@ -23,7 +23,13 @@ function drawEngineeringScreen(ctx: CanvasRenderingContext2D, w: number, h: numb
   ctx.fillRect(110, 0, 2, h)
 
   // File tree lines
-  const files = ['OfficeScene.tsx', 'walkCollision.ts', 'db-map.ts', 'route.ts', 'schema.sql']
+  const files = [
+    'OfficeScene.tsx',
+    'walkCollision.ts',
+    'db-map.ts',
+    'route.ts',
+    'schema.sql',
+  ]
   ctx.font = 'bold 12px monospace'
   files.forEach((f, idx) => {
     ctx.fillStyle = idx === 0 ? '#58a6ff' : '#8b949e'
@@ -42,12 +48,19 @@ function drawEngineeringScreen(ctx: CanvasRenderingContext2D, w: number, h: numb
   ctx.fillText('OfficeScene.tsx', 124, 18)
 
   // Syntax-highlighted code lines
-  const codeColors = ['#ff7b72', '#79c0ff', '#a5d6ff', '#d2a8ff', '#7ee787', '#ffa657']
+  const codeColors = [
+    '#ff7b72',
+    '#79c0ff',
+    '#a5d6ff',
+    '#d2a8ff',
+    '#7ee787',
+    '#ffa657',
+  ]
   for (let row = 0; row < 10; row++) {
     const y = 48 + row * 18
     ctx.fillStyle = '#484f58'
     ctx.fillText(String(row + 12), 120, y)
-    let x = 148 + ((row % 3) * 16)
+    let x = 148 + (row % 3) * 16
     const segs = 2 + (row % 3)
     for (let s = 0; s < segs; s++) {
       const segW = 36 + ((row * 17 + s * 29) % 72)
@@ -71,7 +84,11 @@ function drawEngineeringScreen(ctx: CanvasRenderingContext2D, w: number, h: numb
   ctx.fillText('READY  Next.js 16 build clean', 124, 298)
 }
 
-function drawServerAdminScreen(ctx: CanvasRenderingContext2D, w: number, h: number) {
+function drawServerAdminScreen(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number
+) {
   ctx.fillStyle = '#050b14'
   ctx.fillRect(0, 0, w, h)
 
@@ -168,7 +185,11 @@ function drawDesignScreen(ctx: CanvasRenderingContext2D, w: number, h: number) {
   })
 }
 
-function drawOperationsScreen(ctx: CanvasRenderingContext2D, w: number, h: number) {
+function drawOperationsScreen(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number
+) {
   ctx.fillStyle = '#0f172a'
   ctx.fillRect(0, 0, w, h)
 
@@ -203,7 +224,11 @@ function drawOperationsScreen(ctx: CanvasRenderingContext2D, w: number, h: numbe
   })
 }
 
-function drawExecutiveScreen(ctx: CanvasRenderingContext2D, w: number, h: number) {
+function drawExecutiveScreen(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number
+) {
   ctx.fillStyle = '#090d16'
   ctx.fillRect(0, 0, w, h)
 
@@ -230,7 +255,9 @@ function drawExecutiveScreen(ctx: CanvasRenderingContext2D, w: number, h: number
   ctx.fillText('VEL +24%   UPTIME 99.98%   AGENTS 23/23 ONLINE', 24, 282)
 }
 
-export function getMonitorTexture(theme: MonitorRoleTheme): THREE.CanvasTexture {
+export function getMonitorTexture(
+  theme: MonitorRoleTheme
+): THREE.CanvasTexture {
   const existing = textureCache.get(theme)
   if (existing) return existing
 

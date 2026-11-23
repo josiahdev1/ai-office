@@ -15,7 +15,9 @@ import { Agent } from '@/components/office/types'
 
 describe('TICKET-35 Comprehensive Verification', () => {
   it('enforces max 4 active players and 8 bench queue when 31 agents are available', () => {
-    const all31 = Array.from({ length: 31 }, (_, i) => (i === 0 ? 'boss' : `agent_${i}`))
+    const all31 = Array.from({ length: 31 }, (_, i) =>
+      i === 0 ? 'boss' : `agent_${i}`
+    )
     const res = selectMatchAndQueue(all31)
     expect(res.activePlayers).toHaveLength(PICKLEBALL_MAX_COURT_PLAYERS)
     expect(res.benchQueue).toHaveLength(PICKLEBALL_MAX_QUEUE_CAPACITY)
@@ -24,7 +26,10 @@ describe('TICKET-35 Comprehensive Verification', () => {
 
   it('declines 9th bench waiter with "Court full: queue is 8"', () => {
     const bench = Array.from({ length: 8 }, (_, i) => `waiter_${i}`)
-    const state = createInitialRallyState(['boss', 'josiah', 'khent', 'blaze'], bench)
+    const state = createInitialRallyState(
+      ['boss', 'josiah', 'khent', 'blaze'],
+      bench
+    )
     const result = enqueueBenchPlayer(state, 'extra_player')
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Court full: queue is 8')
@@ -36,8 +41,16 @@ describe('TICKET-35 Comprehensive Verification', () => {
     expect(idleState.status).toBe('idle')
     expect(idleState.ballVisible).toBe(false)
 
-    const runA = createInitialRallyState(['boss', 'josiah', 'khent', 'blaze'], ['ferwin'], 777)
-    const runB = createInitialRallyState(['boss', 'josiah', 'khent', 'blaze'], ['ferwin'], 777)
+    const runA = createInitialRallyState(
+      ['boss', 'josiah', 'khent', 'blaze'],
+      ['ferwin'],
+      777
+    )
+    const runB = createInitialRallyState(
+      ['boss', 'josiah', 'khent', 'blaze'],
+      ['ferwin'],
+      777
+    )
     for (let i = 0; i < 180; i++) {
       stepPickleballRally(runA, 1 / 60)
       stepPickleballRally(runB, 1 / 60)
@@ -48,11 +61,32 @@ describe('TICKET-35 Comprehensive Verification', () => {
 
   it('builds a single shared sceneModel for 2D and 3D with queue badges & orange foot ring', () => {
     const mockAgents = [
-      { id: 'boss', name: 'Boss', status: 'available', department: 'EXECUTIVE', room: 'Pickleball Court' },
-      { id: 'ferwin', name: 'Ferwin', status: 'available', department: 'ENGINEERING', room: 'Pickleball Court' },
-      { id: 'arwin', name: 'Arwin', status: 'working', department: 'ENGINEERING', room: 'Engineering' },
+      {
+        id: 'boss',
+        name: 'Boss',
+        status: 'available',
+        department: 'EXECUTIVE',
+        room: 'Pickleball Court',
+      },
+      {
+        id: 'ferwin',
+        name: 'Ferwin',
+        status: 'available',
+        department: 'ENGINEERING',
+        room: 'Pickleball Court',
+      },
+      {
+        id: 'arwin',
+        name: 'Arwin',
+        status: 'working',
+        department: 'ENGINEERING',
+        room: 'Engineering',
+      },
     ] as Agent[]
-    const rally = createInitialRallyState(['boss', 'josiah', 'khent', 'blaze'], ['ferwin'])
+    const rally = createInitialRallyState(
+      ['boss', 'josiah', 'khent', 'blaze'],
+      ['ferwin']
+    )
     const model = buildSceneModel(mockAgents, 'OVERVIEW', {}, rally)
     const boss = model.entities.find((e) => e.id === 'boss')
     const ferwin = model.entities.find((e) => e.id === 'ferwin')
